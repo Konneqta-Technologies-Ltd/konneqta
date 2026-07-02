@@ -15,7 +15,7 @@
 import QRCode from "qrcode";
 
 export type GenerateQrOptions = {
-  /** Absolute profile URL, e.g. https://konneqta.com/johndoe */
+  /** Absolute profile URL, e.g. https://www.konneqta.com/johndoe */
   profileUrl: string;
   /** Optional image URL to embed in the QR center (e.g. user's logo_url). */
   logoUrl?: string | null;
