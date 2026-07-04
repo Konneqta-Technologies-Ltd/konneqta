@@ -10,10 +10,6 @@ type WavyLineProps = {
   flip?: boolean;
 };
 
-/**
- * A single hand-drawn-feeling squiggle used as ambient decoration.
- * Draws itself in on mount using pathLength animation.
- */
 export default function WavyLine({
   color,
   width = 220,

@@ -74,7 +74,7 @@ export default function WhatIsSection() {
           Konneqta isn&apos;t a link-in-bio.
           <br />
           It&apos;s who you are,{' '}
-          <span className="text-konneqta-orange">made shareable.</span>
+          <span className="text-[#FF6B2C]">made shareable.</span>
         </motion.h2>
 
         <motion.div
