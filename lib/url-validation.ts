@@ -78,6 +78,51 @@ export function isAllowedStorageUrl(url: string): boolean {
 }
 
 /**
+ * Returns true only if the URL points at the Konneqta app domain.
+ *
+ * This is the SECURITY GATE for the QR scanner: a decoded QR must resolve
+ * to a Konneqta profile URL before we navigate to it. Anything else
+ * (external sites, phishing URLs, malformed strings) is rejected.
+ *
+ * Accepts both "konneqta.com" and "www.konneqta.com" (and localhost for dev).
+ */
+export function isKonneqtaUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (!isSafeHttpUrl(trimmed)) return false;
+  try {
+    const parsed = new URL(trimmed);
+    const allowedHosts = [
+      "konneqta.com",
+      "www.konneqta.com",
+      "localhost",
+      "127.0.0.1",
+    ];
+    return allowedHosts.includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extract the username/path segment from a Konneqta URL.
+ * Returns null if the URL isn't a valid Konneqta profile URL.
+ *
+ * e.g. "https://konneqta.com/emeka" → "emeka"
+ *      "https://konneqta.com/emeka/edit" → "emeka" (first segment only)
+ */
+export function extractKonneqtaPath(url: string): string | null {
+  if (!isKonneqtaUrl(url)) return null;
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    return segments[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Allowed image MIME types for uploads (avatars + logos).
  * SVG is EXCLUDED because it can carry <script> tags → stored XSS.
  */

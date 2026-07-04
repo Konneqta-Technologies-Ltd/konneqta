@@ -11,17 +11,43 @@ export default async function PostLoginPage() {
         redirect('/');
     }
 
-    const { data: profile, error } = await supabase
+    // Get the profile — check if they have a card yet
+    const { data: profile } = await supabase
         .from('profiles')
-        .select('username')
+        .select('username, active_card_id')
         .eq('id', user.id)
         .maybeSingle();
 
     // No profile yet → first-time user → needs to onboard
-    if (error || !profile) {
+    if (!profile) {
         redirect('/onboarding');
     }
 
-    // Profile exists → go to their public profile page
+    // If they have an active card, redirect to that card's slug
+    if (profile.active_card_id) {
+        const { data: card } = await supabase
+            .from('cards')
+            .select('slug')
+            .eq('id', profile.active_card_id)
+            .maybeSingle();
+
+        if (card) {
+            redirect(`/${card.slug}`);
+        }
+    }
+
+    // Fallback: no active card set, find their primary card
+    const { data: primaryCard } = await supabase
+        .from('cards')
+        .select('slug')
+        .eq('owner_id', user.id)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+    if (primaryCard) {
+        redirect(`/${primaryCard.slug}`);
+    }
+
+    // Last resort: use the username directly (shouldn't happen after migration)
     redirect(`/${profile.username}`);
 }

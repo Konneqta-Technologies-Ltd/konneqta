@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -9,6 +10,7 @@
   --main-text-color: #F8F7F5;
   --secondary-text-color: #737373;
   --border-color: #E5E5E5;
+  --font-outfit: var(--font-outfit), sans-serif;
   
 }
 
@@ -31,6 +33,9 @@
     --background: #18181b;
     --foreground: #ededed;
   }
+}
+body {
+  font-family: var(--font-outfit);
 }
 
 /* body {

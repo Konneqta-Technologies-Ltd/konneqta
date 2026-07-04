@@ -92,7 +92,7 @@ function ResetPasswordForm() {
 
         verifySession();
         return () => { cancelled = true; };
-    }, [searchParams, router]);
+    }, [searchParams, router, supabase]);
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
