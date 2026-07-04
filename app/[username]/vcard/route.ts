@@ -4,20 +4,17 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * vCard (.vcf) download route.
  *
- * Serves a live, thin vCard generated from the current profile row.
+ * Serves a live, thin vCard generated from the current card row.
+ * Queries `cards` by slug (the URL segment).
  *
  * Privacy:
- * - Selects ONLY the columns it needs: full_name, username, phone, show_phone.
- * - Phone is included in the output only when show_phone is TRUE and the
- *   phone value is non-empty. Otherwise it is read and discarded.
+ * - Selects ONLY the columns it needs: full_name, slug, phone, show_phone.
+ * - Phone is fetched from the OWNER's profile (account-level), not the card,
+ *   and is included in the output only when show_phone is TRUE and non-empty.
  * - Email is never selected, never included.
- *
- * The profile URL written into the `URL:` field is the canonical Konneqta
- * profile link derived from the request host, making the saved contact a
- * living pointer to the always-current profile.
  */
 
-// Always dynamic — every request must hit the DB for fresh profile data.
+// Always dynamic — every request must hit the DB for fresh card data.
 export const dynamic = "force-dynamic";
 
 export async function GET(
@@ -27,31 +24,38 @@ export async function GET(
   const { username } = await ctx.params;
   const supabase = await createClient();
 
-  // Only the columns this route is allowed to read.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, username, phone, show_phone")
-    .eq("username", username)
+  // Look up the card by slug
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id, owner_id, slug, full_name")
+    .eq("slug", username)
     .maybeSingle();
 
-  if (!profile) {
+  if (!card) {
     return new Response("Not Found", { status: 404 });
   }
 
+  // Fetch phone + show_phone from the owner's profile (account-level)
+  const { data: owner } = await supabase
+    .from("profiles")
+    .select("phone, show_phone")
+    .eq("id", card.owner_id)
+    .maybeSingle();
+
   // Build the canonical profile URL from the incoming request host.
   const url = new URL(_req.url);
-  const profileUrl = `${url.origin}/${profile.username}`;
+  const profileUrl = `${url.origin}/${card.slug}`;
 
   const vcf = buildVCard({
-    fullName: profile.full_name,
-    username: profile.username,
+    fullName: card.full_name,
+    username: card.slug,
     profileUrl,
-    phone: profile.phone,
-    showPhone: profile.show_phone,
+    phone: owner?.phone ?? null,
+    showPhone: owner?.show_phone ?? false,
   });
 
   // Suggest a filename the OS will use for "Save Contact".
-  const fileBase = (profile.full_name || "contact").replace(
+  const fileBase = (card.full_name || "contact").replace(
     /[^a-z0-9_-]/gi,
     ""
   );
@@ -61,7 +65,6 @@ export async function GET(
     headers: {
       "Content-Type": "text/vcard; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileBase}.vcf"`,
-      // Never cache — the card must reflect the latest DB row.
       "Cache-Control": "no-store",
     },
   });

@@ -10,6 +10,7 @@ import { dataUrlToBlob, generateQrDataUrl } from "@/lib/qr";
 import { useEffect, useRef, useState } from "react";
 
 import InfoTip from "./InfoTip";
+import ProGate from "./ProGate";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -622,7 +623,7 @@ export default function OnboardingForm({
             </div>
           </div>
 
-          {/* Logo (optional) */}
+          {/* Logo (Pro feature — locked at onboarding) */}
           <div>
             <label
               htmlFor="logo"
@@ -630,21 +631,19 @@ export default function OnboardingForm({
             >
               Logo{" "}
               <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">
-                (optional)
+                (Pro)
               </span>
             </label>
-            <input
-              id="logo"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleLogoSelect}
-              className={inputClassName}
-            />
-            {logoFile && (
-              <p className="mt-1 text-xs text-green-600 dark:text-green-400">
-                {logoFile.name} selected
-              </p>
-            )}
+            <ProGate allowed={false} label="Logo upload">
+              <input
+                id="logo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleLogoSelect}
+                disabled
+                className={inputClassName}
+              />
+            </ProGate>
           </div>
 
           {/* Bio */}

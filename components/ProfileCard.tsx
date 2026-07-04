@@ -1,13 +1,15 @@
 "use client";
 
-import Image from "next/image";
+import AppearanceModal from "./AppearanceModal";
 import { PLATFORM_MAP } from "@/lib/social-platforms";
 import ShareMenu from "./ShareMenu";
 import Tooltip from "./Tooltip";
-import {
-  safeHref,
-} from "@/lib/url-validation";
+import { getTheme } from "@/lib/themes";
+import { renderCardFront } from "./card-layouts";
+import { safeHref } from "@/lib/url-validation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTrack } from "@/lib/use-track";
 
 type SocialLink = {
   platform: string;
@@ -15,6 +17,7 @@ type SocialLink = {
 };
 
 type Profile = {
+  id: string;
   username: string;
   full_name: string | null;
   job_title: string | null;
@@ -23,6 +26,8 @@ type Profile = {
   avatar_url: string | null;
   logo_url: string | null;
   qr_code_url: string | null;
+  theme: string | null;
+  banner_url: string | null;
 };
 
 /** Circular icon button shared by the card's action row. */
@@ -61,17 +66,24 @@ export default function ProfileCard({
   profile,
   socialLinks,
   isOwner = false,
+  canUseThemes = false,
+  canUseBanners = false,
 }: {
   profile: Profile;
   socialLinks: SocialLink[];
   isOwner?: boolean;
+  canUseThemes?: boolean;
+  canUseBanners?: boolean;
 }) {
   const [flipped, setFlipped] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
+  const track = useTrack();
+  const router = useRouter();
 
+  const theme = getTheme(profile.theme);
+  const c = theme.colors;
   const displayName = profile.full_name || profile.username;
-  
-
 
   // Compute the absolute profile URL lazily at click-time (client-only).
   const getProfileUrl = () =>
@@ -92,6 +104,7 @@ export default function ProfileCard({
       document.body.removeChild(textarea);
     }
     setCopied(true);
+    track("profile_link_copied", { username: profile.username });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -111,91 +124,34 @@ export default function ProfileCard({
         >
           {/* ---------- FRONT ---------- */}
           <div
-            className="flex flex-col items-center justify-center rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+            className="flex flex-col items-center justify-center rounded-3xl border p-8 text-center shadow-sm"
             style={{
               position: "absolute",
               inset: 0,
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
+              background: c.bg,
             }}
           >
-            <div className=" overflow-hidden avatar relative">
-
-            {profile.avatar_url && (
-              <Image
-              src={profile.avatar_url}
-              alt={profile.username}
-              width={290}
-              height={290}
-              priority
-              className=" h-56 max-w-65 object-cover"
-              unoptimized
-              />
-              )}
-              <div className="absolute top-0 right-0  w-20 h-full bg-[#7751b8]/70 ">
-
-            </div>
-            </div>
-
-            <div className="bg-[#201F1F] w-65 rounded-b-3xl px-5 py-6">
-
-           
-           
-              <h1 className="text-lg text-left font-medium  text-zinc-900 dark:text-zinc-50">
-                {displayName}
-              </h1>
-            
-
-              <div className="flex items-center justify-between">
-  
-              <div className="flex gap-2 items-center">
-            
-              <p className=" text-sm font-light text-zinc-700 dark:text-[#CFCFCF]">
-                {profile.job_title}
-              </p>
-           
-            <p className=" text-sm font-medium text-zinc-500 dark:text-[#CFCFCF]">{profile.company}</p>
-                </div>
-              {profile.logo_url && (
-                <Image
-                  src={profile.logo_url}
-                  alt={`${displayName} logo`}
-                  width={15}
-                  height={15}
-                  className="h-4 w-4 shrink-0  object-contain"
-                  unoptimized
-                />
-              )}
-</div>
-            </div>
-
-             {profile.bio && (
-              <p className="my-3 text-center text-sm text-zinc-600 dark:text-zinc-400">
-                {profile.bio}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setFlipped(true)}
-              className="mt-8 flex cursor-pointer w-10 h-10 items-center gap-2 rounded-full bg-(--main-orange) px-3 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width={16}
-                height={16}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
-             
-            </button>
+            {/*
+              The front-face layout is now delegated to the theme's layout
+              key (see components/card-layouts). Each layout is structurally
+              different, not just recolored.
+            */}
+            {renderCardFront({
+              profile: {
+                username: profile.username,
+                full_name: profile.full_name,
+                job_title: profile.job_title,
+                company: profile.company,
+                bio: profile.bio,
+                avatar_url: profile.avatar_url,
+                logo_url: profile.logo_url,
+              },
+              theme,
+              bannerUrl: profile.banner_url,
+              onFlip: () => setFlipped(true),
+            })}
           </div>
 
           {/* ---------- BACK ---------- */}
@@ -209,8 +165,6 @@ export default function ProfileCard({
               transform: "rotateY(180deg)",
             }}
           >
-          
-
             <div className="scrollable-links flex min-h-0 flex-1 flex-wrap content-start justify-center gap-3 overflow-y-auto pr-1">
               {socialLinks.length === 0 ? (
                 <p className="text-center text-sm text-zinc-400 dark:text-zinc-500">
@@ -221,15 +175,7 @@ export default function ProfileCard({
                   const platform = PLATFORM_MAP[link.platform];
                   const Icon = platform?.icon;
                   const label = platform?.label ?? link.platform;
-                  // DEFENSE-IN-DEPTH: sanitize the href at render time.
-                  // If a dangerous URL (javascript:, data:, etc.) somehow
-                  // made it into the DB, safeHref returns null and we skip
-                  // rendering the link entirely rather than render a live
-                  // XSS vector.
-                  const href = safeHref(
-                    link.url,
-                    link.platform === "email"
-                  );
+                  const href = safeHref(link.url, link.platform === "email");
                   if (!href) return null;
                   return (
                     <a
@@ -271,7 +217,9 @@ export default function ProfileCard({
             <button
               type="button"
               onClick={() => setFlipped(false)}
-              className="mt-4 flex mx-auto cursor-pointer w-10 h-10 items-center gap-2 rounded-full bg-(--main-orange) px-3 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90"
+              className="mt-4 mx-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white transition-opacity hover:opacity-90"
+              style={{ background: c.accent }}
+              aria-label="Flip card back"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -287,7 +235,6 @@ export default function ProfileCard({
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
-             
             </button>
           </div>
         </div>
@@ -315,10 +262,37 @@ export default function ProfileCard({
             </IconButton>
           )}
 
+          {/* Customize (owner only) — opens the Appearance modal */}
+          {isOwner && (
+            <IconButton
+              label="Customize card"
+              onClick={() => setShowAppearance(true)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+              </svg>
+            </IconButton>
+          )}
+
           {/* Save Contact — always available (name + URL), for owner & visitor. */}
           <IconButton
             href={`/${profile.username}/vcard`}
             label="Save Contact"
+            onClick={() => track("contact_saved", { username: profile.username })}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -377,10 +351,35 @@ export default function ProfileCard({
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
               </svg>
             )}
-            konneqta.com/@{profile.username}
+            www.konneqta.com/@{profile.username}
           </button>
         </Tooltip>
       </div>
+
+      {/* ---- Appearance modal (owner only) ---- */}
+      {isOwner && (
+        <AppearanceModal
+          open={showAppearance}
+          onClose={() => {
+            setShowAppearance(false);
+            router.refresh();
+          }}
+          profile={{
+            username: profile.username,
+            full_name: profile.full_name,
+            job_title: profile.job_title,
+            company: profile.company,
+            bio: profile.bio,
+            avatar_url: profile.avatar_url,
+            logo_url: profile.logo_url,
+          }}
+          currentThemeId={profile.theme ?? "classic"}
+          currentBannerUrl={profile.banner_url}
+          canUseThemes={canUseThemes}
+          canUseBanners={canUseBanners}
+          ownerId={profile.id}
+        />
+      )}
     </div>
   );
 }
