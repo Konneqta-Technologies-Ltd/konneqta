@@ -17,9 +17,11 @@ import { useEffect } from "react";
 export default function SideNav({
   open,
   onClose,
+  isAuthenticated,
 }: {
   open: boolean;
   onClose: () => void;
+  isAuthenticated: boolean;
 }) {
   // Close on Escape key.
   useEffect(() => {
@@ -84,8 +86,12 @@ export default function SideNav({
         {/* ---- Action buttons (bottom, stacked) ---- */}
         <div className="space-y-3 border-t border-zinc-200 p-5 dark:border-zinc-800">
           <InstallAppButton />
-          <LogoutButton />
-          <DeleteAccountButton />
+          {isAuthenticated && (
+            <>
+              <LogoutButton />
+              <DeleteAccountButton />
+            </>
+          )}
         </div>
       </aside>
     </>

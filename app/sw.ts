@@ -10,8 +10,8 @@
  *   - Runtime caching: navigation, static assets, images, fonts.
  *   - Offline fallback to /offline when a navigation fails with no cache.
  *
- * IMPORTANT: auth callbacks and the vCard route are never cached — they must
- * always hit the network for correctness/privacy.
+ * IMPORTANT: auth callbacks, the vCard route, and PostHog analytics
+ * (/ingest) are never cached — they must always hit the network.
  */
 
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureEvent } from "@/lib/posthog";
 import { cookies } from "next/headers";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
@@ -16,7 +17,7 @@ import { createServerClient } from "@supabase/ssr";
  * Security: the SUPABASE_SERVICE_ROLE_KEY is read from the server environment
  * and is NEVER exposed to the browser (no NEXT_PUBLIC_ prefix).
  */
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   try {
     const cookieStore = await cookies();
 
@@ -57,21 +58,44 @@ export async function POST(request: Request) {
 
     // 3. Wipe storage files for this user across all buckets.
     //    Files are stored under `<userId>/...` paths.
-    const buckets = ["avatars", "logos", "qrcodes"];
+    //    QR codes for multi-card are stored under `<userId>/<cardId>/qr.png`.
+    const buckets = ["avatars", "logos", "qrcodes", "banners"];
     for (const bucket of buckets) {
-      const { data: files } = await admin.storage
+      const { data: folders } = await admin.storage
         .from(bucket)
         .list(userId, { limit: 100 });
 
-      if (files && files.length > 0) {
-        const paths = files.map((f) => `${userId}/${f.name}`);
-        await admin.storage.from(bucket).remove(paths);
+      if (folders && folders.length > 0) {
+        // Collect all files (may include subfolders for qrcodes)
+        const allPaths: string[] = [];
+        for (const item of folders) {
+          const itemPath = `${userId}/${item.name}`;
+          if (item.id) {
+            // It's a folder (e.g. qrcodes has per-card subfolders)
+            const { data: subFiles } = await admin.storage
+              .from(bucket)
+              .list(itemPath, { limit: 100 });
+            if (subFiles) {
+              for (const sub of subFiles) {
+                allPaths.push(`${itemPath}/${sub.name}`);
+              }
+            }
+          } else {
+            // It's a file directly under the user folder
+            allPaths.push(itemPath);
+          }
+        }
+        if (allPaths.length > 0) {
+          await admin.storage.from(bucket).remove(allPaths);
+        }
       }
     }
 
-    // 4. Delete social_links + profiles rows manually (defence-in-depth
+    // 4. Delete cards + social_links + profiles rows manually (defence-in-depth
     //    in case ON DELETE CASCADE isn't wired up in the DB).
+    //    Cards must go first (social_links reference card_id), then profile.
     await admin.from("social_links").delete().eq("profile_id", userId);
+    await admin.from("cards").delete().eq("owner_id", userId);
     await admin.from("profiles").delete().eq("id", userId);
 
     // 5. Delete the auth user entry. This is the irreversible step.
@@ -84,6 +108,9 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // 6. Track the deletion event (server-side).
+    await captureEvent(userId, "account_deleted");
 
     return NextResponse.json({ success: true });
   } catch (err) {

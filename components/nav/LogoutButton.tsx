@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTrack } from "@/lib/use-track";
 
 /**
  * Logout button — orange bg, white text.
@@ -15,6 +16,7 @@ import { useState } from "react";
 export default function LogoutButton() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const track = useTrack();
 
   async function handleLogout() {
     setLoading(true);
@@ -27,6 +29,7 @@ export default function LogoutButton() {
       return;
     }
 
+    track("user_logged_out");
     toast.success("Logged out successfully");
     router.push("/");
   }

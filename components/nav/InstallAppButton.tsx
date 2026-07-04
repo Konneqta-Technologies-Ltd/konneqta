@@ -55,6 +55,18 @@ export default function InstallAppButton() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  // Track install prompt outcomes when the user makes a choice.
+  useEffect(() => {
+    if (!deferredPrompt) return;
+    deferredPrompt.userChoice.then((choice) => {
+      import("posthog-js").then(({ default: posthog }) => {
+        posthog.capture("install_prompt_resolved", {
+          outcome: choice.outcome,
+        });
+      });
+    });
+  }, [deferredPrompt]);
+
   // Don't render if installed, or if neither prompt nor iOS available.
   if (isStandalone) return null;
   if (!deferredPrompt && !isIOS) return null;
