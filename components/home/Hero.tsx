@@ -1,7 +1,6 @@
 'use client';
 
 import { motion, type Variants } from 'framer-motion';
-import Logo from '../../public/k-white.png';
 import WavyLine from './WavyLine';
 import FloatingDot from './FloatingDot';
 import Image from 'next/image';
@@ -88,7 +87,7 @@ export default function Hero() {
 
       <div className="relative mx-auto max-w-3xl px-6 text-center">
         <Image
-          src={Logo}
+          src="/k-white.png"
           alt="Logo"
           className="w-[100px] object-contain justify-self-center pb-8"
         />
