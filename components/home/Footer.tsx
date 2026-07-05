@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Logo from '../../public/k-white.png';
 import Image from 'next/image';
 
 const links = ['Privacy', 'Terms', 'Contact'];
@@ -10,7 +9,11 @@ export default function Footer() {
   return (
     <footer className="relative overflow-hidden bg-[#0a0a0a] pt-16">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 text-center sm:flex-row sm:justify-between sm:text-left">
-        <Image src={Logo} alt="Logo" className="object-contain w-[150px]" />
+        <Image
+          src="/k-white.png"
+          alt="Logo"
+          className="object-contain w-[150px]"
+        />
         <p className="text-sm text-white/50">
           Made for African digital culture.
         </p>
