@@ -29,7 +29,12 @@ export type CardLayoutProps = {
   profile: CardLayoutProfile;
   theme: ThemePreset;
   bannerUrl: string | null;
-  onFlip: () => void;
+  /**
+   * Flip handler. When omitted, the FlipButton is NOT rendered — used by
+   * AppearanceModal's scaled-down previews (which are already inside a
+   * <button>, and HTML forbids nested buttons → hydration error).
+   */
+  onFlip?: () => void;
 };
 
 const displayName = (p: CardLayoutProfile) => p.full_name || p.username;
@@ -43,31 +48,51 @@ function FlipButton({
   className = "",
 }: {
   accent: string;
-  onFlip: () => void;
+  onFlip?: () => void;
   className?: string;
 }) {
+  // When onFlip is undefined (preview mode inside AppearanceModal), render a
+  // non-interactive <div> styled identically. This avoids nested-<button>
+  // hydration errors while keeping the preview visually accurate.
+  const sharedClass = `flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90 ${className}`;
+  const inner = (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+
+  if (!onFlip) {
+    return (
+      <div
+        style={{ background: accent }}
+        className={`${sharedClass} pointer-events-none opacity-90`}
+        aria-hidden="true"
+      >
+        {inner}
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={onFlip}
       style={{ background: accent }}
-      className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white transition-opacity hover:opacity-90 ${className}`}
+      className={`${sharedClass} cursor-pointer`}
       aria-label="Flip card"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width={16}
-        height={16}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-        <path d="M3 3v5h5" />
-      </svg>
+      {inner}
     </button>
   );
 }
@@ -78,6 +103,13 @@ function FlipButton({
 export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
   const c = theme.colors;
   const name = displayName(profile);
+
+  function avatarRadius(shape?: "circle" | "rounded" | "square"): string {
+  if (shape === 'square')  return '4px'
+  if (shape === 'rounded') return '16px'
+  return '50%'  // default circle
+}
+
 
   return (
     <>

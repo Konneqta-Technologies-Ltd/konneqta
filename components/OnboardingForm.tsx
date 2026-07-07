@@ -133,8 +133,8 @@ export default function OnboardingForm({
       toast.error("Avatar must be a JPG, PNG, or WebP image");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB");
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Image must be less than 3MB");
       return;
     }
 
@@ -147,6 +147,12 @@ export default function OnboardingForm({
     setAvatarPreview(URL.createObjectURL(file));
   };
 
+  useEffect(() => {
+  return () => {
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+  };
+}, [avatarPreview]);
+
   // Store the selected logo file locally (no preview, just a name indicator).
   // Upload only happens on submit. Strict image-only check enforced both
   // client-side here and server-side via the Supabase bucket's allowed_mime_types.
@@ -158,8 +164,8 @@ export default function OnboardingForm({
       toast.error("Logo must be a JPG, PNG, or WebP image");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Logo must be less than 5MB");
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error("Logo must be less than 1MB");
       return;
     }
 
@@ -259,7 +265,51 @@ export default function OnboardingForm({
         return;
       }
 
-      // 3. Insert any social links the user added.
+      // 3. Create the user's PRIMARY card.
+      //    The public profile page (app/[username]/page.tsx) reads from the
+      //    `cards` table by slug — NOT from `profiles`. So without this row,
+      //    /<username> finds nothing and bounces the user back to home,
+      //    leaving them stuck in a redirect loop. This is the multi-card
+      //    model: profiles = account identity, cards = public-facing data.
+      const { data: cardRow, error: cardError } = await supabase
+        .from("cards")
+        .insert({
+          owner_id: user.id,
+          slug: form.username,
+          label: "Primary",
+          full_name: form.full_name,
+          job_title: form.job_title,
+          company: form.company,
+          bio: form.bio,
+          avatar_url: avatarUrl,
+          logo_url: logoUrl,
+          is_primary: true,
+          sort_order: 0,
+        })
+        .select("id")
+        .single();
+
+      if (cardError) {
+        toast.error(cardError.message);
+        return;
+      }
+
+      const cardId = cardRow.id;
+
+      // 3b. Point active_card_id at the new card so /post-login can
+      //     redirect straight to it on future logins.
+      const { error: activeCardError } = await supabase
+        .from("profiles")
+        .update({ active_card_id: cardId })
+        .eq("id", user.id);
+
+      if (activeCardError) {
+        // Non-fatal — profile + card exist, just no active pointer.
+        // /post-login falls back to finding the primary card.
+        console.error("active_card_id update error:", activeCardError);
+      }
+
+      // 4. Insert any social links the user added.
       //    SECURITY: reject dangerous URL schemes (javascript:, data:, etc.)
       //    before they reach the DB. The DB CHECK constraint is the real
       //    barrier; this is defense-in-depth + user feedback.
@@ -272,7 +322,8 @@ export default function OnboardingForm({
             : isSafeHttpUrl(trimmed);
         })
         .map((link) => ({
-          profile_id: user.id,
+          card_id: cardId,
+          profile_id: user.id, // keep for backward compat
           platform: link.platform,
           url: link.url.trim(),
         }));
@@ -291,8 +342,16 @@ export default function OnboardingForm({
         }
       }
 
-      // 4. Generate + persist the profile QR code (client-side gen → Storage).
+      // 5. Generate + persist the profile QR code (client-side gen → Storage).
       //    Failure here must NOT block the profile — warn and proceed.
+      //    One retry is attempted on a Storage error to ride out transient RLS
+      //    propagation / network hiccups; the profile is already created, so
+      //    this is best-effort. (Run supabase/fix-qrcodes-upload-policy.sql to
+      //    resolve the persistent "new row violates row-level security policy".)
+      //
+      //    QR codes are stored per-card under <userId>/<cardId>/qr.png so each
+      //    card can have its own (matching its slug/logo). The qr_code_url lives
+      //    on the `cards` row, not `profiles` — the public page reads it there.
       try {
         const profileUrl = `${window.location.origin}/${form.username}`;
         const qrDataUrl = await generateQrDataUrl({
@@ -300,29 +359,44 @@ export default function OnboardingForm({
           logoUrl: logoUrl || null,
         });
         const qrBlob = dataUrlToBlob(qrDataUrl);
-        const qrPath = `${user.id}/qr.png`;
+        const qrPath = `${user.id}/${cardId}/qr.png`;
 
-        const { error: qrUploadError } = await supabase.storage
-          .from("qrcodes")
-          .upload(qrPath, qrBlob, {
-            upsert: true,
-            contentType: "image/png",
-          });
+        let qrUploadError: unknown = null;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const { error } = await supabase.storage
+            .from("qrcodes")
+            .upload(qrPath, qrBlob, {
+              upsert: true,
+              contentType: "image/png",
+            });
+          qrUploadError = error;
+          if (!error) break;
+          if (attempt === 1) {
+            // Brief pause before the single retry.
+            await new Promise((r) => setTimeout(r, 800));
+          }
+        }
 
         if (qrUploadError) {
           console.error("qr upload error:", qrUploadError);
+          toast.warning(
+            "Profile created, but your QR code couldn’t be saved. You can regenerate it later from your profile."
+          );
         } else {
           const {
             data: { publicUrl: qrPublicUrl },
           } = supabase.storage.from("qrcodes").getPublicUrl(qrPath);
 
           await supabase
-            .from("profiles")
+            .from("cards")
             .update({ qr_code_url: qrPublicUrl })
-            .eq("id", user.id);
+            .eq("id", cardId);
         }
       } catch (qrErr) {
         console.error("qr generation error:", qrErr);
+        toast.warning(
+          "Profile created, but your QR code couldn’t be generated. You can regenerate it later from your profile."
+        );
       }
 
       router.push(`/${form.username}`);

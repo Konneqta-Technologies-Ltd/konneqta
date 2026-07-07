@@ -178,7 +178,11 @@ export default function AppearanceModal({
                             profile,
                             theme: preset,
                             bannerUrl: selectedBanner,
-                            onFlip: () => {},
+                            // onFlip intentionally omitted — this preview
+                            // lives inside a <button>, and rendering another
+                            // <button> (FlipButton) here causes a nested-
+                            // <button> hydration error. Without onFlip,
+                            // FlipButton renders a non-interactive <div>.
                           })}
                         </div>
                       </div>

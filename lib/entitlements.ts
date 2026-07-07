@@ -136,7 +136,12 @@ export function canUseSignature(profile: EntitlementProfile | null | undefined):
   return getFeatureFlags(profile).canUseSignature;
 }
 
-/** Convenience: how many cards can this user create? */
+/**
+ * How many cards can this user create?
+ * Exempt users (e.g. vicwin13) are unlimited → Infinity.
+ * Pro = 3, Free = 1.
+ */
 export function getMaxCards(profile: EntitlementProfile | null | undefined): number {
+  if (isExempt(profile)) return Infinity;
   return getFeatureFlags(profile).maxCards;
 }

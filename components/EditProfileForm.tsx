@@ -39,6 +39,7 @@ interface EditProfileFormProps {
   };
   initialSocialLinks: { id?: string; platform: string; url: string }[];
   canUploadLogo?: boolean;
+  maxCards: number;
   cardId: string;
   cardSlug: string;
   isPrimaryCard: boolean;
@@ -55,6 +56,7 @@ export default function EditProfileForm({
   initialProfile,
   initialSocialLinks,
   canUploadLogo = false,
+  maxCards = 1,
   cardId,
   cardSlug,
   isPrimaryCard,
@@ -277,7 +279,7 @@ export default function EditProfileForm({
 
         {/* ---- Card Switcher ---- */}
         <div className="mt-4">
-          <CardSwitcher cards={allCards} currentCardId={cardId} username={form.username} />
+          <CardSwitcher cards={allCards} currentCardId={cardId} username={form.username} maxCards={maxCards} />
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">

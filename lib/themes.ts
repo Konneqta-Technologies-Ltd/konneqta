@@ -61,7 +61,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     isFree: true,
     layout: "standard",
     colors: {
-      bg: "#ffffff",
+      bg: "#101010",
       infoBg: "#201F1F",
       text: "#FAFAFA",
       subtext: "#CFCFCF",
@@ -142,3 +142,50 @@ export function getTheme(themeId: string | null | undefined): ThemePreset {
   if (!themeId) return THEME_PRESETS[0];
   return THEME_PRESETS.find((t) => t.id === themeId) ?? THEME_PRESETS[0];
 }
+
+export type ThemeCustomization ={
+  /** Optional override for the card background. */
+  bg?: string;
+  accent?: string;
+  text?: string;
+  subtext?: string;
+  infoBg?: string;
+  avatarShape?: "circle" | "square" | "rounded";
+  fontFamily?: "system" | "inter" | "playfair" | "henny penny" | "metamorphous" | "passero" | "birthstone";
+  cardBannerUrl?: string;
+}
+
+export function resolveTheme(
+  themeId: string | null | undefined,
+  custom: ThemeCustomization | null | undefined
+): ThemePreset{
+  const preset = getTheme(themeId);
+  if (!custom || Object.keys(custom).length === 0) return preset;
+
+
+  return {
+    ...preset,
+    colors: {
+      ...preset.colors,
+      ...(custom.bg ? { bg: custom.bg } : {}),
+      ...(custom.accent ? { accent: custom.accent } : {}),
+      ...(custom.text ? { text: custom.text } : {}),
+      ...(custom.subtext ? { subtext: custom.subtext } : {}),
+      ...(custom.infoBg ? { infoBg: custom.infoBg } : {}),
+      ...(custom.cardBannerUrl ? { overlay: `url(${custom.cardBannerUrl})` } : {}),
+      ...(custom.avatarShape ? { avatarShape: custom.avatarShape } : {}),
+      ...(custom.fontFamily ? { fontFamily: custom.fontFamily } : {}),
+    },
+
+    }
+  }
+
+export const FONT_OPTIONS = {
+  inter: "'Inter', sans-serif",
+
+  "henny penny": "'Henny Penny', system-ui",
+  playfair: "'Playfair Display', serif",
+  metamorphous: "'Metamorphous', serif",
+  passero: "'Passero One', san-serif",
+  birthstone: "Birthstone, cursive",
+} as const
