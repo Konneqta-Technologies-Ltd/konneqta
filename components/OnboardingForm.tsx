@@ -283,6 +283,8 @@ export default function OnboardingForm({
           bio: form.bio,
           avatar_url: avatarUrl,
           logo_url: logoUrl,
+          phone: form.phone,
+          show_phone: phoneIsEmpty ? false : form.show_phone,
           is_primary: true,
           sort_order: 0,
         })

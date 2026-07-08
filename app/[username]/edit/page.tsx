@@ -22,9 +22,11 @@ export default async function EditProfilePage({
   }
 
   // 2. Fetch the card by slug
+  //    phone + show_phone are now PER-CARD (moved off profiles) so each card
+  //    can have its own contact number. Run fix-card-creation-and-per-card-phone.sql.
   const { data: card } = await supabase
     .from("cards")
-    .select("id, owner_id, slug, full_name, job_title, company, bio, avatar_url, logo_url, qr_code_url, is_primary")
+    .select("id, owner_id, slug, full_name, job_title, company, bio, avatar_url, logo_url, qr_code_url, is_primary, phone, show_phone")
     .eq("slug", username)
     .maybeSingle();
 
@@ -37,10 +39,12 @@ export default async function EditProfilePage({
     redirect(`/${username}`);
   }
 
-  // 4. Fetch account-level fields from profiles (email, phone, username)
+  // 4. Fetch account-level fields from profiles (email, username, entitlements)
+  //    phone + show_phone have MOVED to cards (per-card). Only email and the
+  //    immutable username live on profiles now.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, email, phone, show_phone, plan, is_exempt")
+    .select("username, email, plan, is_exempt")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -70,8 +74,9 @@ export default async function EditProfilePage({
         full_name: card.full_name ?? "",
         job_title: card.job_title ?? "",
         company: card.company ?? "",
-        phone: profile.phone ?? "",
-        show_phone: profile.show_phone ?? false,
+        // phone + show_phone are PER-CARD now (not account-level)
+        phone: card.phone ?? "",
+        show_phone: card.show_phone ?? false,
         bio: card.bio ?? "",
         avatar_url: card.avatar_url ?? "",
         logo_url: card.logo_url ?? "",

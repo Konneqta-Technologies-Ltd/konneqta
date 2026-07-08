@@ -165,6 +165,7 @@ export default async function UsernamePage({
   // that by falling back to the preset colors.
   const profile = {
     id: card.owner_id,
+    cardId: card.id,
     username: card.slug,
     full_name: card.full_name,
     job_title: card.job_title,

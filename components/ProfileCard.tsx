@@ -19,6 +19,7 @@ type SocialLink = {
 
 type Profile = {
   id: string;
+  cardId?: string;
   username: string;
   full_name: string | null;
   job_title: string | null;
@@ -125,14 +126,26 @@ export default function ProfileCard({
           }}
         >
           {/* ---------- FRONT ---------- */}
+          {/*
+            FLIP-BUG FIX: The front face MUST have an explicit identity
+            transform (rotateY(0deg)), overflow:hidden, and pointer-events
+            toggling. Without these, child elements (especially in the
+            BannerHero layout which uses absolute-positioned <img>/z-index
+            layers) "bleed through" the back when flipped and capture clicks,
+            making it impossible to flip back. backface-visibility:hidden on
+            the parent alone is insufficient for nested 3D content.
+          */}
           <div
-            className="flex flex-col items-center justify-center rounded-3xl border p-8 text-center shadow-sm"
+            className="flex flex-col items-center justify-center overflow-hidden rounded-3xl border p-8 text-center shadow-sm"
             style={{
               position: "absolute",
               inset: 0,
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               background: c.bg,
+              transform: "rotateY(0deg)",
+              pointerEvents: flipped ? "none" : "auto",
+              zIndex: flipped ? 0 : 1,
             }}
           >
             {/*
@@ -404,6 +417,8 @@ export default function ProfileCard({
           canUseThemes={canUseThemes}
           canUseBanners={canUseBanners}
           ownerId={profile.id}
+          cardId={profile.cardId}
+          initialCustom={profile.theme_custom}
         />
       )}
     </div>

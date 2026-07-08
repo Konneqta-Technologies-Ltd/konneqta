@@ -15,6 +15,17 @@
 import Image from "next/image";
 import type { ThemePreset } from "@/lib/themes";
 
+/**
+ * Resolve avatar border-radius from the theme's avatarShape customization.
+ * Defaults to the layout's own styling when not set.
+ */
+function avatarRadius(shape: ThemePreset["avatarShape"], fallback = "50%"): string {
+  if (shape === "square") return "4px";
+  if (shape === "rounded") return "16px";
+  if (shape === "circle") return "50%";
+  return fallback;
+}
+
 export type CardLayoutProfile = {
   username: string;
   full_name: string | null;
@@ -104,13 +115,6 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
   const c = theme.colors;
   const name = displayName(profile);
 
-  function avatarRadius(shape?: "circle" | "rounded" | "square"): string {
-  if (shape === 'square')  return '4px'
-  if (shape === 'rounded') return '16px'
-  return '50%'  // default circle
-}
-
-
   return (
     <>
       <div className="avatar relative overflow-hidden">
@@ -122,6 +126,7 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
             height={290}
             priority
             className="h-56 max-w-65 object-cover"
+            style={{ borderRadius: avatarRadius(theme.avatarShape, "0px") }}
             unoptimized
           />
         )}
@@ -138,7 +143,7 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
       >
         <h1
           className="text-left text-lg font-medium"
-          style={{ color: c.text }}
+          style={{ color: c.text, fontFamily: theme.fontFamily }}
         >
           {name}
         </h1>
@@ -191,14 +196,17 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
           width={120}
           height={120}
           priority
-          className="h-28 w-28 rounded-full object-cover ring-2"
-          style={{ borderColor: c.accent }}
+          className="h-28 w-28 object-cover ring-2"
+          style={{ borderColor: c.accent, borderRadius: avatarRadius(theme.avatarShape) }}
           unoptimized
         />
       ) : null}
 
       <div className="flex flex-col items-center gap-1">
-        <h1 className="text-center text-2xl font-semibold" style={{ color: c.text }}>
+        <h1
+          className="text-center text-2xl font-semibold"
+          style={{ color: c.text, fontFamily: theme.fontFamily }}
+        >
           {name}
         </h1>
         {(profile.job_title || profile.company) && (
@@ -275,7 +283,7 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
             unoptimized
           />
         )}
-        <h1 className="text-left text-xl font-bold" style={{ color: c.text }}>
+        <h1 className="text-left text-xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>
           {name}
         </h1>
         {profile.job_title && (
@@ -337,7 +345,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
       <div className="flex flex-col gap-1">
         <h1
           className="text-left text-3xl font-bold leading-tight"
-          style={{ color: c.text }}
+          style={{ color: c.text, fontFamily: theme.fontFamily }}
         >
           {name}
         </h1>
@@ -405,7 +413,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           />
         )}
 
-        <h1 className="text-center text-2xl font-bold" style={{ color: c.text }}>
+        <h1 className="text-center text-2xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>
           {name}
         </h1>
 

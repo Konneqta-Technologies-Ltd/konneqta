@@ -169,6 +169,9 @@ export default function EditProfileForm({
       }
 
       // 2. UPDATE THE CARD ROW (card-specific fields)
+      //    phone + show_phone are PER-CARD now — each card has its own number.
+      //    Only email + username stay account-level (on profiles).
+      const phoneIsEmpty = !form.phone.trim();
       const { error: cardError } = await supabase
         .from("cards")
         .update({
@@ -178,6 +181,8 @@ export default function EditProfileForm({
           bio: form.bio,
           avatar_url: avatarUrl,
           logo_url: logoUrl,
+          phone: form.phone,
+          show_phone: phoneIsEmpty ? false : form.show_phone,
         })
         .eq("id", cardId);
 
@@ -186,20 +191,9 @@ export default function EditProfileForm({
         return;
       }
 
-      // 3. UPDATE THE PROFILE ROW (account-level: phone, show_phone)
-      const phoneIsEmpty = !form.phone.trim();
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          phone: form.phone,
-          show_phone: phoneIsEmpty ? false : form.show_phone,
-        })
-        .eq("id", user.id);
-
-      if (profileError) {
-        toast.error(profileError.message);
-        return;
-      }
+      // 3. (Account-level profile row no longer needs updating — phone moved
+      //    to cards so each card is fully independent. username + email are
+      //    immutable here.)
 
       // 4. Sync social links (by card_id now)
       const { error: deleteError } = await supabase

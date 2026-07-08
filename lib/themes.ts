@@ -52,6 +52,10 @@ export type ThemePreset = {
   colors: ThemeColors;
   layout: ThemeLayout;
   isFree: boolean;
+  /** Custom font family (from theme_custom). Applied to name/headings. */
+  fontFamily?: string;
+  /** Custom avatar border-radius (from theme_custom). */
+  avatarShape?: "circle" | "square" | "rounded";
 };
 
 export const THEME_PRESETS: ThemePreset[] = [
@@ -158,13 +162,20 @@ export type ThemeCustomization ={
 export function resolveTheme(
   themeId: string | null | undefined,
   custom: ThemeCustomization | null | undefined
-): ThemePreset{
+): ThemePreset {
   const preset = getTheme(themeId);
   if (!custom || Object.keys(custom).length === 0) return preset;
 
+  // Resolve font key → CSS font-family string (e.g. "playfair" →
+  // "var(--font-playfair), serif"). Lives at the preset top level so the
+  // card layouts can read theme.fontFamily directly.
+  const resolvedFont = custom.fontFamily
+    ? resolveFontFamily(custom.fontFamily)
+    : undefined;
 
   return {
     ...preset,
+    // Colors: custom values override preset values.
     colors: {
       ...preset.colors,
       ...(custom.bg ? { bg: custom.bg } : {}),
@@ -172,20 +183,33 @@ export function resolveTheme(
       ...(custom.text ? { text: custom.text } : {}),
       ...(custom.subtext ? { subtext: custom.subtext } : {}),
       ...(custom.infoBg ? { infoBg: custom.infoBg } : {}),
-      ...(custom.cardBannerUrl ? { overlay: `url(${custom.cardBannerUrl})` } : {}),
-      ...(custom.avatarShape ? { avatarShape: custom.avatarShape } : {}),
-      ...(custom.fontFamily ? { fontFamily: custom.fontFamily } : {}),
     },
+    // Non-color customizations live on the preset top level.
+    ...(custom.avatarShape ? { avatarShape: custom.avatarShape } : {}),
+    ...(resolvedFont ? { fontFamily: resolvedFont } : {}),
+  };
+}
 
-    }
-  }
-
+/**
+ * Map a customization font key → the CSS variable that the matching Google
+ * Font is exposed under in app/layout.tsx. Used by the card layouts to apply
+ * the user's chosen font via inline style.
+ */
 export const FONT_OPTIONS = {
-  inter: "'Inter', sans-serif",
-
+  inter: "var(--font-inter), sans-serif",
   "henny penny": "'Henny Penny', system-ui",
-  playfair: "'Playfair Display', serif",
-  metamorphous: "'Metamorphous', serif",
-  passero: "'Passero One', san-serif",
-  birthstone: "Birthstone, cursive",
-} as const
+  playfair: "var(--font-playfair), serif",
+  metamorphous: "var(--font-metamorphous), serif",
+  passero: "var(--font-passero), sans-serif",
+  birthstone: "var(--font-birthstone), cursive",
+} as const;
+
+export type FontFamilyKey = keyof typeof FONT_OPTIONS;
+
+/** Resolve a customization font key to its CSS font-family string. */
+export function resolveFontFamily(
+  key: ThemeCustomization["fontFamily"]
+): string | undefined {
+  if (!key) return undefined;
+  return FONT_OPTIONS[key as FontFamilyKey] ?? FONT_OPTIONS.inter;
+}
