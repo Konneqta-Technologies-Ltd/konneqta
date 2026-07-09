@@ -13,6 +13,8 @@ export default function Footer() {
           src="/k-white.png"
           alt="Logo"
           className="object-contain w-[150px]"
+          width={150}
+          height={40}
         />
         <p className="text-sm text-white/50">
           Made for African digital culture.

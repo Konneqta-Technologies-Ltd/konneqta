@@ -1,11 +1,11 @@
 'use client';
 
 import { motion, type Variants } from 'framer-motion';
+import Link from 'next/link';
 import WavyLine from './WavyLine';
 import FloatingDot from './FloatingDot';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
-import { GoogleIcon } from '../GoogleIcon';
+import SignInWithGoogle from '@/components/SignInWithGoogle';
 
 const container: Variants = {
   hidden: {},
@@ -18,17 +18,8 @@ const item: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
-export default function Hero() {
-  const supabase = createClient();
 
-  async function handleSignIn() {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  }
+export default function Hero() {
   return (
     <section className="relative overflow-hidden bg-[#0a0a0a] pt-10 pb-36 md:pb-44">
       {/* ambient decoration layer */}
@@ -85,13 +76,34 @@ export default function Hero() {
         />
       </div>
 
-      <div className="relative mx-auto max-w-3xl px-6 text-center">
+      {/* header nav */}
+      <div className="relative mx-auto flex max-w-5xl items-center justify-between px-6">
         <Image
           src="/k-white.png"
           alt="Logo"
-          className="w-[100px] object-contain justify-self-center pb-8"
+          className="w-[100px] object-contain"
+          width={100}
+          height={30}
         />
 
+        <nav className="flex items-center gap-6">
+          <Link
+            href="/auth/signup"
+            className="visible-focus rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+          >
+            Sign up
+          </Link>
+
+          <Link
+            href="/auth/login"
+            className="visible-focus text-sm font-semibold text-white/80 transition-colors hover:text-white"
+          >
+            Login
+          </Link>
+        </nav>
+      </div>
+
+      <div className="relative mx-auto max-w-3xl px-6 pt-16 text-center">
         <motion.div
           variants={container}
           initial="hidden"
@@ -124,15 +136,7 @@ export default function Hero() {
           </motion.p>
 
           <motion.div variants={item} className="mt-10">
-            <motion.button
-              whileHover={{ scale: 1.03, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className="visible-focus flex items-center gap-3 rounded-full bg-[#F3EFE4] px-7 py-4 font-semibold text-[#0a0a0a] shadow-lg shadow-black/20 transition-shadow hover:shadow-xl cursor-pointer"
-              onClick={handleSignIn}
-            >
-              <GoogleIcon />
-              Continue with Google
-            </motion.button>
+            <SignInWithGoogle />
           </motion.div>
         </motion.div>
       </div>
