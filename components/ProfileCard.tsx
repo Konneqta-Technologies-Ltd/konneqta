@@ -1,10 +1,11 @@
 "use client";
 
+import { ThemeCustomization, resolveTheme } from "@/lib/themes";
+
 import AppearanceModal from "./AppearanceModal";
 import { PLATFORM_MAP } from "@/lib/social-platforms";
 import ShareMenu from "./ShareMenu";
 import Tooltip from "./Tooltip";
-import { getTheme } from "@/lib/themes";
 import { renderCardFront } from "./card-layouts";
 import { safeHref } from "@/lib/url-validation";
 import { useRouter } from "next/navigation";
@@ -18,6 +19,7 @@ type SocialLink = {
 
 type Profile = {
   id: string;
+  cardId?: string;
   username: string;
   full_name: string | null;
   job_title: string | null;
@@ -28,6 +30,7 @@ type Profile = {
   qr_code_url: string | null;
   theme: string | null;
   banner_url: string | null;
+  theme_custom: ThemeCustomization | null;
 };
 
 /** Circular icon button shared by the card's action row. */
@@ -81,7 +84,7 @@ export default function ProfileCard({
   const track = useTrack();
   const router = useRouter();
 
-  const theme = getTheme(profile.theme);
+  const theme = resolveTheme(profile.theme, profile.theme_custom);
   const c = theme.colors;
   const displayName = profile.full_name || profile.username;
 
@@ -123,14 +126,26 @@ export default function ProfileCard({
           }}
         >
           {/* ---------- FRONT ---------- */}
+          {/*
+            FLIP-BUG FIX: The front face MUST have an explicit identity
+            transform (rotateY(0deg)), overflow:hidden, and pointer-events
+            toggling. Without these, child elements (especially in the
+            BannerHero layout which uses absolute-positioned <img>/z-index
+            layers) "bleed through" the back when flipped and capture clicks,
+            making it impossible to flip back. backface-visibility:hidden on
+            the parent alone is insufficient for nested 3D content.
+          */}
           <div
-            className="flex flex-col items-center justify-center rounded-3xl border p-8 text-center shadow-sm"
+            className="flex flex-col items-center justify-center overflow-hidden rounded-3xl border p-8 text-center shadow-sm"
             style={{
               position: "absolute",
               inset: 0,
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               background: c.bg,
+              transform: "rotateY(0deg)",
+              pointerEvents: flipped ? "none" : "auto",
+              zIndex: flipped ? 0 : 1,
             }}
           >
             {/*
@@ -156,7 +171,7 @@ export default function ProfileCard({
 
           {/* ---------- BACK ---------- */}
           <div
-            className="flex flex-col rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+            className="flex flex-col rounded-3xl border border-zinc-200 bg-zinc-900 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
             style={{
               position: "absolute",
               inset: 0,
@@ -262,6 +277,27 @@ export default function ProfileCard({
             </IconButton>
           )}
 
+          {/* New Card (owner only) — quick access to create another identity */}
+          {isOwner && (
+            <IconButton href={`/${profile.username}/edit`} label="Add new card">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
+            </IconButton>
+          )}
+
           {/* Customize (owner only) — opens the Appearance modal */}
           {isOwner && (
             <IconButton
@@ -288,29 +324,32 @@ export default function ProfileCard({
             </IconButton>
           )}
 
-          {/* Save Contact — always available (name + URL), for owner & visitor. */}
-          <IconButton
-            href={`/${profile.username}/vcard`}
-            label="Save Contact"
-            onClick={() => track("contact_saved", { username: profile.username })}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {/* Save Contact — visitors only. The owner doesn't need to save
+              their own card. */}
+          {!isOwner && (
+            <IconButton
+              href={`/${profile.username}/vcard`}
+              label="Save Contact"
+              onClick={() => track("contact_saved", { username: profile.username })}
             >
-              <path d="M16 2v4a2 2 0 0 0 2 2h4" />
-              <path d="M3.27 6.96 12 12.01l8.73-5.05" />
-              <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9l5 5Z" />
-              <path d="M8 14h.01M12 14h.01M16 14h.01" />
-            </svg>
-          </IconButton>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M16 2v4a2 2 0 0 0 2 2h4" />
+                <path d="M3.27 6.96 12 12.01l8.73-5.05" />
+                <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9l5 5Z" />
+                <path d="M8 14h.01M12 14h.01M16 14h.01" />
+              </svg>
+            </IconButton>
+          )}
 
           <Tooltip label="Share" side="top">
             <ShareMenu username={profile.username} title={displayName} />
@@ -378,6 +417,8 @@ export default function ProfileCard({
           canUseThemes={canUseThemes}
           canUseBanners={canUseBanners}
           ownerId={profile.id}
+          cardId={profile.cardId}
+          initialCustom={profile.theme_custom}
         />
       )}
     </div>

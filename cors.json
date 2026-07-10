@@ -1,0 +1,8 @@
+[
+  {
+    "Origin": ["https://www.konneqta.com", "https://konneqta.com", "http://localhost:3000"],
+    "Method": ["GET", "HEAD"],
+    "Headers": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]

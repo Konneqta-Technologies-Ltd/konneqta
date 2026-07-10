@@ -1,9 +1,12 @@
+
 "use client";
 
 import DeleteAccountButton from "./DeleteAccountButton";
 import InstallAppButton from "./InstallAppButton";
 import LogoutButton from "./LogoutButton";
+import { toast } from "sonner";
 import { useEffect } from "react";
+import { useFlutterwavePayment } from "@/hooks/useFlutterwavePayment";
 
 /**
  * Slide-out side navigation drawer.
@@ -32,6 +35,18 @@ export default function SideNav({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
+
+  const { pay, loading } = useFlutterwavePayment();
+
+  const handlePay = async () => {
+    try {
+      await pay("premium_upgrade");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Payment failed to start.";
+      toast.error(message);
+    }
+  };
 
   return (
     <>
@@ -88,7 +103,14 @@ export default function SideNav({
           <InstallAppButton />
           {isAuthenticated && (
             <>
-              <LogoutButton />
+              <button
+                onClick={handlePay}
+                disabled={loading}
+                className="rounded bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "Loading..." : "Test Flutterwave"}
+              </button>
+            <LogoutButton />
               <DeleteAccountButton />
             </>
           )}

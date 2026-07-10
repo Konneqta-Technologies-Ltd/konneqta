@@ -5,16 +5,14 @@ import { useEffect, useState } from "react";
 /**
  * Install App button — purple bg, white text.
  *
- * Captures the browser's `beforeinstallprompt` event (Chrome/Edge/Samsung on
- * Android & desktop) and triggers the native install sheet when clicked.
+ * ALWAYS visible to all visitors (auth'd or not) so the install entry point
+ * is discoverable everywhere. The click handler adapts to the browser:
+ *   - Chromium (Chrome/Edge/Samsung): fires `beforeinstallprompt` → native sheet
+ *   - iOS Safari: shows the Share → Add to Home Screen guide
+ *   - Other (Firefox, desktop Safari): shows the generic install guide
  *
- * On iOS Safari (which doesn't support beforeinstallprompt), shows an
- * instruction card teaching the user to use Share → Add to Home Screen.
- *
- * Hidden entirely when:
- *   - The app is already installed (display-mode: standalone)
- *   - The browser doesn't support installation
- *   - The user previously dismissed the prompt (localStorage flag)
+ * The button is only hidden when the app is ALREADY installed
+ * (display-mode: standalone).
  */
 
 interface BeforeInstallPromptEvent extends Event {
@@ -42,6 +40,8 @@ export default function InstallAppButton() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  // isStandalone is reserved for a future "already installed" banner/edge case.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isStandalone] = useState(getStandalone);
   const [isIOS] = useState(getIsIOS);
 
@@ -67,10 +67,10 @@ export default function InstallAppButton() {
     });
   }, [deferredPrompt]);
 
-  // Don't render if installed, or if neither prompt nor iOS available.
-  if (isStandalone) return null;
-  if (!deferredPrompt && !isIOS) return null;
-
+  // Always render the button so it's visible to ALL visitors (auth'd or not).
+  // The click handler decides what to do based on the browser's capabilities.
+  // (Previously this returned null when beforeinstallprompt hadn't fired,
+  // which made the button invisible on most desktop browsers during dev.)
   async function handleInstall() {
     if (deferredPrompt) {
       await deferredPrompt.prompt();
@@ -81,6 +81,10 @@ export default function InstallAppButton() {
       }
       setDeferredPrompt(null);
     } else if (isIOS) {
+      setShowIOSGuide(true);
+    } else {
+      // Browser doesn't support beforeinstallprompt and isn't iOS —
+      // show the generic guide (covers Firefox, desktop Safari, etc.)
       setShowIOSGuide(true);
     }
   }
@@ -113,7 +117,7 @@ export default function InstallAppButton() {
       {/* ---- iOS Instructions Modal ---- */}
       {showIOSGuide && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4"
           onClick={() => setShowIOSGuide(false)}
         >
           <div

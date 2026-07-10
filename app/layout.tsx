@@ -1,11 +1,12 @@
 import "./globals.css";
 
+import { Birthstone, Inter, Metamorphous, Outfit, Passero_One, Playfair_Display } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 
 import { Analytics } from "@vercel/analytics/next"
 import AppNavbar from "@/components/AppNavbar";
-import { Outfit } from "next/font/google";
 import PostHogProvider from "@/components/PostHogProvider";
+import Script from 'next/script';
 import SwRegister from "@/components/SwRegister";
 import { Toaster } from "sonner";
 
@@ -14,6 +15,15 @@ const outfit = Outfit({
   subsets: ["latin"],
   variable: '--font-outfit',
 });
+
+// Card customization fonts. Exposed as CSS variables so the card layouts can
+// apply them via inline styles / Tailwind. These load on every page (small
+// subset cost) so a user's chosen font renders even on first paint.
+const inter = Inter({ display: "swap", subsets: ["latin"], variable: "--font-inter" });
+const playfair = Playfair_Display({ display: "swap", subsets: ["latin"], variable: "--font-playfair" });
+const passero = Passero_One({ display: "swap", weight: "400", subsets: ["latin"], variable: "--font-passero" });
+const metamorphous = Metamorphous({ display: "swap", weight: "400", subsets: ["latin"], variable: "--font-metamorphous" });
+const birthstone = Birthstone({ display: "swap", weight: "400", subsets: ["latin"], variable: "--font-birthstone" });
 
 export const metadata: Metadata = {
   // metadataBase resolves relative OG/Twitter image URLs (e.g. "/banner.png")
@@ -89,10 +99,10 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={` ${outfit.variable} h-full antialiased`}
+      className={` ${outfit.variable} ${inter.variable} ${playfair.variable} ${passero.variable} ${metamorphous.variable} ${birthstone.variable} h-full antialiased`}
     >
       <head>
-        <script
+        <Script id="analytics-init" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -117,6 +127,11 @@ export default function RootLayout({
           {/* Auth-gated navbar (hamburger + side drawer) — logged-in users only. */}
           <AppNavbar />
         </PostHogProvider>
+        <Script
+          src="https://checkout.flutterwave.com/v3.js"
+          strategy="afterInteractive"
+          
+        />
       </body>
     </html>
   );

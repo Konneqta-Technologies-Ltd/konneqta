@@ -27,10 +27,12 @@ export default function CardSwitcher({
   cards,
   currentCardId,
   username,
+  maxCards = 1,
 }: {
   cards: CardSummary[];
   currentCardId: string;
   username: string;
+  maxCards?: number;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -104,7 +106,9 @@ export default function CardSwitcher({
         <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
           My Cards ({cards.length})
         </span>
-        {cards.length < 3 && (
+        {/* maxCards of Infinity = exempt user (unlimited). Otherwise respect
+            the plan limit. Use Number.isFinite so Infinity isn't < anything. */}
+        {(maxCards === Infinity || cards.length < maxCards) && (
           <button
             type="button"
             onClick={() => setShowCreate(!showCreate)}
