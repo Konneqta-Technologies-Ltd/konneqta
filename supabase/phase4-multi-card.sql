@@ -83,17 +83,24 @@ create policy "cards_owner_delete" on public.cards for delete to authenticated u
 create or replace function public.enforce_card_limit() returns trigger language plpgsql as $$
 declare v_plan text;
 v_exempt boolean;
+v_username text;
 v_current_count integer;
 v_max integer;
 begin -- Only service_role or the owner can insert (RLS handles this, but
 -- this trigger is the REAL limit enforcer).
 select plan,
-    is_exempt into v_plan,
-    v_exempt
+    is_exempt,
+    username into v_plan,
+    v_exempt,
+    v_username
 from public.profiles
 where id = new.owner_id;
+-- Bypass if the database flag is set OR the username is in the hardcoded
+-- exempt list. This mirrors lib/entitlements.ts EXEMPT_USERNAMES so the
+-- client and DB always agree on who is exempt.
 if v_exempt then return new;
--- exempt users bypass the limit
+end if;
+if v_username in ('vicwin13') then return new;
 end if;
 select count(*) into v_current_count
 from public.cards

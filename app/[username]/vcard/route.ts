@@ -9,8 +9,8 @@ import { createClient } from "@/lib/supabase/server";
  *
  * Privacy:
  * - Selects ONLY the columns it needs: full_name, slug, phone, show_phone.
- * - Phone is fetched from the OWNER's profile (account-level), not the card,
- *   and is included in the output only when show_phone is TRUE and non-empty.
+ * - Phone + show_phone are PER-CARD (each card has its own number). Phone is
+ *   included in the output only when show_phone is TRUE and non-empty.
  * - Email is never selected, never included.
  */
 
@@ -24,23 +24,18 @@ export async function GET(
   const { username } = await ctx.params;
   const supabase = await createClient();
 
-  // Look up the card by slug
+  // Look up the card by slug.
+  // phone + show_phone are PER-CARD now (moved off profiles) so each card
+  // has its own contact number.
   const { data: card } = await supabase
     .from("cards")
-    .select("id, owner_id, slug, full_name")
+    .select("id, owner_id, slug, full_name, phone, show_phone")
     .eq("slug", username)
     .maybeSingle();
 
   if (!card) {
     return new Response("Not Found", { status: 404 });
   }
-
-  // Fetch phone + show_phone from the owner's profile (account-level)
-  const { data: owner } = await supabase
-    .from("profiles")
-    .select("phone, show_phone")
-    .eq("id", card.owner_id)
-    .maybeSingle();
 
   // Build the canonical profile URL from the incoming request host.
   const url = new URL(_req.url);
@@ -50,8 +45,8 @@ export async function GET(
     fullName: card.full_name,
     username: card.slug,
     profileUrl,
-    phone: owner?.phone ?? null,
-    showPhone: owner?.show_phone ?? false,
+    phone: card.phone ?? null,
+    showPhone: card.show_phone ?? false,
   });
 
   // Suggest a filename the OS will use for "Save Contact".
