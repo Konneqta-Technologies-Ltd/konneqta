@@ -6,6 +6,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next"
 import AppNavbar from "@/components/AppNavbar";
 import PostHogProvider from "@/components/PostHogProvider";
+import Script from 'next/script';
 import SwRegister from "@/components/SwRegister";
 import { Toaster } from "sonner";
 
@@ -101,7 +102,7 @@ export default function RootLayout({
       className={` ${outfit.variable} ${inter.variable} ${playfair.variable} ${passero.variable} ${metamorphous.variable} ${birthstone.variable} h-full antialiased`}
     >
       <head>
-        <script
+        <Script id="analytics-init" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -126,6 +127,11 @@ export default function RootLayout({
           {/* Auth-gated navbar (hamburger + side drawer) — logged-in users only. */}
           <AppNavbar />
         </PostHogProvider>
+        <Script
+          src="https://checkout.flutterwave.com/v3.js"
+          strategy="afterInteractive"
+          
+        />
       </body>
     </html>
   );

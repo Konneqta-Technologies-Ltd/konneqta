@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+/sentry-example-page
+
+# Posthog Config File
+posthog-warehouse-report.md
+
+Konneqt1.docx

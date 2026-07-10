@@ -15,9 +15,9 @@ const QrScanner = dynamic(() => import("./QrScanner"), { ssr: false });
  * App Navbar — always-visible hamburger with auth-aware drawer + scan button.
  *
  * - The hamburger button (fixed top-left) is shown to ALL visitors.
- * - The QR scan button (next to the hamburger) is shown ONLY to authenticated
- *   users — visitors viewing a shared profile can't use the scanner.
- * - The drawer's action buttons (Logout, Delete Account) are auth-gated too.
+ * - The QR scan button (next to the hamburger) is shown to ALL visitors so
+ *   anyone can scan a Konneqta profile QR code.
+ * - The drawer's action buttons (Logout, Delete Account) are auth-gated.
  */
 export default function AppNavbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -69,40 +69,38 @@ export default function AppNavbar() {
           </svg>
         </button>
 
-        {/* QR Scan button — authenticated users only */}
-        {user && (
-          <button
-            type="button"
-            onClick={() => setScannerOpen(true)}
-            aria-label="Scan QR code"
-            className="cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        {/* QR Scan button — available to all visitors */}
+        <button
+          type="button"
+          onClick={() => setScannerOpen(true)}
+          aria-label="Scan QR code"
+          className="cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect width="5" height="5" x="3" y="3" rx="1" />
-              <rect width="5" height="5" x="16" y="3" rx="1" />
-              <rect width="5" height="5" x="3" y="16" rx="1" />
-              <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
-              <path d="M21 21v.01" />
-              <path d="M12 7v3a2 2 0 0 1-2 2H7" />
-              <path d="M3 12h.01" />
-              <path d="M12 3h.01" />
-              <path d="M12 16v.01" />
-              <path d="M16 12h1" />
-              <path d="M21 12v.01" />
-              <path d="M12 21v-1" />
-            </svg>
-          </button>
-        )}
+            <rect width="5" height="5" x="3" y="3" rx="1" />
+            <rect width="5" height="5" x="16" y="3" rx="1" />
+            <rect width="5" height="5" x="3" y="16" rx="1" />
+            <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
+            <path d="M21 21v.01" />
+            <path d="M12 7v3a2 2 0 0 1-2 2H7" />
+            <path d="M3 12h.01" />
+            <path d="M12 3h.01" />
+            <path d="M12 16v.01" />
+            <path d="M16 12h1" />
+            <path d="M21 12v.01" />
+            <path d="M12 21v-1" />
+          </svg>
+        </button>
       </div>
 
       <SideNav
@@ -111,8 +109,8 @@ export default function AppNavbar() {
         isAuthenticated={!!user}
       />
 
-      {/* QR Scanner — lazy-loaded, auth-gated */}
-      {scannerOpen && user && (
+      {/* QR Scanner — lazy-loaded, available to all visitors */}
+      {scannerOpen && (
         <QrScanner onClose={() => setScannerOpen(false)} />
       )}
     </>
