@@ -21,7 +21,7 @@ const item: Variants = {
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-[#0a0a0a] pt-10 pb-36 md:pb-44">
+    <section className="relative overflow-hidden bg-[#0a0a0a] pt-10 pb-20 sm:pb-36 md:pb-44">
       {/* ambient decoration layer */}
       <div
         className="absolute inset-0 bg-[#6B21D4]"
@@ -60,18 +60,18 @@ export default function Hero() {
         <FloatingDot
           color="#F3C23A"
           size={10}
-          className="left-[160px] top-[220px] hidden sm:block"
+          className="left-[60px] sm:left-[160px] top-[220px] sm:block"
         />
         <FloatingDot
           color="#2DD9A6"
           size={10}
-          className="right-[195px] top-[195px] hidden sm:block"
+          className="right-[35px] sm:right-[195px] top-[195px] sm:block"
           duration={4}
         />
         <FloatingDot
           color="#F3C23A"
           size={8}
-          className="right-[165px] top-[545px] hidden sm:block"
+          className="right-[35px] sm:right-[165px] top-[545px] sm:block"
           duration={3}
         />
       </div>
@@ -103,7 +103,7 @@ export default function Hero() {
         </nav>
       </div>
 
-      <div className="relative mx-auto max-w-3xl px-6 pt-16 text-center">
+      <div className="relative mx-auto max-w-3xl px-6 pt-8 sm:pt-16 text-center">
         <motion.div
           variants={container}
           initial="hidden"
@@ -112,7 +112,7 @@ export default function Hero() {
         >
           <motion.span
             variants={item}
-            className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/90"
+            className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
             Built for African creators &amp; professionals
@@ -120,7 +120,7 @@ export default function Hero() {
 
           <motion.h1
             variants={item}
-            className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl"
+            className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl"
           >
             Connect Smarter
             <br />

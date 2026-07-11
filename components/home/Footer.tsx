@@ -7,7 +7,7 @@ const links = ['Privacy', 'Terms', 'Contact'];
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden bg-[#0a0a0a] pt-16">
+    <footer className="relative overflow-hidden bg-[#0a0a0a] pt-8 sm:pt-16">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 text-center sm:flex-row sm:justify-between sm:text-left">
         <Image
           src="/k-white.png"

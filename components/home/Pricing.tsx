@@ -41,7 +41,7 @@ export default function Pricing() {
   const price = pricing[cycle];
 
   return (
-    <section className="relative bg-[#0a0a0a] px-6 py-28">
+    <section className="relative bg-[#0a0a0a] px-6 py-16 sm:py-28">
       <div className="mx-auto max-w-3xl text-center">
         <motion.p
           variants={fadeUp}
@@ -59,7 +59,7 @@ export default function Pricing() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="mt-6 font-display text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl"
+          className="mt-6 font-display text-2xl font-bold leading-tight text-white sm:text-4xl md:text-5xl"
         >
           Simple pricing, <span className="text-[#FF6B2C]">no surprises.</span>
         </motion.h2>
@@ -99,7 +99,7 @@ export default function Pricing() {
         </motion.div>
       </div>
 
-      <div className="mx-auto mt-16 grid max-w-5xl gap-6 sm:grid-cols-3">
+      <div className="mx-auto mt-10 sm:mt-16 grid max-w-5xl gap-6 sm:grid-cols-3">
         {/* Free */}
         <motion.div
           variants={fadeUp}
@@ -107,7 +107,7 @@ export default function Pricing() {
           whileInView="show"
           viewport={{ once: true }}
           whileHover={{ y: -6 }}
-          className="flex flex-col rounded-3xl bg-[#F3EFE4] p-7 text-[#0a0a0a] shadow-xl shadow-black/30"
+          className="flex flex-col rounded-3xl bg-[#F3EFE4] p-6 text-[#0a0a0a] shadow-xl shadow-black/30"
         >
           <span className="mb-6 inline-flex w-fit rounded-full bg-[#0a0a0a]/10 px-3 py-1 text-xs font-semibold">
             Free forever
@@ -141,7 +141,7 @@ export default function Pricing() {
           whileInView="show"
           viewport={{ once: true }}
           whileHover={{ y: -6 }}
-          className="relative flex flex-col rounded-3xl bg-[#6B21D4] p-7 text-white shadow-xl shadow-black/40"
+          className="relative flex flex-col rounded-3xl bg-[#6B21D4] p-6 text-white shadow-xl shadow-black/40"
         >
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#FF6B2C] px-3 py-1 text-xs font-bold">
             Most popular

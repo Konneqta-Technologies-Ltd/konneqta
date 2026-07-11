@@ -51,7 +51,7 @@ const fadeUp: Variants = {
 
 export default function WhatIsSection() {
   return (
-    <section className="relative bg-[#0a0a0a] px-6 pb-28 pt-24">
+    <section className="relative bg-[#0a0a0a] px-6 pb-16 sm:pb-28 sm:pt-24 pt-16">
       <div className="mx-auto max-w-3xl text-center">
         <motion.p
           variants={fadeUp}
@@ -69,7 +69,7 @@ export default function WhatIsSection() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="mt-6 font-display text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl"
+          className="mt-6 font-display text-2xl font-bold leading-tight text-white sm:text-3xl md:text-5xl"
         >
           Konneqta isn&apos;t a link-in-bio.
           <br />
@@ -88,7 +88,7 @@ export default function WhatIsSection() {
           {audiences.map((a) => (
             <span
               key={a}
-              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80"
+              className="rounded-full border border-white/15 bg-white/5 px-2 sm:px-4 py-2 text-sm text-white/80"
             >
               {a}
             </span>

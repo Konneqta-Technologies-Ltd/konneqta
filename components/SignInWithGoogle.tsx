@@ -16,7 +16,7 @@ export default function SignInWithGoogle() {
   }
   return (
     <button
-      className="visible-focus flex items-center gap-3 rounded-full bg-[#F3EFE4] px-5 py-4 font-semibold text-[#0a0a0a] shadow-lg shadow-black/20 transition-shadow hover:shadow-xl cursor-pointer"
+      className="visible-focus flex items-center gap-3 text-sm sm:text-lg rounded-full bg-[#F3EFE4] px-4 py-3 sm:px-5 sm:py-4 font-semibold text-[#0a0a0a] shadow-lg shadow-black/20 transition-shadow hover:shadow-xl cursor-pointer"
       onClick={handleSignIn}
     >
       <GoogleIcon />
