@@ -15,6 +15,17 @@
 import Image from "next/image";
 import type { ThemePreset } from "@/lib/themes";
 
+/**
+ * Resolve avatar border-radius from the theme's avatarShape customization.
+ * Defaults to the layout's own styling when not set.
+ */
+function avatarRadius(shape: ThemePreset["avatarShape"], fallback = "50%"): string {
+  if (shape === "square") return "4px";
+  if (shape === "rounded") return "16px";
+  if (shape === "circle") return "50%";
+  return fallback;
+}
+
 export type CardLayoutProfile = {
   username: string;
   full_name: string | null;
@@ -29,7 +40,12 @@ export type CardLayoutProps = {
   profile: CardLayoutProfile;
   theme: ThemePreset;
   bannerUrl: string | null;
-  onFlip: () => void;
+  /**
+   * Flip handler. When omitted, the FlipButton is NOT rendered — used by
+   * AppearanceModal's scaled-down previews (which are already inside a
+   * <button>, and HTML forbids nested buttons → hydration error).
+   */
+  onFlip?: () => void;
 };
 
 const displayName = (p: CardLayoutProfile) => p.full_name || p.username;
@@ -43,31 +59,51 @@ function FlipButton({
   className = "",
 }: {
   accent: string;
-  onFlip: () => void;
+  onFlip?: () => void;
   className?: string;
 }) {
+  // When onFlip is undefined (preview mode inside AppearanceModal), render a
+  // non-interactive <div> styled identically. This avoids nested-<button>
+  // hydration errors while keeping the preview visually accurate.
+  const sharedClass = `flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90 ${className}`;
+  const inner = (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+
+  if (!onFlip) {
+    return (
+      <div
+        style={{ background: accent }}
+        className={`${sharedClass} pointer-events-none opacity-90`}
+        aria-hidden="true"
+      >
+        {inner}
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={onFlip}
       style={{ background: accent }}
-      className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white transition-opacity hover:opacity-90 ${className}`}
+      className={`${sharedClass} cursor-pointer`}
       aria-label="Flip card"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width={16}
-        height={16}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-        <path d="M3 3v5h5" />
-      </svg>
+      {inner}
     </button>
   );
 }
@@ -90,6 +126,7 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
             height={290}
             priority
             className="h-56 max-w-65 object-cover"
+            style={{ borderRadius: avatarRadius(theme.avatarShape, "0px") }}
             unoptimized
           />
         )}
@@ -106,7 +143,7 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
       >
         <h1
           className="text-left text-lg font-medium"
-          style={{ color: c.text }}
+          style={{ color: c.text, fontFamily: theme.fontFamily }}
         >
           {name}
         </h1>
@@ -159,14 +196,17 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
           width={120}
           height={120}
           priority
-          className="h-28 w-28 rounded-full object-cover ring-2"
-          style={{ borderColor: c.accent }}
+          className="h-28 w-28 object-cover ring-2"
+          style={{ borderColor: c.accent, borderRadius: avatarRadius(theme.avatarShape) }}
           unoptimized
         />
       ) : null}
 
       <div className="flex flex-col items-center gap-1">
-        <h1 className="text-center text-2xl font-semibold" style={{ color: c.text }}>
+        <h1
+          className="text-center text-2xl font-semibold"
+          style={{ color: c.text, fontFamily: theme.fontFamily }}
+        >
           {name}
         </h1>
         {(profile.job_title || profile.company) && (
@@ -243,7 +283,7 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
             unoptimized
           />
         )}
-        <h1 className="text-left text-xl font-bold" style={{ color: c.text }}>
+        <h1 className="text-left text-xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>
           {name}
         </h1>
         {profile.job_title && (
@@ -305,7 +345,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
       <div className="flex flex-col gap-1">
         <h1
           className="text-left text-3xl font-bold leading-tight"
-          style={{ color: c.text }}
+          style={{ color: c.text, fontFamily: theme.fontFamily }}
         >
           {name}
         </h1>
@@ -373,7 +413,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           />
         )}
 
-        <h1 className="text-center text-2xl font-bold" style={{ color: c.text }}>
+        <h1 className="text-center text-2xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>
           {name}
         </h1>
 

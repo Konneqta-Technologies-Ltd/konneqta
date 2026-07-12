@@ -39,6 +39,7 @@ interface EditProfileFormProps {
   };
   initialSocialLinks: { id?: string; platform: string; url: string }[];
   canUploadLogo?: boolean;
+  maxCards: number;
   cardId: string;
   cardSlug: string;
   isPrimaryCard: boolean;
@@ -55,6 +56,7 @@ export default function EditProfileForm({
   initialProfile,
   initialSocialLinks,
   canUploadLogo = false,
+  maxCards = 1,
   cardId,
   cardSlug,
   isPrimaryCard,
@@ -167,6 +169,9 @@ export default function EditProfileForm({
       }
 
       // 2. UPDATE THE CARD ROW (card-specific fields)
+      //    phone + show_phone are PER-CARD now — each card has its own number.
+      //    Only email + username stay account-level (on profiles).
+      const phoneIsEmpty = !form.phone.trim();
       const { error: cardError } = await supabase
         .from("cards")
         .update({
@@ -176,6 +181,8 @@ export default function EditProfileForm({
           bio: form.bio,
           avatar_url: avatarUrl,
           logo_url: logoUrl,
+          phone: form.phone,
+          show_phone: phoneIsEmpty ? false : form.show_phone,
         })
         .eq("id", cardId);
 
@@ -184,20 +191,9 @@ export default function EditProfileForm({
         return;
       }
 
-      // 3. UPDATE THE PROFILE ROW (account-level: phone, show_phone)
-      const phoneIsEmpty = !form.phone.trim();
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          phone: form.phone,
-          show_phone: phoneIsEmpty ? false : form.show_phone,
-        })
-        .eq("id", user.id);
-
-      if (profileError) {
-        toast.error(profileError.message);
-        return;
-      }
+      // 3. (Account-level profile row no longer needs updating — phone moved
+      //    to cards so each card is fully independent. username + email are
+      //    immutable here.)
 
       // 4. Sync social links (by card_id now)
       const { error: deleteError } = await supabase
@@ -277,7 +273,7 @@ export default function EditProfileForm({
 
         {/* ---- Card Switcher ---- */}
         <div className="mt-4">
-          <CardSwitcher cards={allCards} currentCardId={cardId} username={form.username} />
+          <CardSwitcher cards={allCards} currentCardId={cardId} username={form.username} maxCards={maxCards} />
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">

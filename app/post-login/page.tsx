@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
+// force-dynamic prevents Next.js 16 from streaming this page. The Supabase
+// getUser() call refreshes session cookies, and setting cookies during a
+// streaming RSC response triggers "controller[kState].transformAlgorithm
+// is not a function" which corrupts the stream and bounces the user to /.
+export const dynamic = 'force-dynamic';
+
 export default async function PostLoginPage() {
     const supabase = await createClient();
     const {
