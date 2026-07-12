@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { SubmitEvent, useState } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { FaCheck, FaSpinner } from 'react-icons/fa';
 import Image from 'next/image';
 import WavyLine from '../home/WavyLine';
 import FloatingDot from '../home/FloatingDot';
-import { createClient } from '@/lib/supabase/client';
 
 const container: Variants = {
   hidden: {},
@@ -25,31 +24,39 @@ type Status = 'idle' | 'loading' | 'success' | 'error';
 export default function WaitlistHero() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const supabase = createClient();
 
-  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
     setStatus('loading');
     setErrorMessage('');
 
-    const { error } = await supabase
-      .from('waitlist')
-      .insert({ name: name.trim(), email: email.trim().toLowerCase() });
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone }),
+      });
 
-    if (error) {
-      if (error.code === '23505') {
-        setErrorMessage("You're already on the list — we'll be in touch!");
-      } else {
-        setErrorMessage('Something went wrong. Please try again.');
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMessage(
+          data.message ?? 'Something went wrong. Please try again.',
+        );
+        setStatus('error');
+        return;
       }
+
+      setStatus('success');
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.');
       setStatus('error');
-      return;
     }
-    setStatus('success');
   }
 
   return (
@@ -132,7 +139,7 @@ export default function WaitlistHero() {
 
           <motion.h1
             variants={item}
-            className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl"
+            className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl"
           >
             Connect Smarter
             <br />
@@ -176,9 +183,9 @@ export default function WaitlistHero() {
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.4, ease: 'easeOut' }}
                   onSubmit={handleSubmit}
-                  className="flex flex-col gap-3 rounded-3xl bg-white/10 p-4 sm:flex-row sm:items-start sm:p-2"
+                  className="flex flex-col gap-3 rounded-3xl bg-white/10 p-4"
                 >
-                  <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+                  <div className="flex flex-col gap-3 sm:flex-row">
                     <input
                       type="text"
                       required
@@ -196,6 +203,15 @@ export default function WaitlistHero() {
                       className="visible-focus w-full rounded-2xl border-none bg-white/95 px-4 py-3 text-sm text-[#0a0a0a] placeholder:text-[#0a0a0a]/40 sm:rounded-full"
                     />
                   </div>
+
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Phone number (optional)"
+                    className="visible-focus w-full rounded-2xl border-none bg-white/95 px-4 py-3 text-sm text-[#0a0a0a] placeholder:text-[#0a0a0a]/40 sm:rounded-full"
+                  />
+
                   <button
                     type="submit"
                     disabled={status === 'loading'}

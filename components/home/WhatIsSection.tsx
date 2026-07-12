@@ -51,7 +51,7 @@ const fadeUp: Variants = {
 
 export default function WhatIsSection() {
   return (
-    <section className="relative bg-[#0a0a0a] px-6 pb-16 sm:pb-28 sm:pt-24 pt-16">
+    <section className="relative bg-[#0a0a0a] px-6 pb-16 sm:pb-28 sm:pt-24 pt-10">
       <div className="mx-auto max-w-3xl text-center">
         <motion.p
           variants={fadeUp}

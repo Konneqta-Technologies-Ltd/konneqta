@@ -71,7 +71,7 @@ export default function Hero() {
         <FloatingDot
           color="#F3C23A"
           size={8}
-          className="right-[35px] sm:right-[165px] top-[545px] sm:block"
+          className="right-[35px] sm:right-[165px] top-[345px] sm:top-[545px] sm:block"
           duration={3}
         />
       </div>
