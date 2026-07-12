@@ -1,5 +1,6 @@
 import { PAYMENT_PLANS, PaymentType } from "./plans";
 import { PaymentSession, ServiceResponse } from "./types";
+import { getDaysUntilExpiry, isPro } from "@/lib/entitlements";
 
 import { createClient } from "@/lib/supabase/server";
 import { generateTransactionReference } from "./references";
@@ -35,12 +36,20 @@ export async function createPaymentSession(
         }
     }
 
-    // Prevent duplicate upgrades
-    if (profile.plan === "pro") {
-        return {
-            success: false,
-            message: "You already have an active Pro subscription.",
-        };
+    // Prevent duplicate upgrades — but allow renewals.
+    // A user can pay if:
+    //   - They are NOT currently Pro (free or expired), OR
+    //   - They ARE Pro but their subscription expires within 7 days (early renewal).
+    // This block stops someone with 20 days left from paying again unnecessarily,
+    // while letting expired users and users near expiry renew.
+    if (isPro(profile)) {
+        const daysLeft = getDaysUntilExpiry(profile);
+        if (daysLeft !== null && daysLeft > 7) {
+            return {
+                success: false,
+                message: `You already have an active Pro subscription with ${daysLeft} days left. You can renew when you're within 7 days of expiry.`,
+            };
+        }
     }
 
     // Look up the selected plan

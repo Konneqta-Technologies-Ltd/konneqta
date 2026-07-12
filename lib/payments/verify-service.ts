@@ -1,3 +1,6 @@
+import { sendAdminNotification, sendPaymentReceipt } from "@/lib/emails/zeptomail";
+
+import { PAYMENT_PLANS } from "./plans";
 import type { ServiceResponse } from "./types";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { isKonneqtaReference } from "./references";
@@ -79,11 +82,26 @@ export async function verifyAndFulfilPayment(
   );
 
   // 5. Look up the pending payment row we created at session creation.
+  //    We select the extra fields needed for the email receipt, plus the
+  //    owner's current pro_expires_at (so a renewal extends rather than resets).
   const { data: payment, error: lookupError } = await admin
     .from("payments")
-    .select("id, user_id, status, amount")
+    .select(
+      "id, user_id, status, amount, currency, customer_email, customer_name, payment_type"
+    )
     .eq("tx_ref", txRef)
     .single();
+
+  // Fetch the user's current Pro expiry (if any) so renewals stack correctly.
+  let currentExpiry: string | null = null;
+  if (payment?.user_id) {
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("pro_expires_at")
+      .eq("id", payment.user_id)
+      .maybeSingle();
+    currentExpiry = profileRow?.pro_expires_at ?? null;
+  }
 
   if (lookupError || !payment) {
     console.error("[verify-service] Payment row not found for tx_ref:", txRef);
@@ -114,7 +132,7 @@ export async function verifyAndFulfilPayment(
     .from("payments")
     .update({
       status: newStatus,
-      flw_transaction_id: transactionId,
+      flutterwave_transaction_id: transactionId,
     })
     .eq("tx_ref", txRef);
 
@@ -128,9 +146,22 @@ export async function verifyAndFulfilPayment(
 
   // 8. Fulfilment — grant Pro if the payment is successful.
   if (isSuccessful) {
+    // Calculate the new Pro expiry (30 days). If the user still has an active
+    // subscription, extend from the current expiry so they don't lose remaining
+    // days. Otherwise, start the clock from now.
+    const SUBSCRIPTION_DAYS = 30;
+    const now = new Date();
+    const baseDate =
+      currentExpiry && new Date(currentExpiry).getTime() > now.getTime()
+        ? new Date(currentExpiry)
+        : now;
+    const newExpiry = new Date(
+      baseDate.getTime() + SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000
+    );
+
     const { error: grantError } = await admin
       .from("profiles")
-      .update({ plan: "pro" })
+      .update({ plan: "pro", pro_expires_at: newExpiry.toISOString() })
       .eq("id", payment.user_id);
 
     if (grantError) {
@@ -141,6 +172,57 @@ export async function verifyAndFulfilPayment(
       );
       // Don't fail the whole request — the payment row is already marked
       // successful, so a retry or manual fix can grant Pro later.
+    }
+
+    // 9. 📧 Send email notifications (receipt to user + notification to admin).
+    //    Wrapped in try/catch — email failures must NEVER break the payment.
+    //    The user already has Pro; the email is a nice-to-have.
+    try {
+      const planName =
+        PAYMENT_PLANS[payment.payment_type as keyof typeof PAYMENT_PLANS]
+          ?.name || "Konneqta Pro";
+      const emailData = {
+        customerName: payment.customer_name || "there",
+        customerEmail: payment.customer_email || "",
+        amount: payment.amount,
+        currency: payment.currency,
+        planName,
+        txRef,
+        transactionId,
+        paymentDate: new Date().toLocaleString("en-NG", {
+          dateStyle: "full",
+          timeStyle: "short",
+        }),
+      };
+
+      // Send both emails in parallel (don't block one on the other).
+      const [receiptResult, adminResult] = await Promise.allSettled([
+        sendPaymentReceipt(emailData),
+        sendAdminNotification(emailData),
+      ]);
+
+      if (receiptResult.status === "rejected" || !receiptResult.value.success) {
+        console.warn(
+          "[verify-service] Payment receipt email may not have sent:",
+          receiptResult.status === "fulfilled"
+            ? receiptResult.value.error
+            : receiptResult.reason
+        );
+      }
+
+      if (adminResult.status === "rejected" || !adminResult.value.success) {
+        console.warn(
+          "[verify-service] Admin notification email may not have sent:",
+          adminResult.status === "fulfilled"
+            ? adminResult.value.error
+            : adminResult.reason
+        );
+      }
+    } catch (emailErr) {
+      console.error(
+        "[verify-service] Unexpected error sending payment emails:",
+        emailErr
+      );
     }
   }
 
