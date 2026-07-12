@@ -68,6 +68,8 @@ export type EntitlementProfile = {
   username?: string | null;
   plan?: Plan | string | null;
   is_exempt?: boolean | null;
+  /** ISO timestamp when Pro access expires. Null = never had Pro / exempt. */
+  pro_expires_at?: string | null;
 };
 
 /**
@@ -84,12 +86,49 @@ export function isExempt(profile: EntitlementProfile | null | undefined): boolea
 }
 
 /**
- * True if the user has Pro access (paying subscriber OR exempt).
+ * True if the user has Pro access (paying subscriber with unexpired
+ * subscription OR exempt).
+ *
+ * EXPIRY (lazy evaluation):
+ * We check `pro_expires_at` here rather than relying solely on a cron job.
+ * This guarantees a user drops to free the INSTANT their subscription lapses,
+ * regardless of whether the cleanup job has run. The column is
+ * service-role-writable only (DB trigger), so clients can't forge it.
  */
 export function isPro(profile: EntitlementProfile | null | undefined): boolean {
   if (!profile) return false;
   if (isExempt(profile)) return true;
-  return profile.plan === "pro";
+  if (profile.plan !== "pro") return false;
+
+  // Lazy expiry check — if the timestamp passed, they're free now.
+  if (profile.pro_expires_at) {
+    const expiry = new Date(profile.pro_expires_at);
+    if (expiry.getTime() < Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Days remaining until the user's Pro subscription expires.
+ * Returns Infinity for exempt users, and null for users who have never
+ * had Pro (no expiry timestamp).
+ *
+ * Returns a negative number if the subscription has already expired —
+ * useful for UI messaging like "expired 3 days ago".
+ */
+export function getDaysUntilExpiry(
+  profile: EntitlementProfile | null | undefined
+): number | null {
+  if (!profile) return null;
+  if (isExempt(profile)) return Infinity;
+  if (!profile.pro_expires_at) return null;
+
+  const msRemaining =
+    new Date(profile.pro_expires_at).getTime() - Date.now();
+  return Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
 }
 
 /**

@@ -1,5 +1,6 @@
-import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import fs from "fs";
+import { withSentryConfig } from "@sentry/nextjs";
 import { withSerwist } from "@serwist/turbopack";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -12,6 +13,11 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    // Use the real filesystem path so the casing (e.g. "Desktop" vs "desktop")
+    // and separators match what Turbopack's Rust core expects on Windows.
+    root: fs.realpathSync(process.cwd()),
+  },
   images: {
     // Next.js 16 requires an explicit qualities allowlist
     qualities: [75],

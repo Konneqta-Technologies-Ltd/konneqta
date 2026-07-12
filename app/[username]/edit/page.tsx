@@ -44,7 +44,7 @@ export default async function EditProfilePage({
   //    immutable username live on profiles now.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, email, plan, is_exempt")
+    .select("username, email, plan, is_exempt, pro_expires_at")
     .eq("id", user.id)
     .maybeSingle();
 
