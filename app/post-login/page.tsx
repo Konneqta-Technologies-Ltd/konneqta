@@ -29,7 +29,10 @@ export default async function PostLoginPage() {
         redirect('/onboarding');
     }
 
-    // If they have an active card, redirect to that card's slug
+    // If they have an active card, redirect to that card's slug.
+    // NOTE: If the card is non-primary and Pro has expired, the [username]
+    // page will redirect to the primary card. So we don't need expiry logic
+    // here — just send them to their active card and let the page handle it.
     if (profile.active_card_id) {
         const { data: card } = await supabase
             .from('cards')

@@ -1,4 +1,4 @@
-import { canUseBanners, canUseThemes } from "@/lib/entitlements";
+import { canUseBanners, canUseThemes, isPro } from "@/lib/entitlements";
 
 import  Link  from "next/link"
 import type { Metadata } from "next";
@@ -6,6 +6,7 @@ import ProfileCard from "@/components/ProfileCard";
 import type { ThemeCustomization } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/server";
 import { isAllowedStorageUrl } from "@/lib/url-validation";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -88,7 +89,7 @@ export default async function UsernamePage({
   const { data: card, error: cardError } = await supabase
     .from("cards")
     .select(
-      "id, owner_id, slug, full_name, job_title, company, bio, avatar_url, logo_url, qr_code_url, theme, banner_url"
+      "id, owner_id, slug, is_primary, full_name, job_title, company, bio, avatar_url, logo_url, qr_code_url, theme, banner_url"
     )
     .eq("slug", username)
     .maybeSingle();
@@ -134,9 +135,10 @@ export default async function UsernamePage({
 
   // Fetch the owner's entitlements (for feature gating + owner check).
   // `username` is required so isExempt() can match EXEMPT_USERNAMES.
+  // `pro_expires_at` is required so isPro() can enforce subscription expiry.
   const { data: owner, error: ownerError } = await supabase
     .from("profiles")
-    .select("id, username, plan, is_exempt")
+    .select("id, username, plan, is_exempt, pro_expires_at")
     .eq("id", card.owner_id)
     .maybeSingle();
 
@@ -153,6 +155,19 @@ export default async function UsernamePage({
     }
 
 
+  // ── SUBSCRIPTION EXPIRY: read-time feature reversion ─────────────────
+  // If the owner's Pro has expired (or they're on free tier), Pro-only
+  // features gracefully revert to free defaults. The data stays in the DB;
+  // we just override what's rendered. If they renew, everything comes back.
+  const ownerIsPro = isPro(owner);
+
+  // Non-primary cards (card #2, #3) are Pro-only. If the owner is not Pro,
+  // redirect visitors to the owner's primary card so QR scans / links don't
+  // hit a dead end. The owner's primary slug = their username.
+  if (!ownerIsPro && card.is_primary === false) {
+    redirect(`/${owner.username}`);
+  }
+
   // Check if the current visitor is the owner
   const {
     data: { user },
@@ -163,6 +178,10 @@ export default async function UsernamePage({
   // Map card fields → the Profile shape ProfileCard already uses.
   // theme_custom may be null (no customizations) — resolveTheme() handles
   // that by falling back to the preset colors.
+  //
+  // EXPIRY OVERRIDE: when the owner is not Pro, force free-tier rendering
+  // (classic theme, no banner, no logo, no custom theme). The original
+  // values remain safely in the DB for when they renew.
   const profile = {
     id: card.owner_id,
     cardId: card.id,
@@ -172,11 +191,15 @@ export default async function UsernamePage({
     company: card.company,
     bio: card.bio,
     avatar_url: card.avatar_url,
-    logo_url: card.logo_url,
+    // Logo is Pro-only — hide when expired
+    logo_url: ownerIsPro ? card.logo_url : null,
     qr_code_url: card.qr_code_url,
-    theme: card.theme,
-    banner_url: card.banner_url,
-    theme_custom: themeCustom,
+    // Force classic theme when not Pro
+    theme: ownerIsPro ? card.theme : "classic",
+    // Banner is Pro-only — hide when expired
+    banner_url: ownerIsPro ? card.banner_url : null,
+    // Custom theme overrides are Pro-only — discard when expired
+    theme_custom: ownerIsPro ? themeCustom : null,
   };
 
   return (
