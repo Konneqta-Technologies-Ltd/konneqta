@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/waitlist');
+  redirect("/waitlist");
   return null;
 }
