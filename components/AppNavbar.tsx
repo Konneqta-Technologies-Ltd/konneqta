@@ -47,7 +47,7 @@ export default function AppNavbar() {
   // Hide the global navbar (hamburger + SideNav + QR scanner) on routes that
   // are fully standalone (no app chrome). Currently: /waitlist. Must come after
   // all hooks (Rules of Hooks).
-  if (pathname === "/waitlist") return null;
+  if (pathname === "/waitlist, /home") return null;
 
   return (
     <>
