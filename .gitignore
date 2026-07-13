@@ -48,4 +48,6 @@ next-env.d.ts
 # Posthog Config File
 posthog-warehouse-report.md
 
+/supabase
+
 Konneqt1.docx
