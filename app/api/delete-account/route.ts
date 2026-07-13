@@ -17,7 +17,7 @@ import { createServerClient } from "@supabase/ssr";
  * Security: the SUPABASE_SERVICE_ROLE_KEY is read from the server environment
  * and is NEVER exposed to the browser (no NEXT_PUBLIC_ prefix).
  */
-export async function POST(_request: Request) {
+export async function POST() {
   try {
     const cookieStore = await cookies();
 
