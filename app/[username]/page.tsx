@@ -7,6 +7,7 @@ import type { ThemeCustomization } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/server";
 import { isAllowedStorageUrl } from "@/lib/url-validation";
 import { redirect } from "next/navigation";
+import { buildPersonSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function generateMetadata({
   // Queries cards by slug (the URL segment) — not profiles.
   const { data: card } = await supabase
     .from("cards")
-    .select("full_name, job_title, company, avatar_url")
+    .select("full_name, job_title, company, bio, avatar_url, is_searchable")
     .eq("slug", username)
     .maybeSingle();
 
@@ -34,24 +35,43 @@ export async function generateMetadata({
   }
 
   const fullName = card.full_name?.trim() || username;
-
   const jobTitle = card.job_title?.trim() || "";
   const company = card.company?.trim() || "";
+  const bio = card.bio?.trim() || "";
+
+  // Pipe-separated title: "FullName | JobTitle | Company | Konneqta".
+  const titleParts = [fullName, jobTitle, company, "Konneqta"].filter(Boolean);
+  const title = titleParts.join(" | ");
+
+  // Richer description (capped at ~155 chars for Google's snippet).
+  const descriptionRaw = [
+    jobTitle && `💼 ${jobTitle}`,
+    company && `at ${company}`,
+    bio,
+  ]
+    .filter(Boolean)
+    .join(". ");
   const description =
-    jobTitle && company
-      ? `${jobTitle} at ${company}`
-      : jobTitle || company || `Connect with @${username} on Konneqta`;
+    descriptionRaw.slice(0, 157).trim() ||
+    `Connect with @${username} on Konneqta`;
 
   const avatarUrl = card.avatar_url?.trim() || "";
   const ogImage =
     avatarUrl && isAllowedStorageUrl(avatarUrl) ? avatarUrl : "/banner.png";
 
   return {
-    title: `${fullName} · Konneqta`,
+    title,
     description,
     alternates: { canonical: `/${username}` },
+    // Per-card opt-out from search engines (is_searchable column).
+    ...(card.is_searchable === false
+      ? { robots: { index: false, follow: false } }
+      : {}),
+    authors: [{ name: fullName }],
+    creator: fullName,
+    publisher: "Konneqta",
     openGraph: {
-      title: `${fullName} · Konneqta`,
+      title,
       description,
       url: `/${username}`,
       siteName: "Konneqta",
@@ -60,7 +80,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${fullName} · Konneqta`,
+      title,
       description,
       images: [ogImage],
     },
@@ -202,8 +222,28 @@ export default async function UsernamePage({
     theme_custom: ownerIsPro ? themeCustom : null,
   };
 
+  // ── SEO: schema.org Person JSON-LD ────────────────────────────────────
+  // Tells Google this page represents a Person. Built from the card data we
+  // already fetched above.
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.konneqta.com";
+  const personSchema = buildPersonSchema({
+    username: card.slug,
+    fullName: card.full_name,
+    jobTitle: card.job_title,
+    company: card.company,
+    bio: card.bio,
+    avatarUrl: card.avatar_url,
+    socialLinks: socialLinks ?? [],
+    baseUrl,
+  });
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+      />
       <ProfileCard
         profile={profile}
         socialLinks={socialLinks ?? []}
