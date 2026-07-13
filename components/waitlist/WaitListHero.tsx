@@ -249,7 +249,7 @@ export default function WaitlistHero() {
             )}
 
             <p className="mt-4 text-xs text-white/50">
-              No spam. We&apos;ll only email you when it&apos;s your turn.
+              No spam. We&apos;ll only email you when it&apos;s ready.
             </p>
           </motion.div>
         </motion.div>
