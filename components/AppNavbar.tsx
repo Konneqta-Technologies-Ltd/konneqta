@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 import SideNav from "./nav/SideNav";
 import type { User } from "@supabase/supabase-js";
@@ -20,6 +21,7 @@ const QrScanner = dynamic(() => import("./QrScanner"), { ssr: false });
  * - The drawer's action buttons (Logout, Delete Account) are auth-gated.
  */
 export default function AppNavbar() {
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [open, setOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -41,6 +43,12 @@ export default function AppNavbar() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Hide the global navbar (hamburger + SideNav + QR scanner) on routes that
+  // are fully standalone (no app chrome). Must come after all hooks (Rules of
+  // Hooks).
+  const HIDDEN_ROUTES = ["/waitlist", "/home"];
+  if (HIDDEN_ROUTES.includes(pathname)) return null;
 
   return (
     <>
