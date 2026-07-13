@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import GoBackButton from "@/components/GoBackButton";
 
 export const metadata: Metadata = {
   title: "Page Not Found · Konneqta",
@@ -47,14 +48,8 @@ export default function NotFound() {
 
       {/* Actions */}
       <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-        {/* Go Back — uses browser history */}
-        <button
-          type="button"
-          onClick={() => window.history.back()}
-          className="w-full rounded-lg border border-zinc-700 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 sm:w-auto"
-        >
-          ← Go Back
-        </button>
+        {/* Go Back — Client Component (needs onClick) */}
+        <GoBackButton />
 
         {/* Go Home — brand orange */}
         <Link
