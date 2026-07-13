@@ -69,36 +69,44 @@ export default function WaitlistHero() {
       >
         <WavyLine
           color="#F2622E"
-          className="absolute left-[-10px] top-[330px] hidden sm:block"
+          className="absolute -left-2.5 top-82.5 hidden sm:block"
           delay={0.3}
         />
         <WavyLine
           color="#F3C23A"
-          className="absolute left-[-10px] top-[440px] hidden sm:block"
+          className="absolute -left-2.5 top-110 hidden sm:block"
           delay={0.5}
         />
+
+ <WavyLine
+          color="#2DD9A6"
+          className="absolute -left-2.5 top-135 hidden sm:block"
+          delay={0.7}
+          
+        />
+        {/* Right side */}
         <WavyLine
           color="#F2622E"
-          className="absolute right-[-10px] top-[300px] hidden sm:block"
+          className="absolute -right-2.5 top-75 hidden sm:block"
           delay={0.3}
           flip
         />
         <WavyLine
           color="#2DD9A6"
-          className="absolute right-[-10px] top-[410px] hidden sm:block"
+          className="absolute -right-2.5 top-102.5 hidden sm:block"
           delay={0.5}
           flip
         />
         <WavyLine
           color="#FBD3E4"
-          className="absolute right-[-10px] top-[520px] hidden sm:block"
+          className="absolute -right-2.5 top-130 hidden sm:block"
           delay={0.7}
           flip
         />
         <FloatingDot
           color="#F3C23A"
           size={10}
-          className="left-[60px] sm:left-[160px] top-[130px] sm:top-[220px] sm:block"
+          className="left-15 sm:left-40 top-[130px] sm:top-[220px] sm:block"
         />
         <FloatingDot
           color="#2DD9A6"
@@ -115,13 +123,16 @@ export default function WaitlistHero() {
       </div>
 
       <div className="relative mx-auto max-w-3xl px-6 sm:pt-8 text-center">
+        <div className=" ">
+
         <Image
           src="/k-white.png"
           alt="Logo"
-          className="w-[100px] object-contain justify-self-center pb-8"
-          width={100}
-          height={30}
+          className="mx-auto object-contain justify-self-center pb-8"
+          width={170}
+          height={50}
         />
+        </div>
 
         <motion.div
           variants={container}
@@ -134,7 +145,7 @@ export default function WaitlistHero() {
             className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-            Built for African creators &amp; professionals
+            Built for African Creators &amp; Professionals
           </motion.span>
 
           <motion.h1
@@ -151,7 +162,7 @@ export default function WaitlistHero() {
             className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg"
           >
             We&apos;re putting the finishing touches on Konneqta. Join the
-            waitlist and be first to claim your digital identity card.
+            waitlist and be first to create your digital identity / business card.
           </motion.p>
 
           <motion.div variants={item} className="mt-10 w-full max-w-md">
@@ -215,12 +226,12 @@ export default function WaitlistHero() {
                   <button
                     type="submit"
                     disabled={status === 'loading'}
-                    className="visible-focus flex items-center justify-center gap-2 rounded-full bg-[#F3EFE4] px-6 py-3 text-sm font-semibold text-[#0a0a0a] shadow-lg shadow-black/20 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="visible-focus flex items-center justify-center gap-2 rounded-full bg-[#F3EFE4] hover:bg-(--main-orange) hover:text-white cursor-pointer px-6 py-3 text-sm font-semibold text-[#0a0a0a] shadow-lg shadow-black/20 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {status === 'loading' ? (
                       <FaSpinner className="h-4 w-4 animate-spin" />
                     ) : (
-                      'Join waitlist'
+                      'Join Waitlist'
                     )}
                   </button>
                 </motion.form>
