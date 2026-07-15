@@ -847,13 +847,21 @@ export default function OnboardingForm({
             type="submit"
             disabled={
               loading ||
-              usernameStatus === "taken" ||
-              usernameStatus === "invalid" ||
-              usernameStatus === "checking"
+              usernameStatus !== "available"
             }
             className="mt-4 w-full cursor-pointer rounded-lg bg-(--main-orange) px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            {loading ? "Creating profile..." : "Create Profile"}
+            {loading
+              ? "Creating profile..."
+              : usernameStatus === "idle"
+                ? "Enter a username to continue"
+                : usernameStatus === "checking"
+                  ? "Checking username..."
+                  : usernameStatus === "taken"
+                    ? "Username taken — try another"
+                    : usernameStatus === "invalid"
+                      ? "Fix username to continue"
+                      : "Create Profile"}
           </button>
         </form>
       </div>

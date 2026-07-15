@@ -24,6 +24,9 @@ declare global {
 
       payment_options: string;
 
+      /** Flutterwave Payment Plan ID — enables recurring billing. */
+      payment_plan?: number;
+
       callback: (response: { transaction_id: number }) => void;
 
       onclose: () => void;
@@ -49,12 +52,14 @@ export function useFlutterwavePayment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pay = async (paymentType: PaymentType) => {
+  const pay = async (paymentType: PaymentType, recurring: boolean = false) => {
     setLoading(true);
     setError(null);
 
     try {
       // 1. Create the payment session (server creates a pending payment row).
+      //    `recurring` determines whether this is a card-only auto-renew
+      //    subscription or a one-time payment (card/transfer/USSD).
       const response = await fetch("/api/payments/create-session", {
         method: "POST",
         headers: {
@@ -62,6 +67,7 @@ export function useFlutterwavePayment() {
         },
         body: JSON.stringify({
           paymentType,
+          recurring,
         }),
       });
 
@@ -94,7 +100,13 @@ export function useFlutterwavePayment() {
 
         customizations: session.customizations,
 
-        payment_options: "card,banktransfer,ussd",
+        // Use the payment options from the session (card-only for recurring,
+        // all methods for one-time).
+        payment_options: session.paymentOptions,
+
+        // Pass the Payment Plan ID for recurring billing.
+        // Undefined for one-time payments (Flutterwave ignores it).
+        ...(session.paymentPlan ? { payment_plan: session.paymentPlan } : {}),
 
         // 3. When the user completes payment in the modal, Flutterwave calls
         //    this with { transaction_id }. We redirect to the callback page,
