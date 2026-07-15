@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 
 import SideNav from "./nav/SideNav";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 
 // Lazy-load the scanner only when the user opens it.
 // html5-qrcode (~30KB) stays out of the main bundle.
@@ -47,7 +47,7 @@ export default function AppNavbar() {
   // Hide the global navbar (hamburger + SideNav + QR scanner) on routes that
   // are fully standalone (no app chrome). Must come after all hooks (Rules of
   // Hooks).
-  const HIDDEN_ROUTES = ["/waitlist", "/home"];
+  const HIDDEN_ROUTES = ["/waitlist", "/home", "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password"];
   if (HIDDEN_ROUTES.includes(pathname)) return null;
 
   return (

@@ -2,12 +2,14 @@ import { canUseBanners, canUseThemes, isPro } from "@/lib/entitlements";
 
 import  Link  from "next/link"
 import type { Metadata } from "next";
+import PlanBadge from "@/components/PlanBadge";
 import ProfileCard from "@/components/ProfileCard";
 import type { ThemeCustomization } from "@/lib/themes";
+import UpgradeButton from "@/components/UpgradeButton";
+import { buildPersonSchema } from "@/lib/seo";
 import { createClient } from "@/lib/supabase/server";
 import { isAllowedStorageUrl } from "@/lib/url-validation";
 import { redirect } from "next/navigation";
-import { buildPersonSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -251,6 +253,14 @@ export default async function UsernamePage({
         canUseThemes={canUseThemes(owner)}
         canUseBanners={canUseBanners(owner)}
       />
+
+      {/* Plan badge — owner-only, always visible to the owner.
+          Shows "Freemium" (amber) or "Premium" (green). */}
+      <PlanBadge isPro={ownerIsPro} show={isOwner} />
+
+      {/* Upgrade button — only for the owner when they don't have Pro.
+          Sits to the left of the plan badge at top-right. */}
+      <UpgradeButton show={isOwner && !ownerIsPro} />
     </main>
   );
 }

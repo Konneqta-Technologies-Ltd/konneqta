@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { generateTransactionReference } from "./references";
 
 export async function createPaymentSession(
-    paymentType: PaymentType
+    paymentType: PaymentType,
+    recurring: boolean = false
 ): Promise<ServiceResponse<PaymentSession>> {
     const supabase = await createClient();
 
@@ -62,6 +63,20 @@ export async function createPaymentSession(
         };
     }
 
+    // Resolve the Flutterwave Payment Plan ID for recurring billing.
+    // Read from the plan object's `environmentPlanId` (set in plans.ts).
+    // ONLY applies when the user chose "Auto-Renew" (recurring = true).
+    // One-time payments (transfer/USSD) skip the payment plan entirely.
+    const flwPlanIdEnv =
+        "environmentPlanId" in plan ? plan.environmentPlanId : undefined;
+    const paymentPlan =
+        recurring && flwPlanIdEnv ? Number(flwPlanIdEnv) : undefined;
+
+    // Recurring (card only) vs One-Time (all methods).
+    // Flutterwave Payment Plans require a card token, so recurring billing
+    // restricts to card. One-time allows bank transfer, USSD, etc.
+    const paymentOptions = recurring ? "card" : "card,banktransfer,ussd";
+
     // Generate a unique transaction reference
     const txRef = generateTransactionReference(paymentType);
 
@@ -102,6 +117,8 @@ export async function createPaymentSession(
                 title: "Konneqta",
                 description: plan.description,
             },
+            paymentOptions,
+            paymentPlan,
         },
     }
 }
