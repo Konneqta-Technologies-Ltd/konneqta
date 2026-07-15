@@ -8,7 +8,6 @@ import type { ThemeCustomization } from "@/lib/themes";
 import UpgradeButton from "@/components/UpgradeButton";
 import { buildPersonSchema } from "@/lib/seo";
 import { createClient } from "@/lib/supabase/server";
-import { isAllowedStorageUrl } from "@/lib/url-validation";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -46,21 +45,22 @@ export async function generateMetadata({
   const title = titleParts.join(" | ");
 
   // Richer description (capped at ~155 chars for Google's snippet).
-  const descriptionRaw = [
-    jobTitle && `💼 ${jobTitle}`,
-    company && `at ${company}`,
-    bio,
-  ]
+  // NOTE: do NOT use emojis here — they get mojibake-corrupted in the
+  // <meta> tag serialization, and strict crawlers (WhatsApp/Telegram)
+  // drop the entire preview card when they see invalid UTF-8 bytes.
+  const descriptionRaw = [jobTitle, company && `at ${company}`, bio]
     .filter(Boolean)
     .join(". ");
   const description =
     descriptionRaw.slice(0, 157).trim() ||
     `Connect with @${username} on Konneqta`;
 
-  const avatarUrl = card.avatar_url?.trim() || "";
-  const ogImage =
-    avatarUrl && isAllowedStorageUrl(avatarUrl) ? avatarUrl : "/banner.png";
-
+  // og:image / twitter:image are now generated dynamically by
+  // app/[username]/opengraph-image.tsx (Next.js 16 file convention).
+  // Next.js auto-wires the correct og:image + og:image:width/height tags,
+  // so we intentionally do NOT set `images` in openGraph/twitter below.
+  // This fixes the dimension-mismatch bug where the raw avatar (portrait)
+  // was declared as 1200×630, causing strict crawlers to reject the card.
   return {
     title,
     description,
@@ -78,13 +78,11 @@ export async function generateMetadata({
       url: `/${username}`,
       siteName: "Konneqta",
       type: "profile",
-      images: [{ url: ogImage, width: 1200, height: 630, alt: fullName }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [ogImage],
     },
   };
 }
