@@ -1,10 +1,10 @@
+import { getSubscription, verifyTransaction } from "./flutterwave";
 import { sendAdminNotification, sendPaymentReceipt } from "@/lib/emails/zeptomail";
 
 import { PAYMENT_PLANS } from "./plans";
 import type { ServiceResponse } from "./types";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { isKonneqtaReference } from "./references";
-import { verifyTransaction } from "./flutterwave";
 
 /**
  * Shared server-side payment verification + fulfilment logic.
@@ -19,16 +19,17 @@ import { verifyTransaction } from "./flutterwave";
  * place. Idempotent: if the payment is already marked successful, re-verifying
  * is a no-op.
  *
- * Uses the SUPABASE_SERVICE_ROLE_KEY to:
- *   - UPDATE the payments row (RLS blocks user JWTs from writing).
- *   - UPDATE profiles.plan = 'pro' (the protect_entitlements trigger blocks
- *     user JWTs from changing plan; only service_role can).
+ * FLOW (for recurring billing):
+ *   1. Verify transaction (Flutterwave API)
+ *   2. Save provider_response (raw payload for debugging)
+ *   3. Get subscription details from Flutterwave (if recurring)
+ *   4. Create/update subscriptions row with Flutterwave's real dates
+ *   5. Sync profiles (plan='pro', pro_expires_at = Flutterwave's next charge date)
+ *
+ * Uses the SUPABASE_SERVICE_ROLE_KEY to bypass RLS + the protect_entitlements
+ * trigger.
  */
 
-/**
- * Result of verifying a Flutterwave transaction.
- * Returns the new payment status so callers can respond appropriately.
- */
 export async function verifyAndFulfilPayment(
   transactionId: number,
   txRef: string
@@ -53,9 +54,6 @@ export async function verifyAndFulfilPayment(
     };
   }
 
-  // Flutterwave returns { status: "success", data: { status: "successful", ... } }
-  // The outer `status` is the API call status; the inner `data.status` is the
-  // transaction status.
   const txStatus = verification?.data?.status;
   const verifiedAmount = verification?.data?.amount;
   const verifiedTxRef = verification?.data?.tx_ref;
@@ -82,26 +80,13 @@ export async function verifyAndFulfilPayment(
   );
 
   // 5. Look up the pending payment row we created at session creation.
-  //    We select the extra fields needed for the email receipt, plus the
-  //    owner's current pro_expires_at (so a renewal extends rather than resets).
   const { data: payment, error: lookupError } = await admin
     .from("payments")
     .select(
-      "id, user_id, status, amount, currency, customer_email, customer_name, payment_type"
+      "id, user_id, status, amount, currency, customer_email, customer_name, payment_type, subscription_id"
     )
     .eq("tx_ref", txRef)
     .single();
-
-  // Fetch the user's current Pro expiry (if any) so renewals stack correctly.
-  let currentExpiry: string | null = null;
-  if (payment?.user_id) {
-    const { data: profileRow } = await admin
-      .from("profiles")
-      .select("pro_expires_at")
-      .eq("id", payment.user_id)
-      .maybeSingle();
-    currentExpiry = profileRow?.pro_expires_at ?? null;
-  }
 
   if (lookupError || !payment) {
     console.error("[verify-service] Payment row not found for tx_ref:", txRef);
@@ -121,18 +106,27 @@ export async function verifyAndFulfilPayment(
 
   // 7. Map Flutterwave's status to our internal status and update the row.
   //    We also validate the amount to prevent underpayment attacks.
+  //    Store the ENTIRE provider response for debugging + set paid_at.
   const isSuccessful =
     verification.status === "success" &&
     txStatus === "successful" &&
     verifiedAmount === payment.amount;
 
-  const newStatus = isSuccessful ? "successful" : txStatus === "cancelled" ? "cancelled" : "failed";
+  const newStatus = isSuccessful
+    ? "successful"
+    : txStatus === "cancelled"
+      ? "cancelled"
+      : "failed";
 
   const { error: updateError } = await admin
     .from("payments")
     .update({
       status: newStatus,
       flutterwave_transaction_id: transactionId,
+      // Store EVERYTHING Flutterwave sent us — priceless for debugging.
+      provider_response: verification as unknown as Record<string, unknown>,
+      // Record when the payment actually succeeded.
+      paid_at: isSuccessful ? new Date().toISOString() : null,
     })
     .eq("tx_ref", txRef);
 
@@ -144,39 +138,11 @@ export async function verifyAndFulfilPayment(
     };
   }
 
-  // 8. Fulfilment — grant Pro if the payment is successful.
+  // 8. Fulfilment — grant Pro + sync subscription if the payment is successful.
   if (isSuccessful) {
-    // Calculate the new Pro expiry (30 days). If the user still has an active
-    // subscription, extend from the current expiry so they don't lose remaining
-    // days. Otherwise, start the clock from now.
-    const SUBSCRIPTION_DAYS = 30;
-    const now = new Date();
-    const baseDate =
-      currentExpiry && new Date(currentExpiry).getTime() > now.getTime()
-        ? new Date(currentExpiry)
-        : now;
-    const newExpiry = new Date(
-      baseDate.getTime() + SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000
-    );
-
-    const { error: grantError } = await admin
-      .from("profiles")
-      .update({ plan: "pro", pro_expires_at: newExpiry.toISOString() })
-      .eq("id", payment.user_id);
-
-    if (grantError) {
-      console.error(
-        "[verify-service] Failed to grant Pro to user",
-        payment.user_id,
-        grantError
-      );
-      // Don't fail the whole request — the payment row is already marked
-      // successful, so a retry or manual fix can grant Pro later.
-    }
+    await fulfilPayment(admin, payment, verification, transactionId, txRef);
 
     // 9. 📧 Send email notifications (receipt to user + notification to admin).
-    //    Wrapped in try/catch — email failures must NEVER break the payment.
-    //    The user already has Pro; the email is a nice-to-have.
     try {
       const planName =
         PAYMENT_PLANS[payment.payment_type as keyof typeof PAYMENT_PLANS]
@@ -195,7 +161,6 @@ export async function verifyAndFulfilPayment(
         }),
       };
 
-      // Send both emails in parallel (don't block one on the other).
       const [receiptResult, adminResult] = await Promise.allSettled([
         sendPaymentReceipt(emailData),
         sendAdminNotification(emailData),
@@ -230,4 +195,155 @@ export async function verifyAndFulfilPayment(
     success: true,
     data: { status: newStatus },
   };
+}
+
+// ── Subscription sync helper ──────────────────────────────────────────────
+// Extracted so it's testable and readable. Handles both one-time payments
+// (no subscription) and recurring payments (creates/updates subscription row).
+async function fulfilPayment(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+  payment: {
+    id: string;
+    user_id: string;
+    payment_type: string;
+    subscription_id: string | null;
+    customer_email: string;
+  },
+  verification: { data?: Record<string, unknown> },
+  transactionId: number,
+  _txRef: string
+) {
+  // Flutterwave's verify response includes the full transaction data.
+  // For recurring charges, the response includes subscription info.
+  const txData = verification?.data ?? {};
+  const customerId = (txData as { customer?: { id?: number } }).customer?.id;
+  const flwSubscriptionId = (txData as { subscription_id?: number }).subscription_id;
+  const flwPlanId = (txData as { payment_plan?: number }).payment_plan;
+
+  // Determine if this is a recurring payment.
+  const isRecurring = Boolean(flwSubscriptionId || flwPlanId);
+
+  // The billing dates come DIRECTLY from Flutterwave — never calculated.
+  let periodEnd: string | null = null;
+  let periodStart: string | null = null;
+  let subscriptionId: string | null = payment.subscription_id;
+
+  if (isRecurring && flwSubscriptionId) {
+    // Fetch the subscription from Flutterwave to get the REAL billing dates.
+    try {
+      const subDetails = await getSubscription(flwSubscriptionId);
+      const subData = subDetails?.data;
+
+      if (subData) {
+        // next_charge_date is the REAL next billing date from Flutterwave.
+        // This is what we use for pro_expires_at — NOT now() + 30 days.
+        periodEnd = subData.next_charge_date ?? subData.next_payment_date ?? null;
+        periodStart = subData.created_at ?? new Date().toISOString();
+
+        // ── Create or update the subscription row ──
+        const subRow = {
+          user_id: payment.user_id,
+          plan: payment.payment_type,
+          status: "active",
+          provider: "flutterwave",
+          external_subscription_id: String(flwSubscriptionId),
+          external_customer_id: customerId ? String(customerId) : null,
+          external_plan_id: flwPlanId ? String(flwPlanId) : null,
+          origin: "subscription",
+          started_at: periodStart,
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+          cancel_at_period_end: false,
+        };
+
+        // Check if a subscription row already exists (renewal scenario).
+        const { data: existingSub } = await admin
+          .from("subscriptions")
+          .select("id")
+          .eq("user_id", payment.user_id)
+          .eq("plan", payment.payment_type)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (existingSub) {
+          // Update existing subscription with new period dates.
+          await admin
+            .from("subscriptions")
+            .update({
+              current_period_start: periodStart,
+              current_period_end: periodEnd,
+              external_subscription_id: String(flwSubscriptionId),
+            })
+            .eq("id", existingSub.id);
+
+          subscriptionId = existingSub.id;
+        } else {
+          // Create new subscription row.
+          const { data: newSub, error: subError } = await admin
+            .from("subscriptions")
+            .insert(subRow)
+            .select("id")
+            .single();
+
+          if (subError) {
+            console.error(
+              "[verify-service] Failed to create subscription row:",
+              subError.message
+            );
+          } else if (newSub) {
+            subscriptionId = newSub.id;
+          }
+        }
+      }
+    } catch (err) {
+      console.error(
+        "[verify-service] Failed to fetch subscription from Flutterwave:",
+        err
+      );
+      // Non-fatal — fall through to one-time payment logic below.
+    }
+  }
+
+  // ── Sync profiles (the fast read path for isPro) ──
+  // pro_expires_at comes from Flutterwave's next_charge_date when available.
+  // For one-time payments without a subscription, fall back to now() + 30 days.
+  let proExpiresAt: string;
+
+  if (periodEnd) {
+    // Use Flutterwave's real billing date (recurring payments).
+    proExpiresAt = periodEnd;
+  } else {
+    // One-time payment (no recurring plan) — grant based on the plan cycle.
+    // Monthly = 30 days, Yearly = 365 days. Defaults to 30 for safety.
+    const planCycle =
+      PAYMENT_PLANS[payment.payment_type as keyof typeof PAYMENT_PLANS]?.cycle;
+    const daysToAdd = planCycle === "yearly" ? 365 : 30;
+    const fallbackExpiry = new Date();
+    fallbackExpiry.setDate(fallbackExpiry.getDate() + daysToAdd);
+    proExpiresAt = fallbackExpiry.toISOString();
+  }
+
+  const { error: grantError } = await admin
+    .from("profiles")
+    .update({ plan: "pro", pro_expires_at: proExpiresAt })
+    .eq("id", payment.user_id);
+
+  if (grantError) {
+    console.error(
+      "[verify-service] Failed to grant Pro to user",
+      payment.user_id,
+      grantError
+    );
+    // Don't fail the whole request — the payment row is already marked
+    // successful, so a retry or manual fix can grant Pro later.
+  }
+
+  // ── Link payment to subscription (if we have one) ──
+  if (subscriptionId && subscriptionId !== payment.subscription_id) {
+    await admin
+      .from("payments")
+      .update({ subscription_id: subscriptionId })
+      .eq("id", payment.id);
+  }
 }

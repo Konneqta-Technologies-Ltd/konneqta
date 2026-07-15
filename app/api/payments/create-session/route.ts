@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const paymentType = body.paymentType as PaymentType;
+    const recurring = body.recurring === true;
 
     if (!paymentType) {
       return NextResponse.json(
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await createPaymentSession(paymentType);
+    const result = await createPaymentSession(paymentType, recurring);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
