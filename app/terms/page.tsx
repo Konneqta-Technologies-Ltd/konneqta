@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import DarkModeToggle from '@/components/DarkModeToggle';
 
 export const metadata = {
   title: 'Terms of Use — Konneqta',
@@ -23,9 +24,10 @@ const SECTIONS = [
 
 export default function TermsOfUsePage() {
   return (
-    <main className="min-h-screen bg-black text-zinc-300">
+    <main className="min-h-screen bg-white text-zinc-700 dark:bg-black dark:text-zinc-300">
+      <DarkModeToggle />
       {/* Header */}
-      <div className="border-b border-zinc-800 px-6 py-14 sm:px-10">
+      <div className="border-b border-zinc-200 px-6 py-14 sm:px-10 dark:border-zinc-800">
         <div className="mx-auto max-w-5xl">
           <Link
             href="/"
@@ -33,18 +35,20 @@ export default function TermsOfUsePage() {
           >
             ← Back to Konneqta
           </Link>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl dark:text-zinc-50">
             Terms of Use
           </h1>
           <p className="mt-3 text-sm text-zinc-500">
             Last Updated: July 16, 2026
           </p>
-          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-zinc-400">
+          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             Welcome to Konneqta. These Terms of Use govern your access to and
             use of{' '}
-            <span className="text-zinc-300">https://www.konneqta.com</span> and
-            any related services provided by Konneqta. By accessing or using our
-            website or services, you agree to be bound by these Terms.
+            <span className="text-zinc-700 dark:text-zinc-300">
+              https://www.konneqta.com
+            </span>{' '}
+            and any related services provided by Konneqta. By accessing or using
+            our website or services, you agree to be bound by these Terms.
           </p>
         </div>
       </div>
@@ -54,17 +58,18 @@ export default function TermsOfUsePage() {
         {/* On-this-page nav */}
         <nav className="hidden lg:block">
           <div className="sticky top-14">
-            <p className="mb-4 text-xs font-semibold tracking-wide text-zinc-600 uppercase">
+            3
+            <p className="mb-4 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-600">
               On this page
             </p>
-            <ul className="flex flex-col gap-3 border-l border-zinc-800 pl-4">
+            <ul className="flex flex-col gap-3 border-l border-zinc-200 pl-4 dark:border-zinc-800">
               {SECTIONS.map((section, i) => (
                 <li key={section.id}>
                   <a
                     href={`#${section.id}`}
                     className="text-sm text-zinc-500 transition-colors hover:text-(--main-orange)"
                   >
-                    <span className="mr-1.5 text-zinc-700">
+                    <span className="mr-1.5 text-zinc-400 dark:text-zinc-700">
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     {section.title}
@@ -259,9 +264,11 @@ function Section({
         <span className="text-sm font-medium text-(--main-orange)">
           {String(number).padStart(2, '0')}
         </span>
-        <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+          {title}
+        </h2>
       </div>
-      <div className="flex flex-col gap-3 text-sm leading-relaxed text-zinc-400 [&_a]:text-(--main-orange) [&_li]:ml-4 [&_li]:list-disc [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-1.5">
+      <div className="flex flex-col gap-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 [&_a]:text-(--main-orange) [&_li]:ml-4 [&_li]:list-disc [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-1.5">
         {children}
       </div>
     </section>

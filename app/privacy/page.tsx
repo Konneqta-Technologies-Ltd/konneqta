@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import DarkModeToggle from '@/components/DarkModeToggle';
 
 export const metadata = {
   title: 'Privacy Policy — Konneqta',
@@ -8,7 +9,7 @@ export const metadata = {
 const SECTIONS = [
   { id: 'information-we-collect', title: 'Information We Collect' },
   { id: 'how-we-use-your-information', title: 'How We Use Your Information' },
-  { id: 'google-analytics', title: 'Google Analytics' },
+  { id: 'analytics', title: 'Analytics' },
   { id: 'cookies', title: 'Cookies' },
   { id: 'data-protection', title: 'Data Protection' },
   { id: 'sharing-your-information', title: 'Sharing Your Information' },
@@ -22,9 +23,10 @@ const SECTIONS = [
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="min-h-screen bg-black text-zinc-300">
+    <main className="min-h-screen bg-white text-zinc-700 dark:bg-black dark:text-zinc-300">
+      <DarkModeToggle />
       {/* Header */}
-      <div className="border-b border-zinc-800 px-6 py-14 sm:px-10">
+      <div className="border-b border-zinc-200 px-6 py-14 sm:px-10 dark:border-zinc-800">
         <div className="mx-auto max-w-5xl">
           <Link
             href="/"
@@ -32,18 +34,20 @@ export default function PrivacyPolicyPage() {
           >
             ← Back to Konneqta
           </Link>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl dark:text-zinc-50">
             Privacy Policy
           </h1>
           <p className="mt-3 text-sm text-zinc-500">
             Last Updated: July 16, 2026
           </p>
-          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-zinc-400">
+          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             Konneqta (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;)
             values your privacy. This Privacy Policy explains how we collect,
             use, disclose, and safeguard your information when you visit{' '}
-            <span className="text-zinc-300">https://www.konneqta.com</span> or
-            use our services. By using Konneqta, you agree to the practices
+            <span className="text-zinc-700 dark:text-zinc-300">
+              https://www.konneqta.com
+            </span>{' '}
+            or use our services. By using Konneqta, you agree to the practices
             described in this Privacy Policy.
           </p>
         </div>
@@ -54,17 +58,17 @@ export default function PrivacyPolicyPage() {
         {/* On-this-page nav */}
         <nav className="hidden lg:block">
           <div className="sticky top-14">
-            <p className="mb-4 text-xs font-semibold tracking-wide text-zinc-600 uppercase">
+            <p className="mb-4 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-600">
               On this page
             </p>
-            <ul className="flex flex-col gap-3 border-l border-zinc-800 pl-4">
+            <ul className="flex flex-col gap-3 border-l border-zinc-200 pl-4 dark:border-zinc-800">
               {SECTIONS.map((section, i) => (
                 <li key={section.id}>
                   <a
                     href={`#${section.id}`}
                     className="text-sm text-zinc-500 transition-colors hover:text-(--main-orange)"
                   >
-                    <span className="mr-1.5 text-zinc-700">
+                    <span className="mr-1.5 text-zinc-400 dark:text-zinc-700">
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     {section.title}
@@ -116,8 +120,9 @@ export default function PrivacyPolicyPage() {
 
           <Section number={3} id="analytics" title="Analytics">
             <p>
-              We use Google Analytics to better understand how visitors use our
-              website. Google Analytics collects information such as:
+              We use analytics tools, including PostHog and Vercel Analytics, to
+              better understand how visitors use our website. These tools may
+              collect information such as:
             </p>
             <ul>
               <li>Pages visited</li>
@@ -128,7 +133,6 @@ export default function PrivacyPolicyPage() {
             </ul>
             <p>
               This information helps us improve our website and user experience.
-              Google Analytics may use cookies to collect this information.
             </p>
           </Section>
 
@@ -238,9 +242,11 @@ function Section({
         <span className="text-sm font-medium text-(--main-orange)">
           {String(number).padStart(2, '0')}
         </span>
-        <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+          {title}
+        </h2>
       </div>
-      <div className="flex flex-col gap-3 text-sm leading-relaxed text-zinc-400 [&_a]:text-(--main-orange) [&_li]:ml-4 [&_li]:list-disc [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-1.5">
+      <div className="flex flex-col gap-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 [&_a]:text-(--main-orange) [&_li]:ml-4 [&_li]:list-disc [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-1.5">
         {children}
       </div>
     </section>
