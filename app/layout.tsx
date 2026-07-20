@@ -9,6 +9,7 @@ import PostHogProvider from "@/components/PostHogProvider";
 import Script from 'next/script';
 import SwRegister from "@/components/SwRegister";
 import { Toaster } from "sonner";
+import {GoogleAnalytics} from "@next/third-parties/google"
 
 const outfit = Outfit({
   display: "swap",
@@ -133,6 +134,7 @@ export default function RootLayout({
           
         />
       </body>
+      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
     </html>
   );
 }

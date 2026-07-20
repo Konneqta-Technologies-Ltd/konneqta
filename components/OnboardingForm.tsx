@@ -6,12 +6,13 @@ import {
   isSafeHttpUrl,
   safeFileExtension,
 } from "@/lib/url-validation";
-import { dataUrlToBlob, generateQrDataUrl } from "@/lib/qr";
+import { dataUrlToBlob, generateQrDataUrl, getCanonicalProfileUrl } from "@/lib/qr";
 import { useEffect, useRef, useState } from "react";
 
 import InfoTip from "./InfoTip";
 import ProGate from "./ProGate";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
+import Spinner from "./ui/Spinner";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -355,7 +356,9 @@ export default function OnboardingForm({
       //    card can have its own (matching its slug/logo). The qr_code_url lives
       //    on the `cards` row, not `profiles` — the public page reads it there.
       try {
-        const profileUrl = `${window.location.origin}/${form.username}`;
+        // Use the canonical production origin (NEXT_PUBLIC_SITE_URL) so
+        // the QR never bakes in localhost. Falls back gracefully if unset.
+        const profileUrl = getCanonicalProfileUrl(form.username);
         const qrDataUrl = await generateQrDataUrl({
           profileUrl,
           logoUrl: logoUrl || null,
@@ -849,8 +852,9 @@ export default function OnboardingForm({
               loading ||
               usernameStatus !== "available"
             }
-            className="mt-4 w-full cursor-pointer rounded-lg bg-(--main-orange) px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="mt-4 flex w-full items-center justify-center gap-2 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
+            {loading && <Spinner size="sm" className="text-white dark:text-zinc-900" />}
             {loading
               ? "Creating profile..."
               : usernameStatus === "idle"

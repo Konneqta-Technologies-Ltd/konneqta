@@ -6,6 +6,7 @@ import { useMemo, useRef, useState } from "react";
 import { FONT_OPTIONS, THEME_PRESETS, type ThemeCustomization, resolveTheme } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
 import { renderCardFront } from "./card-layouts";
+import Spinner from "./ui/Spinner";
 import { toast } from "sonner";
 
 type ProfileData = {
@@ -50,6 +51,7 @@ export default function AppearanceModal({
   // never-wired-in ThemeCustomizer component that wrote to the wrong table.
   const [custom, setCustom] = useState<ThemeCustomization>(initialCustom ?? {});
   const [saving, setSaving] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // Custom colors/fonts are a Pro feature (same gate as themes).
@@ -123,6 +125,7 @@ export default function AppearanceModal({
       toast.error("Upgrade to Pro to upload a banner");
       return;
     }
+    setUploadingBanner(true);
     try {
       const supabase = createClient();
       const fileExt = safeFileExtension(file.name);
@@ -142,10 +145,13 @@ export default function AppearanceModal({
       }
 
       const { data } = supabase.storage.from("banners").getPublicUrl(filePath);
-      setSelectedBanner(data.publicUrl);
+      // Cache-bust so the new banner shows immediately (same pattern as avatar).
+      setSelectedBanner(`${data.publicUrl}?t=${Date.now()}`);
       toast.success("Banner uploaded");
     } catch {
       toast.error("Could not upload banner");
+    } finally {
+      setUploadingBanner(false);
     }
   };
 
@@ -556,6 +562,7 @@ export default function AppearanceModal({
               {/* Upload button — Pro only */}
               <button
                 type="button"
+                disabled={uploadingBanner}
                 onClick={() => {
                   if (bannersLocked) {
                     toast.error("Upgrade to Pro to upload a banner");
@@ -563,14 +570,18 @@ export default function AppearanceModal({
                   }
                   bannerInputRef.current?.click();
                 }}
-                className="relative flex h-16 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-zinc-300 text-zinc-400 transition-colors hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-700 dark:hover:border-zinc-500"
+                className="relative flex h-16 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-zinc-300 text-zinc-400 transition-colors hover:border-zinc-400 hover:text-zinc-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:hover:border-zinc-500"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                <span className="text-[9px]">Upload</span>
+                {uploadingBanner ? (
+                  <Spinner size="sm" className="text-zinc-400" />
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                )}
+                <span className="text-[9px]">{uploadingBanner ? "Uploading…" : "Upload"}</span>
                 {bannersLocked && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -615,8 +626,9 @@ export default function AppearanceModal({
             type="button"
             onClick={handleApply}
             disabled={saving}
-            className="flex-1 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            {saving && <Spinner size="sm" className="text-white" />}
             {saving ? "Applying..." : "Apply"}
           </button>
         </div>

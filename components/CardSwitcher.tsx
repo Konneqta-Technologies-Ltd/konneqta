@@ -1,5 +1,6 @@
 "use client";
 
+import Spinner from "@/components/ui/Spinner";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,7 @@ export default function CardSwitcher({
   const [newCardSlug, setNewCardSlug] = useState("");
   const [newCardLabel, setNewCardLabel] = useState("");
   const [creating, setCreating] = useState(false);
+  const [switchingId, setSwitchingId] = useState<string | null>(null);
 
   const slugSuffix = newCardSlug
     .toLowerCase()
@@ -48,14 +50,23 @@ export default function CardSwitcher({
 
   const handleSwitch = async (cardId: string) => {
     if (cardId === currentCardId) return;
-    const supabase = createClient();
-    // Update active_card_id (the switcher state)
-    await supabase.from("profiles").update({ active_card_id: cardId }).eq("id", (await supabase.auth.getUser()).data.user?.id);
-    // Navigate to that card's edit page
-    const card = cards.find((c) => c.id === cardId);
-    if (card) {
-      router.push(`/${card.slug}/edit`);
+    setSwitchingId(cardId);
+    try {
+      const supabase = createClient();
+      // Update active_card_id (the switcher state)
+      await supabase.from("profiles").update({ active_card_id: cardId }).eq("id", (await supabase.auth.getUser()).data.user?.id);
+      // Navigate to that card's edit page
+      const card = cards.find((c) => c.id === cardId);
+      if (card) {
+        router.push(`/${card.slug}/edit`);
+      }
+    } catch {
+      toast.error("Couldn't switch cards");
+      setSwitchingId(null);
     }
+    // Note: switchingId is intentionally not reset on success because the
+    // router.push() triggers a navigation that swaps the view (the new edit
+    // page's loading.tsx takes over the loading UX).
   };
 
   const handleCreate = async () => {
@@ -125,12 +136,13 @@ export default function CardSwitcher({
           <button
             key={card.id}
             type="button"
+            disabled={switchingId !== null}
             onClick={() => handleSwitch(card.id)}
             className={`flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors ${
               card.id === currentCardId
                 ? "bg-(--main-orange)/10 text-(--main-orange) ring-1 ring-(--main-orange)/20"
                 : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            }`}
+            } disabled:cursor-not-allowed`}
           >
             <div className="flex flex-col">
               <span className="font-medium">
@@ -141,10 +153,14 @@ export default function CardSwitcher({
               </span>
               <span className="text-[10px] text-zinc-400">/{card.slug}</span>
             </div>
-            {card.id === currentCardId && (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+            {switchingId === card.id ? (
+              <Spinner size="sm" className="text-(--main-orange)" />
+            ) : (
+              card.id === currentCardId && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              )
             )}
           </button>
         ))}
@@ -196,9 +212,16 @@ export default function CardSwitcher({
               type="button"
               onClick={handleCreate}
               disabled={!slugValid || creating}
-              className="flex-1 rounded-md bg-(--main-orange) px-2 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 flex-1 rounded-md bg-(--main-orange) px-2 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {creating ? "Creating..." : "Create"}
+              {creating ? (
+                <>
+                  <Spinner size="sm" className="text-white" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
             </button>
           </div>
         </div>
