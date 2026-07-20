@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   ALLOWED_IMAGE_TYPES,
@@ -35,16 +35,16 @@ export default function OnboardingForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
-    username: "",
+    username: '',
     full_name: fullName,
     email: email,
-    job_title: "",
-    company: "",
-    phone: "",
+    job_title: '',
+    company: '',
+    phone: '',
     show_phone: false,
-    bio: "",
-    avatar_url: "",
-    logo_url: "",
+    bio: '',
+    avatar_url: '',
+    logo_url: '',
   });
 
   // Social links — dynamic list the user builds during onboarding
@@ -52,23 +52,24 @@ export default function OnboardingForm({
 
   const [loading, setLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Async check result (only set inside the debounce callback to satisfy
   // React's rule against calling setState synchronously in an effect)
   const [usernameCheck, setUsernameCheck] = useState<
-    "idle" | "checking" | "available" | "taken"
-  >("idle");
+    'idle' | 'checking' | 'available' | 'taken'
+  >('idle');
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     // Normalize username as the user types: lowercase, alphanumeric + underscores only
-    if (e.target.name === "username") {
+    if (e.target.name === 'username') {
       const normalized = e.target.value
         .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "");
+        .replace(/[^a-z0-9_]/g, '');
       setForm({ ...form, username: normalized });
       return;
     }
@@ -85,12 +86,16 @@ export default function OnboardingForm({
     username.length >= 3 && !/^[a-z0-9_]{3,20}$/.test(username);
 
   // Final status used by the UI (combines derived + async)
-  const usernameStatus: "idle" | "checking" | "available" | "taken" | "invalid" =
-    usernameTooShort
-      ? "idle"
-      : usernameInvalid
-        ? "invalid"
-        : usernameCheck;
+  const usernameStatus:
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'taken'
+    | 'invalid' = usernameTooShort
+    ? 'idle'
+    : usernameInvalid
+      ? 'invalid'
+      : usernameCheck;
 
   // Debounced availability check — only runs for valid usernames
   useEffect(() => {
@@ -100,23 +105,23 @@ export default function OnboardingForm({
 
     const debounceTimer = setTimeout(async () => {
       try {
-        setUsernameCheck("checking");
+        setUsernameCheck('checking');
         const supabase = createClient();
         const { data, error } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("username", username)
+          .from('profiles')
+          .select('username')
+          .eq('username', username)
           .maybeSingle();
 
         if (error) {
-          console.error("username check error:", error);
-          setUsernameCheck("idle");
+          console.error('username check error:', error);
+          setUsernameCheck('idle');
           return;
         }
 
-        setUsernameCheck(data ? "taken" : "available");
+        setUsernameCheck(data ? 'taken' : 'available');
       } catch {
-        setUsernameCheck("idle");
+        setUsernameCheck('idle');
       }
     }, 500); // 500ms debounce
 
@@ -131,11 +136,11 @@ export default function OnboardingForm({
     if (!file) return;
 
     if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-      toast.error("Avatar must be a JPG, PNG, or WebP image");
+      toast.error('Avatar must be a JPG, PNG, or WebP image');
       return;
     }
     if (file.size > 3 * 1024 * 1024) {
-      toast.error("Image must be less than 3MB");
+      toast.error('Image must be less than 3MB');
       return;
     }
 
@@ -149,10 +154,10 @@ export default function OnboardingForm({
   };
 
   useEffect(() => {
-  return () => {
-    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-  };
-}, [avatarPreview]);
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
 
   // Store the selected logo file locally (no preview, just a name indicator).
   // Upload only happens on submit. Strict image-only check enforced both
@@ -162,11 +167,11 @@ export default function OnboardingForm({
     if (!file) return;
 
     if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-      toast.error("Logo must be a JPG, PNG, or WebP image");
+      toast.error('Logo must be a JPG, PNG, or WebP image');
       return;
     }
     if (file.size > 1 * 1024 * 1024) {
-      toast.error("Logo must be less than 1MB");
+      toast.error('Logo must be less than 1MB');
       return;
     }
 
@@ -175,7 +180,7 @@ export default function OnboardingForm({
 
   // ---- Social link handlers ----
   const addSocialLink = () => {
-    setSocialLinks((prev) => [...prev, { platform: "website", url: "" }]);
+    setSocialLinks((prev) => [...prev, { platform: 'website', url: '' }]);
   };
 
   const removeSocialLink = (index: number) => {
@@ -185,16 +190,24 @@ export default function OnboardingForm({
   const updateSocialLink = (
     index: number,
     field: keyof SocialLink,
-    value: string
+    value: string,
   ) => {
     setSocialLinks((prev) =>
-      prev.map((link, i) => (i === index ? { ...link, [field]: value } : link))
+      prev.map((link, i) => (i === index ? { ...link, [field]: value } : link)),
     );
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+
+    if (!agreedToTerms) {
+      toast.error(
+        'Please accept the privacy policy and terms of use to continue',
+      );
+      setLoading(false);
+      return;
+    }
 
     try {
       const supabase = createClient();
@@ -203,7 +216,7 @@ export default function OnboardingForm({
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error("You must be logged in to create a profile");
+        toast.error('You must be logged in to create a profile');
         return;
       }
 
@@ -214,7 +227,7 @@ export default function OnboardingForm({
         const filePath = `${user.id}/avatar.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("avatars")
+          .from('avatars')
           .upload(filePath, avatarFile, { upsert: true });
 
         if (uploadError) {
@@ -224,7 +237,7 @@ export default function OnboardingForm({
 
         const {
           data: { publicUrl },
-        } = supabase.storage.from("avatars").getPublicUrl(filePath);
+        } = supabase.storage.from('avatars').getPublicUrl(filePath);
         avatarUrl = publicUrl;
       }
 
@@ -235,7 +248,7 @@ export default function OnboardingForm({
         const filePath = `${user.id}/logo.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("logos")
+          .from('logos')
           .upload(filePath, logoFile, { upsert: true });
 
         if (uploadError) {
@@ -245,7 +258,7 @@ export default function OnboardingForm({
 
         const {
           data: { publicUrl },
-        } = supabase.storage.from("logos").getPublicUrl(filePath);
+        } = supabase.storage.from('logos').getPublicUrl(filePath);
         logoUrl = publicUrl;
       }
 
@@ -253,7 +266,7 @@ export default function OnboardingForm({
       //    show_phone is forced to false when the phone field is empty, so
       //    the owner can never accidentally expose a number they left blank.
       const phoneIsEmpty = !form.phone.trim();
-      const { error: profileError } = await supabase.from("profiles").insert({
+      const { error: profileError } = await supabase.from('profiles').insert({
         ...form,
         show_phone: phoneIsEmpty ? false : form.show_phone,
         avatar_url: avatarUrl,
@@ -273,11 +286,11 @@ export default function OnboardingForm({
       //    leaving them stuck in a redirect loop. This is the multi-card
       //    model: profiles = account identity, cards = public-facing data.
       const { data: cardRow, error: cardError } = await supabase
-        .from("cards")
+        .from('cards')
         .insert({
           owner_id: user.id,
           slug: form.username,
-          label: "Primary",
+          label: 'Primary',
           full_name: form.full_name,
           job_title: form.job_title,
           company: form.company,
@@ -289,7 +302,7 @@ export default function OnboardingForm({
           is_primary: true,
           sort_order: 0,
         })
-        .select("id")
+        .select('id')
         .single();
 
       if (cardError) {
@@ -302,14 +315,14 @@ export default function OnboardingForm({
       // 3b. Point active_card_id at the new card so /post-login can
       //     redirect straight to it on future logins.
       const { error: activeCardError } = await supabase
-        .from("profiles")
+        .from('profiles')
         .update({ active_card_id: cardId })
-        .eq("id", user.id);
+        .eq('id', user.id);
 
       if (activeCardError) {
         // Non-fatal — profile + card exist, just no active pointer.
         // /post-login falls back to finding the primary card.
-        console.error("active_card_id update error:", activeCardError);
+        console.error('active_card_id update error:', activeCardError);
       }
 
       // 4. Insert any social links the user added.
@@ -320,7 +333,7 @@ export default function OnboardingForm({
         .filter((link) => {
           const trimmed = link.url.trim();
           if (!trimmed) return false;
-          return link.platform === "email"
+          return link.platform === 'email'
             ? isSafeEmailValue(trimmed)
             : isSafeHttpUrl(trimmed);
         })
@@ -333,14 +346,14 @@ export default function OnboardingForm({
 
       if (linksToInsert.length > 0) {
         const { error: linksError } = await supabase
-          .from("social_links")
+          .from('social_links')
           .insert(linksToInsert);
 
         if (linksError) {
           // Profile was created but links failed — warn but still proceed
-          console.error("social_links insert error:", linksError);
+          console.error('social_links insert error:', linksError);
           toast.error(
-            "Profile created, but we couldn't save your social links. You can add them later."
+            "Profile created, but we couldn't save your social links. You can add them later.",
           );
         }
       }
@@ -369,10 +382,10 @@ export default function OnboardingForm({
         let qrUploadError: unknown = null;
         for (let attempt = 1; attempt <= 2; attempt++) {
           const { error } = await supabase.storage
-            .from("qrcodes")
+            .from('qrcodes')
             .upload(qrPath, qrBlob, {
               upsert: true,
-              contentType: "image/png",
+              contentType: 'image/png',
             });
           qrUploadError = error;
           if (!error) break;
@@ -383,40 +396,40 @@ export default function OnboardingForm({
         }
 
         if (qrUploadError) {
-          console.error("qr upload error:", qrUploadError);
+          console.error('qr upload error:', qrUploadError);
           toast.warning(
-            "Profile created, but your QR code couldn’t be saved. You can regenerate it later from your profile."
+            'Profile created, but your QR code couldn’t be saved. You can regenerate it later from your profile.',
           );
         } else {
           const {
             data: { publicUrl: qrPublicUrl },
-          } = supabase.storage.from("qrcodes").getPublicUrl(qrPath);
+          } = supabase.storage.from('qrcodes').getPublicUrl(qrPath);
 
           await supabase
-            .from("cards")
+            .from('cards')
             .update({ qr_code_url: qrPublicUrl })
-            .eq("id", cardId);
+            .eq('id', cardId);
         }
       } catch (qrErr) {
-        console.error("qr generation error:", qrErr);
+        console.error('qr generation error:', qrErr);
         toast.warning(
-          "Profile created, but your QR code couldn’t be generated. You can regenerate it later from your profile."
+          'Profile created, but your QR code couldn’t be generated. You can regenerate it later from your profile.',
         );
       }
 
       router.push(`/${form.username}`);
     } catch {
-      toast.error("Something went wrong. Please try again.");
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const inputClassName =
-    "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-500 dark:focus:border-zinc-500";
+    'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-500 dark:focus:border-zinc-500';
 
   const disabledInputClassName =
-    "w-full rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-500 cursor-not-allowed dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400";
+    'w-full rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-500 cursor-not-allowed dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400';
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 dark:bg-black">
@@ -471,7 +484,9 @@ export default function OnboardingForm({
             />
 
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              {avatarPreview ? "Click to change photo" : "Click to upload photo"}
+              {avatarPreview
+                ? 'Click to change photo'
+                : 'Click to upload photo'}
             </p>
           </div>
 
@@ -492,22 +507,22 @@ export default function OnboardingForm({
               onChange={handleChange}
               required
               className={
-                usernameStatus === "taken" || usernameStatus === "invalid"
+                usernameStatus === 'taken' || usernameStatus === 'invalid'
                   ? inputClassName +
-                    " border-red-500 focus:border-(--main-orange) focus:ring-red-500"
-                  : usernameStatus === "available"
+                    ' border-red-500 focus:border-(--main-orange) focus:ring-red-500'
+                  : usernameStatus === 'available'
                     ? inputClassName +
-                      " border-green-500 focus:border-green-500 focus:ring-green-500"
+                      ' border-green-500 focus:border-green-500 focus:ring-green-500'
                     : inputClassName
               }
             />
             {/* Username availability feedback */}
-            {usernameStatus === "invalid" && (
+            {usernameStatus === 'invalid' && (
               <p className="mt-1 text-xs text-red-500">
                 3–20 characters, letters/numbers/underscores only
               </p>
             )}
-            {usernameStatus === "checking" && (
+            {usernameStatus === 'checking' && (
               <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
                 <svg
                   className="h-3 w-3 animate-spin"
@@ -532,7 +547,7 @@ export default function OnboardingForm({
                 Checking availability...
               </p>
             )}
-            {usernameStatus === "available" && (
+            {usernameStatus === 'available' && (
               <p className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -550,7 +565,7 @@ export default function OnboardingForm({
                 @{username} is available!
               </p>
             )}
-            {usernameStatus === "taken" && (
+            {usernameStatus === 'taken' && (
               <p className="mt-1 flex items-center gap-1 text-xs text-red-500">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -595,7 +610,7 @@ export default function OnboardingForm({
               htmlFor="email"
               className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Email{" "}
+              Email{' '}
               <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">
                 (locked)
               </span>
@@ -679,21 +694,21 @@ export default function OnboardingForm({
                 }
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                   form.show_phone
-                    ? "bg-(--main-orange)"
-                    : "bg-zinc-300 dark:bg-zinc-700"
+                    ? 'bg-(--main-orange)'
+                    : 'bg-zinc-300 dark:bg-zinc-700'
                 }`}
                 aria-label="Show phone number in contact file"
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                    form.show_phone ? "translate-x-4" : "translate-x-0.5"
+                    form.show_phone ? 'translate-x-4' : 'translate-x-0.5'
                   }`}
                 />
               </button>
               <span className="text-xs text-zinc-600 dark:text-zinc-400">
                 {form.phone.trim()
-                  ? "Show in contact file"
-                  : "Enter a number to enable"}
+                  ? 'Show in contact file'
+                  : 'Enter a number to enable'}
               </span>
               <InfoTip
                 content="When ON, your phone number is included in the .vcf contact file people download from your profile via “Save Contact”. When OFF (default), it stays private."
@@ -708,7 +723,7 @@ export default function OnboardingForm({
               htmlFor="logo"
               className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Logo{" "}
+              Logo{' '}
               <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">
                 (Pro)
               </span>
@@ -775,13 +790,13 @@ export default function OnboardingForm({
             <div className="scrollable-links flex min-h-10 max-h-64 flex-col gap-2 overflow-y-auto pr-1">
               {socialLinks.length === 0 && (
                 <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                  No links added yet — tap{" "}
+                  No links added yet — tap{' '}
                   <span className="font-medium">Add Link</span> to get started.
                 </p>
               )}
               {socialLinks.map((link, index) => {
                 const platform = SOCIAL_PLATFORMS.find(
-                  (p) => p.id === link.platform
+                  (p) => p.id === link.platform,
                 );
                 const PlatformIcon = platform?.icon;
                 return (
@@ -794,10 +809,10 @@ export default function OnboardingForm({
                       <select
                         value={link.platform}
                         onChange={(e) =>
-                          updateSocialLink(index, "platform", e.target.value)
+                          updateSocialLink(index, 'platform', e.target.value)
                         }
                         className={`w-36 rounded-lg border border-zinc-300 bg-white py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 ${
-                          PlatformIcon ? "pl-8 pr-2" : "px-2"
+                          PlatformIcon ? 'pl-8 pr-2' : 'px-2'
                         }`}
                       >
                         {SOCIAL_PLATFORMS.map((p) => (
@@ -813,9 +828,9 @@ export default function OnboardingForm({
                       type="url"
                       value={link.url}
                       onChange={(e) =>
-                        updateSocialLink(index, "url", e.target.value)
+                        updateSocialLink(index, 'url', e.target.value)
                       }
-                      placeholder={platform?.placeholder ?? "https://..."}
+                      placeholder={platform?.placeholder ?? 'https://...'}
                       className={inputClassName}
                     />
 
@@ -846,26 +861,58 @@ export default function OnboardingForm({
             </div>
           </div>
 
+          {/* Terms & Privacy consent — required before profile creation */}
+          <div className="flex items-start gap-2">
+            <input
+              id="agreeToTerms"
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              required
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-zinc-300 text-(--main-orange) focus:ring-(--main-orange) dark:border-zinc-700"
+            />
+            <label
+              htmlFor="agreeToTerms"
+              className="text-xs text-zinc-600 dark:text-zinc-400"
+            >
+              I have read and accept the Konneqta{' '}
+              <a
+                href="/privacy"
+                target="_blank"
+                className="text-(--main-orange) hover:underline"
+              >
+                privacy policy
+              </a>{' '}
+              and{' '}
+              <a
+                href="/terms"
+                target="_blank"
+                className="text-(--main-orange) hover:underline"
+              >
+                terms of use
+              </a>
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={
-              loading ||
-              usernameStatus !== "available"
+              loading || usernameStatus !== 'available' || !agreedToTerms
             }
             className="mt-4 flex w-full items-center justify-center gap-2 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             {loading && <Spinner size="sm" className="text-white dark:text-zinc-900" />}
             {loading
-              ? "Creating profile..."
-              : usernameStatus === "idle"
-                ? "Enter a username to continue"
-                : usernameStatus === "checking"
-                  ? "Checking username..."
-                  : usernameStatus === "taken"
-                    ? "Username taken — try another"
-                    : usernameStatus === "invalid"
-                      ? "Fix username to continue"
-                      : "Create Profile"}
+              ? 'Creating profile...'
+              : usernameStatus === 'idle'
+                ? 'Enter a username to continue'
+                : usernameStatus === 'checking'
+                  ? 'Checking username...'
+                  : usernameStatus === 'taken'
+                    ? 'Username taken — try another'
+                    : usernameStatus === 'invalid'
+                      ? 'Fix username to continue'
+                      : 'Create Profile'}
           </button>
         </form>
       </div>
