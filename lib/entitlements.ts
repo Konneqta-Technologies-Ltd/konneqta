@@ -35,6 +35,8 @@ export type Plan = "free" | "pro";
 /** A single plan's feature limits. */
 export type PlanLimits = {
   maxCards: number;
+  /** Monthly share cap (owner sharing their own card). Infinity = unlimited. */
+  maxShares: number;
   canUploadLogo: boolean;
   canUseThemes: boolean;
   canUseBanners: boolean;
@@ -45,6 +47,8 @@ export type PlanLimits = {
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
     maxCards: 1,
+    // Free users may share their own card up to 25 times per calendar month.
+    maxShares: 25,
     canUploadLogo: false,
     canUseThemes: false,
     canUseBanners: false,
@@ -52,6 +56,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   },
   pro: {
     maxCards: 3,
+    // Pro users have unlimited shares.
+    maxShares: Infinity,
     canUploadLogo: true,
     canUseThemes: true,
     canUseBanners: true,
@@ -183,4 +189,16 @@ export function canUseSignature(profile: EntitlementProfile | null | undefined):
 export function getMaxCards(profile: EntitlementProfile | null | undefined): number {
   if (isExempt(profile)) return Infinity;
   return getFeatureFlags(profile).maxCards;
+}
+
+/**
+ * How many times can this user share their card this calendar month?
+ * Exempt users are unlimited → Infinity. Pro = Infinity. Free = 25.
+ *
+ * This is the READ side only — the real enforcement happens server-side in
+ * app/api/share/route.ts (clients can't be trusted to count honestly).
+ */
+export function getMaxShares(profile: EntitlementProfile | null | undefined): number {
+  if (isExempt(profile)) return Infinity;
+  return getFeatureFlags(profile).maxShares;
 }

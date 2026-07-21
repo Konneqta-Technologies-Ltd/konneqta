@@ -50,6 +50,16 @@ export type CardLayoutProps = {
 
 const displayName = (p: CardLayoutProfile) => p.full_name || p.username;
 
+/**
+ * Fallback avatar used when a card has no avatar_url. Guaranteed to render
+ * something sensible (the Konneqta default placeholder) instead of a blank
+ * gap or a broken-image icon.
+ */
+const DEFAULT_AVATAR = "/default_avatar.png";
+
+/** Resolve the avatar src, falling back to the default placeholder. */
+const avatarSrc = (url: string | null) => url || DEFAULT_AVATAR;
+
 /* ------------------------------------------------------------------ */
 /* Flip button — shared, recolored per theme                           */
 /* ------------------------------------------------------------------ */
@@ -118,18 +128,16 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
   return (
     <>
       <div className="avatar relative overflow-hidden">
-        {profile.avatar_url && (
-          <Image
-            src={profile.avatar_url}
-            alt={profile.username}
-            width={290}
-            height={290}
-            priority
-            className="h-56 max-w-65 object-cover"
-            style={{ borderRadius: avatarRadius(theme.avatarShape, "0px") }}
-            unoptimized
-          />
-        )}
+        <Image
+          src={avatarSrc(profile.avatar_url)}
+          alt={profile.username}
+          width={290}
+          height={290}
+          priority
+          className="h-56 max-w-65 object-cover"
+          style={{ borderRadius: avatarRadius(theme.avatarShape, "0px") }}
+          unoptimized
+        />
         {/* Purple side panel */}
         <div
           className="absolute top-0 right-0 h-full w-20"
@@ -189,18 +197,16 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 px-6">
-      {profile.avatar_url ? (
-        <Image
-          src={profile.avatar_url}
-          alt={profile.username}
-          width={120}
-          height={120}
-          priority
-          className="h-28 w-28 object-cover ring-2"
-          style={{ borderColor: c.accent, borderRadius: avatarRadius(theme.avatarShape) }}
-          unoptimized
-        />
-      ) : null}
+      <Image
+        src={avatarSrc(profile.avatar_url)}
+        alt={profile.username}
+        width={120}
+        height={120}
+        priority
+        className="h-28 w-28 object-cover ring-2"
+        style={{ borderColor: c.accent, borderRadius: avatarRadius(theme.avatarShape) }}
+        unoptimized
+      />
 
       <div className="flex flex-col items-center gap-1">
         <h1
@@ -251,24 +257,15 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
     <div className="flex h-full w-full items-center gap-4 px-5">
       {/* Left: avatar */}
       <div className="flex w-2/5 justify-center">
-        {profile.avatar_url ? (
-          <Image
-            src={profile.avatar_url}
-            alt={profile.username}
-            width={140}
-            height={140}
-            priority
-            className="h-32 w-32 rounded-2xl object-cover"
-            unoptimized
-          />
-        ) : (
-          <div
-            className="flex h-32 w-32 items-center justify-center rounded-2xl text-4xl font-bold"
-            style={{ background: c.infoBg, color: c.accent }}
-          >
-            {name.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <Image
+          src={avatarSrc(profile.avatar_url)}
+          alt={profile.username}
+          width={140}
+          height={140}
+          priority
+          className="h-32 w-32 rounded-2xl object-cover"
+          unoptimized
+        />
       </div>
 
       {/* Right: info */}
@@ -329,17 +326,15 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
       )}
 
       {/* Avatar tiny, top-left */}
-      {profile.avatar_url && (
-        <Image
-          src={profile.avatar_url}
-          alt={profile.username}
-          width={48}
-          height={48}
-          priority
-          className="absolute top-6 left-8 h-12 w-12 rounded-full object-cover"
-          unoptimized
-        />
-      )}
+      <Image
+        src={avatarSrc(profile.avatar_url)}
+        alt={profile.username}
+        width={48}
+        height={48}
+        priority
+        className="absolute top-6 left-8 h-12 w-12 rounded-full object-cover"
+        unoptimized
+      />
 
       {/* Name huge at the bottom */}
       <div className="flex flex-col gap-1">
@@ -400,18 +395,16 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
       {/* Content (z-20) */}
       <div className="relative z-20 flex h-full flex-col items-center justify-end pb-10">
         {/* Avatar overlapping */}
-        {profile.avatar_url && (
-          <Image
-            src={profile.avatar_url}
-            alt={profile.username}
-            width={100}
-            height={100}
-            priority
-            className="mb-3 h-24 w-24 rounded-full border-4 object-cover"
-            style={{ borderColor: c.bg === "#000000" ? "#ffffff" : c.bg }}
-            unoptimized
-          />
-        )}
+        <Image
+          src={avatarSrc(profile.avatar_url)}
+          alt={profile.username}
+          width={100}
+          height={100}
+          priority
+          className="mb-3 h-24 w-24 rounded-full border-4 object-cover"
+          style={{ borderColor: c.bg === "#000000" ? "#ffffff" : c.bg }}
+          unoptimized
+        />
 
         <h1 className="text-center text-2xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>
           {name}

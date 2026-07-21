@@ -13,9 +13,9 @@ export default function GoBackButton() {
     <button
       type="button"
       onClick={() => window.history.back()}
-      className="w-full rounded-lg border border-zinc-700 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 sm:w-auto"
+      className="w-30 rounded-lg border border-zinc-700 px-4 py-3 cursor-pointer text-sm font-medium text-white transition-colors hover:bg-zinc-800 "
     >
-      ← Go Back
+      ← &nbsp; Go Back
     </button>
   );
 }

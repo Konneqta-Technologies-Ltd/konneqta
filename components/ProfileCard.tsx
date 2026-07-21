@@ -5,9 +5,13 @@ import { ThemeCustomization, resolveTheme } from "@/lib/themes";
 import AppearanceModal from "./AppearanceModal";
 import { PLATFORM_MAP } from "@/lib/social-platforms";
 import ShareMenu from "./ShareMenu";
+import Spinner from "./ui/Spinner";
 import Tooltip from "./Tooltip";
+import { createClient } from "@/lib/supabase/client";
+import { regenerateQrCode } from "@/lib/qr";
 import { renderCardFront } from "./card-layouts";
 import { safeHref } from "@/lib/url-validation";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTrack } from "@/lib/use-track";
@@ -81,8 +85,45 @@ export default function ProfileCard({
   const [flipped, setFlipped] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const track = useTrack();
   const router = useRouter();
+
+  // Refresh/regenerate the card's QR code (owner-only). Generates a fresh
+  // PNG, uploads to the qrcodes bucket, and updates qr_code_url — then
+  // refreshes the Server Component data without a full page reload.
+  const handleRefreshQr = async () => {
+    if (refreshing) return; // prevent double-clicks
+    setRefreshing(true);
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to refresh your card.");
+        return;
+      }
+      if (!profile.cardId) {
+        toast.error("Card ID missing — can't refresh QR.");
+        return;
+      }
+      await regenerateQrCode({
+        supabase,
+        userId: user.id,
+        cardId: profile.cardId,
+        cardSlug: profile.username,
+        logoUrl: profile.logo_url,
+      });
+      toast.success("QR code refreshed");
+      router.refresh();
+    } catch (err) {
+      console.error("QR refresh failed:", err);
+      toast.error("Couldn't refresh the QR code. Please try again.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const theme = resolveTheme(profile.theme, profile.theme_custom);
   const c = theme.colors;
@@ -324,6 +365,41 @@ export default function ProfileCard({
             </IconButton>
           )}
 
+          {/* Refresh QR (owner only) — regenerates the QR code PNG and
+              refreshes the card data without a full page reload. Useful
+              when the QR failed to generate during onboarding. */}
+          {isOwner && (
+            <Tooltip label="Refresh QR code" side="bottom">
+              <button
+                type="button"
+                onClick={handleRefreshQr}
+                disabled={refreshing}
+                aria-label="Refresh QR code"
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                {refreshing ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M23 4v6h-6" />
+                    <path d="M1 20v-6h6" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                  </svg>
+                )}
+              </button>
+            </Tooltip>
+          )}
+
           {/* Save Contact — visitors only. The owner doesn't need to save
               their own card. */}
           {!isOwner && (
@@ -352,7 +428,12 @@ export default function ProfileCard({
           )}
 
           <Tooltip label="Share" side="top">
-            <ShareMenu username={profile.username} title={displayName} />
+            <ShareMenu
+              username={profile.username}
+              title={displayName}
+              cardId={profile.cardId}
+              isOwner={isOwner}
+            />
           </Tooltip>
         </div>
 

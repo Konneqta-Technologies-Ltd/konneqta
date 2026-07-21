@@ -1,16 +1,21 @@
 "use client";
 
+import Modal from "@/components/ui/Modal";
+import Spinner from "@/components/ui/Spinner";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /**
- * Delete Account button — red bg with red shadow, white text.
+ * Delete Account control — a button that opens a confirmation modal, and the
+ * modal itself.
  *
- * Opens a confirmation modal where the user must type "DELETE" to confirm.
- * On confirm, calls the /api/delete-account route which uses the Supabase
- * service role key to wipe auth + profile + storage data.
+ * The user must type "DELETE" to confirm. On confirm, calls the
+ * /api/delete-account route which uses the Supabase service role key to wipe
+ * auth + profile + storage data.
+ *
+ * Uses the shared `components/ui/Modal` for the confirmation dialog.
  */
 export default function DeleteAccountButton() {
   const router = useRouter();
@@ -19,6 +24,12 @@ export default function DeleteAccountButton() {
   const [loading, setLoading] = useState(false);
 
   const isConfirmed = confirmText.trim().toUpperCase() === "DELETE";
+
+  function handleClose() {
+    if (loading) return;
+    setShowModal(false);
+    setConfirmText("");
+  }
 
   async function handleDelete() {
     if (!isConfirmed) return;
@@ -76,67 +87,59 @@ export default function DeleteAccountButton() {
         Delete Account
       </button>
 
-      {/* ---- Confirmation Modal ---- */}
-      {showModal && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
-          onClick={() => !loading && setShowModal(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
+      <Modal
+        open={showModal}
+        onClose={handleClose}
+        dismissable={!loading}
+        aria-label="Delete account confirmation"
+      >
+        <h2 className="text-lg font-bold text-red-500">Delete Account?</h2>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          This will permanently erase your profile, social links, QR code,
+          and all uploaded images. <strong>This cannot be undone.</strong>
+        </p>
+
+        <div className="mt-4">
+          <label
+            htmlFor="confirm-delete"
+            className="block text-xs font-medium text-zinc-500 dark:text-zinc-400"
           >
-            <h2 className="text-lg font-bold text-red-500">Delete Account?</h2>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              This will permanently erase your profile, social links, QR code,
-              and all uploaded images. <strong>This cannot be undone.</strong>
-            </p>
-
-            <div className="mt-4">
-              <label
-                htmlFor="confirm-delete"
-                className="block text-xs font-medium text-zinc-500 dark:text-zinc-400"
-              >
-                Type <span className="font-bold text-red-500">DELETE</span> to
-                confirm
-              </label>
-              <input
-                id="confirm-delete"
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                disabled={loading}
-                autoComplete="off"
-                autoFocus
-                className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-red-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-                placeholder="DELETE"
-              />
-            </div>
-
-            <div className="mt-5 flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowModal(false);
-                  setConfirmText("");
-                }}
-                disabled={loading}
-                className="flex-1 cursor-pointer rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={!isConfirmed || loading}
-                className="flex-1 cursor-pointer rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {loading ? "Deleting…" : "Delete Forever"}
-              </button>
-            </div>
-          </div>
+            Type <span className="font-bold text-red-500">DELETE</span> to
+            confirm
+          </label>
+          <input
+            id="confirm-delete"
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            disabled={loading}
+            autoComplete="off"
+            autoFocus
+            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-red-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            placeholder="DELETE"
+          />
         </div>
-      )}
+
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={loading}
+            className="flex-1 cursor-pointer rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={!isConfirmed || loading}
+            className="flex flex-1 items-center justify-center gap-2 cursor-pointer rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {loading && <Spinner size="sm" className="text-white" />}
+            {loading ? "Deleting…" : "Delete Forever"}
+          </button>
+        </div>
+      </Modal>
     </>
   );
 }

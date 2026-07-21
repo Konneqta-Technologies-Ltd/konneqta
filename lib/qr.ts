@@ -13,6 +13,7 @@
  */
 
 import QRCode from "qrcode";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type GenerateQrOptions = {
   /** Absolute profile URL, e.g. https://www.konneqta.com/johndoe */
@@ -35,8 +36,16 @@ export async function generateQrDataUrl({
   logoUrl,
   size = 480,
 }: GenerateQrOptions): Promise<string> {
+  // Tag the URL with ?src=qr so that when someone scans the printed QR with
+  // their phone camera, the resulting profile view is attributed to source
+  // "qr" in analytics (rather than looking like direct/organic traffic).
+  // The fragment is avoided; we append a query param only.
+  const trackedUrl = profileUrl.includes("src=")
+    ? profileUrl
+    : `${profileUrl}${profileUrl.includes("?") ? "&" : "?"}src=qr`;
+
   // 1. Generate the base QR as a data URL.
-  const qrDataUrl = await QRCode.toDataURL(profileUrl, {
+  const qrDataUrl = await QRCode.toDataURL(trackedUrl, {
     errorCorrectionLevel: logoUrl ? "H" : "M",
     margin: 2,
     width: size,
@@ -142,4 +151,105 @@ export function dataUrlToBlob(dataUrl: string): Blob {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: mime });
+}
+
+/**
+ * Resolve the canonical site origin for QR codes.
+ *
+ * QR codes are GENERATED ONCE (client-side) and persisted as a PNG to
+ * Supabase Storage. If they used `window.location.origin`, any QR generated
+ * during local dev would permanently bake `localhost:3000` into the image.
+ * To avoid that, we prefer the `NEXT_PUBLIC_SITE_URL` env var (the production
+ * origin) and only fall back to `window.location.origin` if it's missing
+ * (e.g. a dev who hasn't configured the env yet).
+ *
+ * This is browser-only (the QR is generated client-side), but reading a
+ * NEXT_PUBLIC_* env var is safe in both server and client contexts.
+ */
+export function getCanonicalOrigin(): string {
+  const envOrigin = process.env.NEXT_PUBLIC_SITE_URL;
+  if (envOrigin) return envOrigin.replace(/\/$/, ""); // strip trailing slash
+  // Fallback for environments where the env var isn't set.
+  return typeof window !== "undefined" ? window.location.origin : "";
+}
+
+/**
+ * Build the canonical profile URL for a card slug, using the production
+ * origin (not the current browser origin).
+ */
+export function getCanonicalProfileUrl(cardSlug: string): string {
+  return `${getCanonicalOrigin()}/${cardSlug}`;
+}
+
+export type RegenerateQrCodeInput = {
+  /** Browser Supabase client (from createClient in lib/supabase/client). */
+  supabase: SupabaseClient;
+  /** Auth user id — used for the storage path. */
+  userId: string;
+  /** Card id — the qr_code_url is stored on this cards row. */
+  cardId: string;
+  /** Card slug — the QR encodes `${origin}/${slug}`. */
+  cardSlug: string;
+  /** Optional logo URL to composite into the QR center. */
+  logoUrl?: string | null;
+};
+
+/**
+ * Regenerate a card's QR code: generate a fresh PNG client-side, upload it to
+ * the `qrcodes` bucket (upsert at `${userId}/${cardId}/qr.png`), and update
+ * `cards.qr_code_url` with the new public URL.
+ *
+ * Returns the new public URL (cache-busted) on success, or null on failure.
+ * Errors are thrown to the caller so they can show appropriate UI feedback.
+ *
+ * This is browser-only (uses canvas + document for logo compositing).
+ */
+export async function regenerateQrCode({
+  supabase,
+  userId,
+  cardId,
+  cardSlug,
+  logoUrl,
+}: RegenerateQrCodeInput): Promise<string | null> {
+  // Use the canonical production origin (NEXT_PUBLIC_SITE_URL) so QRs
+  // never bake in localhost. Falls back to window.location.origin only
+  // when the env var is unset.
+  const profileUrl = getCanonicalProfileUrl(cardSlug);
+
+  // 1. Generate the QR PNG (with optional logo).
+  const qrDataUrl = await generateQrDataUrl({
+    profileUrl,
+    logoUrl: logoUrl || null,
+  });
+  const qrBlob = dataUrlToBlob(qrDataUrl);
+  const qrPath = `${userId}/${cardId}/qr.png`;
+
+  // 2. Upload to Supabase Storage (upsert so we replace the old PNG).
+  const { error: uploadError } = await supabase.storage
+    .from("qrcodes")
+    .upload(qrPath, qrBlob, { upsert: true, contentType: "image/png" });
+
+  if (uploadError) {
+    throw new Error(`QR upload failed: ${uploadError.message}`);
+  }
+
+  // 3. Get the public URL and append a cache-busting query param so the
+  //    browser/CDN always fetches the fresh PNG instead of the stale cached
+  //    one (same path, new content).
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("qrcodes").getPublicUrl(qrPath);
+  const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
+
+  // 4. Persist the new URL on the card row.
+  const { error: updateError } = await supabase
+    .from("cards")
+    .update({ qr_code_url: cacheBustedUrl })
+    .eq("id", cardId);
+
+  if (updateError) {
+    throw new Error(`QR URL update failed: ${updateError.message}`);
+  }
+
+  return cacheBustedUrl;
 }

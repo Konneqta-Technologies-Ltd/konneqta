@@ -1,5 +1,7 @@
 import { buildVCard } from "@/lib/vcard";
 import { createClient } from "@/lib/supabase/server";
+import { getVisitorId } from "@/lib/analytics/visitor";
+import { recordEvent } from "@/lib/analytics/server";
 
 /**
  * vCard (.vcf) download route.
@@ -40,6 +42,18 @@ export async function GET(
   // Build the canonical profile URL from the incoming request host.
   const url = new URL(_req.url);
   const profileUrl = `${url.origin}/${card.slug}`;
+
+  // ── ANALYTICS: vCard download (fire-and-forget) ──────────────────────
+  // Record the download for the card owner. Visitor id is read-only here
+  // (no cookie set on a download route to keep headers clean). Errors are
+  // swallowed by recordEvent so a tracking hiccup never breaks the .vcf.
+  const visitorId = await getVisitorId();
+  void recordEvent({
+    owner_id: card.owner_id,
+    card_id: card.id,
+    event_type: "vcard_download",
+    visitor_id: visitorId,
+  });
 
   const vcf = buildVCard({
     fullName: card.full_name,
