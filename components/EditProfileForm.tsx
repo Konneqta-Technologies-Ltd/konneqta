@@ -6,14 +6,15 @@ import {
   isSafeHttpUrl,
   safeFileExtension,
 } from "@/lib/url-validation";
-import { dataUrlToBlob, generateQrDataUrl } from "@/lib/qr";
 import { useRef, useState } from "react";
 
 import CardSwitcher from "./CardSwitcher";
 import InfoTip from "./InfoTip";
 import ProGate from "./ProGate";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
+import Spinner from "./ui/Spinner";
 import { createClient } from "@/lib/supabase/client";
+import { regenerateQrCode } from "@/lib/qr";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -36,6 +37,7 @@ interface EditProfileFormProps {
     bio: string;
     avatar_url: string;
     logo_url: string;
+    qr_code_url?: string | null;
   };
   initialSocialLinks: { id?: string; platform: string; url: string }[];
   canUploadLogo?: boolean;
@@ -52,6 +54,24 @@ type SocialLink = {
   url: string;
 };
 
+/**
+ * Extract the storage object path from a Supabase public URL.
+ * e.g. "https://xyz.supabase.co/storage/v1/object/public/avatars/uid/avatar.jpg?t=123"
+ *   → "uid/avatar.jpg"
+ * Returns null if the URL isn't a valid Supabase storage URL for that bucket.
+ */
+function extractStoragePath(url: string, bucket: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const marker = `/object/public/${bucket}/`;
+    const idx = parsed.pathname.indexOf(marker);
+    if (idx === -1) return null;
+    return parsed.pathname.slice(idx + marker.length);
+  } catch {
+    return null;
+  }
+}
+
 export default function EditProfileForm({
   initialProfile,
   initialSocialLinks,
@@ -64,6 +84,7 @@ export default function EditProfileForm({
 }: EditProfileFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState(initialProfile);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(
@@ -78,7 +99,12 @@ export default function EditProfileForm({
     initialProfile.avatar_url ?? ""
   );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarRemoved, setAvatarRemoved] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>(
+    initialProfile.logo_url ?? ""
+  );
+  const [logoRemoved, setLogoRemoved] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -104,6 +130,7 @@ export default function EditProfileForm({
     }
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
+    setAvatarRemoved(false);
   };
 
   const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +144,32 @@ export default function EditProfileForm({
       toast.error("Logo must be less than 5MB");
       return;
     }
+    if (logoPreview && logoPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(logoPreview);
+    }
     setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+    setLogoRemoved(false);
+  };
+
+  const handleRemoveAvatar = () => {
+    if (avatarPreview && avatarPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    setAvatarFile(null);
+    setAvatarPreview("");
+    setAvatarRemoved(true);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveLogo = () => {
+    if (logoPreview && logoPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    setLogoFile(null);
+    setLogoPreview("");
+    setLogoRemoved(true);
+    if (logoInputRef.current) logoInputRef.current.value = "";
   };
 
   const addSocialLink = () => {
@@ -144,28 +196,63 @@ export default function EditProfileForm({
         return;
       }
 
-      // 1. Upload avatar
+      // 1. Upload avatar (with cache-bust + orphan cleanup).
+      //    The URL must change on every update, otherwise the browser/CDN
+      //    serves the stale cached image even though storage was overwritten.
+      //    This was the root cause of "image doesn't update on save".
       let avatarUrl = form.avatar_url;
       if (avatarFile) {
         const fileExt = safeFileExtension(avatarFile.name);
         const filePath = `${user.id}/avatar.${fileExt}`;
+
+        // Orphan cleanup: if the previous avatar had a different extension,
+        // delete the old file so we don't leave dead objects in the bucket.
+        if (form.avatar_url) {
+          const oldPath = extractStoragePath(form.avatar_url, "avatars");
+          if (oldPath && oldPath !== filePath) {
+            await supabase.storage.from("avatars").remove([oldPath]).catch(() => {});
+          }
+        }
+
         const { error: uploadError } = await supabase.storage
           .from("avatars").upload(filePath, avatarFile, { upsert: true });
         if (uploadError) { toast.error(uploadError.message); return; }
         const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(filePath);
-        avatarUrl = publicUrl;
+        // Cache-bust query forces browsers + the Supabase CDN to refetch.
+        avatarUrl = `${publicUrl}?t=${Date.now()}`;
+      } else if (avatarRemoved && form.avatar_url) {
+        // Explicit removal: delete the storage object + null out the URL.
+        const oldPath = extractStoragePath(form.avatar_url, "avatars");
+        if (oldPath) {
+          await supabase.storage.from("avatars").remove([oldPath]).catch(() => {});
+        }
+        avatarUrl = "";
       }
 
-      // 1b. Upload logo
+      // 1b. Upload logo (same cache-bust + orphan cleanup treatment).
       let logoUrl = form.logo_url;
       if (logoFile) {
         const fileExt = safeFileExtension(logoFile.name);
         const filePath = `${user.id}/logo.${fileExt}`;
+
+        if (form.logo_url) {
+          const oldPath = extractStoragePath(form.logo_url, "logos");
+          if (oldPath && oldPath !== filePath) {
+            await supabase.storage.from("logos").remove([oldPath]).catch(() => {});
+          }
+        }
+
         const { error: uploadError } = await supabase.storage
           .from("logos").upload(filePath, logoFile, { upsert: true });
         if (uploadError) { toast.error(uploadError.message); return; }
         const { data: { publicUrl } } = supabase.storage.from("logos").getPublicUrl(filePath);
-        logoUrl = publicUrl;
+        logoUrl = `${publicUrl}?t=${Date.now()}`;
+      } else if (logoRemoved && form.logo_url) {
+        const oldPath = extractStoragePath(form.logo_url, "logos");
+        if (oldPath) {
+          await supabase.storage.from("logos").remove([oldPath]).catch(() => {});
+        }
+        logoUrl = "";
       }
 
       // 2. UPDATE THE CARD ROW (card-specific fields)
@@ -179,8 +266,9 @@ export default function EditProfileForm({
           job_title: form.job_title,
           company: form.company,
           bio: form.bio,
-          avatar_url: avatarUrl,
-          logo_url: logoUrl,
+          // Empty string (removed) → null so the column is properly cleared.
+          avatar_url: avatarUrl || null,
+          logo_url: logoUrl || null,
           phone: form.phone,
           show_phone: phoneIsEmpty ? false : form.show_phone,
         })
@@ -227,20 +315,20 @@ export default function EditProfileForm({
         }
       }
 
-      // 5. Regenerate QR (per-card, based on slug)
-      const logoChanged = Boolean(logoFile);
-      if (logoChanged) {
+      // 5. Regenerate QR (per-card, based on slug).
+      //    Regenerate when the logo changed OR when the card is missing a
+      //    QR code (e.g. onboarding upload failed). This ensures editing a
+      //    card always produces a valid QR, even without a new logo upload.
+      const logoChanged = Boolean(logoFile) || logoRemoved;
+      if (logoChanged || !initialProfile.qr_code_url) {
         try {
-          const profileUrl = `${window.location.origin}/${cardSlug}`;
-          const qrDataUrl = await generateQrDataUrl({ profileUrl, logoUrl: logoUrl || null });
-          const qrBlob = dataUrlToBlob(qrDataUrl);
-          const qrPath = `${user.id}/${cardId}/qr.png`;
-          const { error: qrUploadError } = await supabase.storage
-            .from("qrcodes").upload(qrPath, qrBlob, { upsert: true, contentType: "image/png" });
-          if (!qrUploadError) {
-            const { data: { publicUrl: qrPublicUrl } } = supabase.storage.from("qrcodes").getPublicUrl(qrPath);
-            await supabase.from("cards").update({ qr_code_url: qrPublicUrl }).eq("id", cardId);
-          }
+          await regenerateQrCode({
+            supabase,
+            userId: user.id,
+            cardId,
+            cardSlug,
+            logoUrl: logoUrl || null,
+          });
         } catch (qrErr) {
           console.error("qr regeneration error:", qrErr);
         }
@@ -295,9 +383,26 @@ export default function EditProfileForm({
               )}
             </button>
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarSelect} className="hidden" />
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              {avatarPreview ? "Click to change photo" : "Click to upload photo"}
-            </p>
+            {avatarPreview ? (
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Change photo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950/40"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Click to upload photo</p>
+            )}
           </div>
 
           {/* Username — LOCKED (multi-card: username is immutable) */}
@@ -357,12 +462,20 @@ export default function EditProfileForm({
               Logo <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">{canUploadLogo ? "(optional)" : "(Pro)"}</span>
             </label>
             <ProGate allowed={canUploadLogo} label="Logo upload">
-              <input id="logo" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleLogoSelect} disabled={!canUploadLogo} className={inputClassName} />
+              <input ref={logoInputRef} id="logo" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleLogoSelect} disabled={!canUploadLogo} className={inputClassName} />
             </ProGate>
-            {canUploadLogo && logoFile ? (
-              <p className="mt-1 text-xs text-green-600 dark:text-green-400">{logoFile.name} selected</p>
-            ) : canUploadLogo && form.logo_url ? (
-              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">Current logo set</p>
+            {canUploadLogo && logoPreview ? (
+              <div className="mt-2 flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoPreview} alt="Logo preview" className="h-10 w-10 rounded-md border border-zinc-200 object-contain dark:border-zinc-700" />
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950/40"
+                >
+                  Remove logo
+                </button>
+              </div>
             ) : null}
           </div>
 
@@ -406,7 +519,7 @@ export default function EditProfileForm({
 
           <div className="mt-4 flex gap-3">
             <button type="button" onClick={() => setShowCancelDialog(true)} className="flex-1 cursor-pointer rounded-lg border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Cancel</button>
-            <button type="submit" disabled={loading} className="flex-1 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-3 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{loading ? "Updating..." : "Update Card"}</button>
+            <button type="submit" disabled={loading} className="flex flex-1 items-center justify-center gap-2 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-3 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{loading && <Spinner size="sm" className="text-white" />}{loading ? "Updating..." : "Update Card"}</button>
           </div>
         </form>
       </div>

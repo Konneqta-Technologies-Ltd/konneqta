@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { VISITOR_COOKIE_NAME } from "@/lib/analytics/visitor";
 
 const PROTECTED_ROUTES = ["/onboarding", "/post-login"];
 const AUTH_ROUTES = ["/auth/login", "/auth/signup", "/auth/forgot-password"];
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 function matchesRoute(pathname: string, routes: string[]): boolean {
   return routes.some((route) => {
@@ -63,6 +65,33 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = matchesRoute(pathname, AUTH_ROUTES);
   if (user && isAuthRoute) {
     return NextResponse.redirect(new URL("/post-login", request.url));
+  }
+
+  // 5. Ensure the anonymous visitor ID cookie exists for analytics.
+  //    Must be set here (middleware) because Server Components cannot
+  //    modify cookies — only Route Handlers, Server Actions, and
+  //    middleware can. Setting it on `request.cookies` makes it visible
+  //    to the downstream page on THIS request; setting it on
+  //    `response.cookies` persists it in the browser.
+  if (!request.cookies.get(VISITOR_COOKIE_NAME)?.value) {
+    const newId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+    const cookieOptions = {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: ONE_YEAR_SECONDS,
+      path: "/",
+    };
+
+    // `request.cookies.set` only takes name/value (no options) — it just
+    // forwards the value to downstream Server Components for THIS request.
+    // `response.cookies.set` accepts full options and persists in the browser.
+    request.cookies.set(VISITOR_COOKIE_NAME, newId);
+    response.cookies.set(VISITOR_COOKIE_NAME, newId, cookieOptions);
   }
 
   return response;

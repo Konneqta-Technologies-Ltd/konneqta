@@ -12,11 +12,12 @@ import type { Metadata, Viewport } from 'next';
 
 import { Analytics } from '@vercel/analytics/next';
 import AppNavbar from '@/components/AppNavbar';
+import CookieConsentBanner from '@/components/CookieConsentBanner';
+import {GoogleAnalytics} from "@next/third-parties/google"
 import PostHogProvider from '@/components/PostHogProvider';
 import Script from 'next/script';
-import SwRegister from '@/components/SwRegister';
-import { Toaster } from 'sonner';
-import CookieConsentBanner from '@/components/CookieConsentBanner';
+import SwRegister from "@/components/SwRegister";
+import { Toaster } from "sonner";
 
 const outfit = Outfit({
   display: 'swap',
@@ -170,6 +171,9 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
       </body>
+      {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+  <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+)}
     </html>
   );
 }

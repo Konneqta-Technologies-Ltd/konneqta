@@ -3,6 +3,8 @@
 import { FaEnvelope, FaTelegram, FaWhatsapp } from "react-icons/fa6";
 import { LuMessageCircle, LuShare2 } from "react-icons/lu";
 
+import Spinner from "@/components/ui/Spinner";
+import { useShareCount } from "@/components/analytics/ShareCountProvider";
 import { useState } from "react";
 
 type ShareMenuProps = {
@@ -10,19 +12,48 @@ type ShareMenuProps = {
   username: string;
   /** Display name used in the share message. */
   title: string;
+  /** Card id (for attribution). */
+  cardId?: string | null;
+  /**
+   * Whether the current viewer is the owner. Only owners are limited by the
+   * 25/month cap; visitors sharing someone else's card are free virality and
+   * are not counted against a limit (and not recorded as owner shares).
+   */
+  isOwner?: boolean;
 };
+
+type ShareResult =
+  | { ok: true }
+  | { blocked: true; remaining: number; limit: number }
+  | { error: true };
 
 /**
  * Share button that uses the native Web Share API when available (shows the
  * mobile bottom-sheet with installed apps). On desktop it falls back to a
  * small dropdown of direct-share links.
  *
+ * ANALYTICS + LIMIT
+ * -----------------
+ * When the viewer is the owner, each share action POSTs to /api/share which:
+ *   - enforces the 25/month limit server-side, and
+ *   - records a `share` event with the channel.
+ * On success it calls `refresh()` on the ShareCountProvider so the top-right
+ * badge ticks down live. On 429 (limit hit) it blocks the share and shows an
+ * upgrade prompt.
+ *
  * The absolute profile URL is computed lazily at click-time to stay
  * SSR-safe (window is only read in event handlers).
  */
-export default function ShareMenu({ username, title }: ShareMenuProps) {
+export default function ShareMenu({
+  username,
+  title,
+  cardId,
+  isOwner = false,
+}: ShareMenuProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const { refresh, resetLimitDismissed } = useShareCount();
 
   // Build the full URL only when the user actually interacts
   const getUrl = () =>
@@ -32,25 +63,67 @@ export default function ShareMenu({ username, title }: ShareMenuProps) {
 
   const shareText = `Connect with ${title} on Konneqta:`;
 
+  /**
+   * Record a share via the server. Returns whether the share is allowed.
+   * For visitors (non-owners) this is a no-op (they share for free).
+   */
+  const recordShare = async (channel: string): Promise<ShareResult> => {
+    if (!isOwner) return { ok: true };
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, channel, cardId }),
+      });
+      if (res.status === 429) {
+        // The server blocked the share (monthly cap reached). Re-show the
+        // upgrade modal owned by the ShareCountProvider, even if the owner
+        // previously dismissed it, then pull the freshly-zeroed count.
+        resetLimitDismissed();
+        void refresh();
+        return { blocked: true, remaining: 0, limit: 25 };
+      }
+      if (!res.ok) return { error: true };
+      // Success — refresh the badge so it ticks down live.
+      void refresh();
+      return { ok: true };
+    } catch {
+      // Network error — don't block the share, but we couldn't record it.
+      return { error: true };
+    }
+  };
+
   // ---- Native share (mobile / supported browsers) ----
   const handleNativeShare = async () => {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({
-          title: `${title} · Konneqta`,
-          text: shareText,
-          url: getUrl(),
-        });
-      } catch {
-        // User cancelled — no action needed
+    if (sharing) return; // prevent double-clicks
+    setSharing(true);
+    try {
+      const result = await recordShare("native");
+      if ("blocked" in result && result.blocked) return;
+
+      if (typeof navigator !== "undefined" && navigator.share) {
+        try {
+          await navigator.share({
+            title: `${title} · Konneqta`,
+            text: shareText,
+            url: getUrl(),
+          });
+        } catch {
+          // User cancelled — no action needed
+        }
+      } else {
+        setOpen((prev) => !prev);
       }
-    } else {
-      setOpen((prev) => !prev);
+    } finally {
+      setSharing(false);
     }
   };
 
   // ---- Copy to clipboard ----
   const handleCopy = async () => {
+    const result = await recordShare("copy");
+    if ("blocked" in result && result.blocked) return;
+
     const url = getUrl();
     try {
       await navigator.clipboard.writeText(url);
@@ -77,24 +150,28 @@ export default function ShareMenu({ username, title }: ShareMenuProps) {
         icon: FaWhatsapp,
         href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${url}`)}`,
         color: "text-green-500",
+        channel: "whatsapp",
       },
       {
         label: "Telegram",
         icon: FaTelegram,
         href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`,
         color: "text-sky-500",
+        channel: "telegram",
       },
       {
         label: "Messages",
         icon: LuMessageCircle,
         href: `sms:?&body=${encodeURIComponent(`${shareText} ${url}`)}`,
         color: "text-blue-500",
+        channel: "sms",
       },
       {
         label: "Email",
         icon: FaEnvelope,
         href: `mailto:?subject=${encodeURIComponent(`${title} · Konneqta`)}&body=${encodeURIComponent(`${shareText}\n\n${url}`)}`,
         color: "text-zinc-500",
+        channel: "email",
       },
     ];
   };
@@ -104,11 +181,12 @@ export default function ShareMenu({ username, title }: ShareMenuProps) {
       <button
         type="button"
         onClick={handleNativeShare}
+        disabled={sharing}
         aria-label="Share profile"
         aria-expanded={open}
-        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
       >
-        <LuShare2 className="h-4 w-4" />
+        {sharing ? <Spinner size="sm" /> : <LuShare2 className="h-4 w-4" />}
       </button>
 
       {/* Fallback dropdown (desktop / browsers without Web Share API) */}
@@ -130,7 +208,10 @@ export default function ShareMenu({ username, title }: ShareMenuProps) {
                     href={target.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      void recordShare(target.channel);
+                      setOpen(false);
+                    }}
                     className="flex w-36 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                   >
                     <Icon className={`h-4 w-4 ${target.color}`} />

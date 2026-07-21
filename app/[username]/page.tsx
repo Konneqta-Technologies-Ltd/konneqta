@@ -1,14 +1,17 @@
 import { canUseBanners, canUseThemes, isPro } from "@/lib/entitlements";
 
-import  Link  from "next/link"
+import Link from "next/link";
 import type { Metadata } from "next";
-import PlanBadge from "@/components/PlanBadge";
+import OwnerBadges from "@/components/OwnerBadges";
 import ProfileCard from "@/components/ProfileCard";
 import type { ThemeCustomization } from "@/lib/themes";
-import UpgradeButton from "@/components/UpgradeButton";
 import { buildPersonSchema } from "@/lib/seo";
 import { createClient } from "@/lib/supabase/server";
-import { isAllowedStorageUrl } from "@/lib/url-validation";
+import { getVisitorId } from "@/lib/analytics/visitor";
+import { headers } from "next/headers";
+import { parseGeo } from "@/lib/analytics/geo";
+import { parseSource } from "@/lib/analytics/source";
+import { recordEvent } from "@/lib/analytics/server";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -46,21 +49,22 @@ export async function generateMetadata({
   const title = titleParts.join(" | ");
 
   // Richer description (capped at ~155 chars for Google's snippet).
-  const descriptionRaw = [
-    jobTitle && `💼 ${jobTitle}`,
-    company && `at ${company}`,
-    bio,
-  ]
+  // NOTE: do NOT use emojis here — they get mojibake-corrupted in the
+  // <meta> tag serialization, and strict crawlers (WhatsApp/Telegram)
+  // drop the entire preview card when they see invalid UTF-8 bytes.
+  const descriptionRaw = [jobTitle, company && `at ${company}`, bio]
     .filter(Boolean)
     .join(". ");
   const description =
     descriptionRaw.slice(0, 157).trim() ||
     `Connect with @${username} on Konneqta`;
 
-  const avatarUrl = card.avatar_url?.trim() || "";
-  const ogImage =
-    avatarUrl && isAllowedStorageUrl(avatarUrl) ? avatarUrl : "/banner.png";
-
+  // og:image / twitter:image are now generated dynamically by
+  // app/[username]/opengraph-image.tsx (Next.js 16 file convention).
+  // Next.js auto-wires the correct og:image + og:image:width/height tags,
+  // so we intentionally do NOT set `images` in openGraph/twitter below.
+  // This fixes the dimension-mismatch bug where the raw avatar (portrait)
+  // was declared as 1200×630, causing strict crawlers to reject the card.
   return {
     title,
     description,
@@ -78,13 +82,11 @@ export async function generateMetadata({
       url: `/${username}`,
       siteName: "Konneqta",
       type: "profile",
-      images: [{ url: ogImage, width: 1200, height: 630, alt: fullName }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [ogImage],
     },
   };
 }
@@ -224,6 +226,34 @@ export default async function UsernamePage({
     theme_custom: ownerIsPro ? themeCustom : null,
   };
 
+  // ── ANALYTICS: profile view (fire-and-forget) ─────────────────────────
+  // Record a view for the owner. We don't await this in a way that blocks the
+  // response — recordEvent swallows all errors. Owner's own views are still
+  // counted (useful for them to see their traffic), but we tag isOwner in a
+  // way the dashboard could later filter. Note: the visitor cookie (`kq_vid`)
+  // is set by the middleware (proxy.ts) — Server Components can only READ
+  // cookies, not modify them. If the cookie is somehow absent (e.g. an edge
+  // that bypassed the middleware), visitor_id is recorded as null, which
+  // recordEvent handles gracefully (the column is nullable).
+  //
+  // Run after the redirect/404 guards so we never count dead-end hits.
+  const visitorId = await getVisitorId();
+  const headersList = await headers();
+  const referer = headersList.get("referer");
+  const geo = parseGeo((name) => headersList.get(name));
+  const source = parseSource({ srcParam: null, referer });
+
+  // Fire-and-forget — don't let a slow insert delay the render.
+  void recordEvent({
+    owner_id: card.owner_id,
+    card_id: card.id,
+    event_type: "profile_view",
+    source,
+    visitor_id: visitorId,
+    country: geo.country,
+    city: geo.city,
+  });
+
   // ── SEO: schema.org Person JSON-LD ────────────────────────────────────
   // Tells Google this page represents a Person. Built from the card data we
   // already fetched above.
@@ -240,27 +270,27 @@ export default async function UsernamePage({
     baseUrl,
   });
 
+  // OwnerBadges wraps the page content in a ShareCountProvider (for owners
+  // only) and renders the top-right cluster (PlanBadge + ShareCounter +
+  // UpgradeButton) side-by-side with no overlap. Nesting the content inside
+  // it means the ShareMenu (within ProfileCard) shares the provider, so a
+  // successful share ticks the counter down live, and a 429 from the server
+  // can surface the "share limit reached" modal.
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
-      />
-      <ProfileCard
-        profile={profile}
-        socialLinks={socialLinks ?? []}
-        isOwner={isOwner}
-        canUseThemes={canUseThemes(owner)}
-        canUseBanners={canUseBanners(owner)}
-      />
-
-      {/* Plan badge — owner-only, always visible to the owner.
-          Shows "Freemium" (amber) or "Premium" (green). */}
-      <PlanBadge isPro={ownerIsPro} show={isOwner} />
-
-      {/* Upgrade button — only for the owner when they don't have Pro.
-          Sits to the left of the plan badge at top-right. */}
-      <UpgradeButton show={isOwner && !ownerIsPro} />
-    </main>
+    <OwnerBadges isOwner={isOwner} isPro={ownerIsPro}>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+        />
+        <ProfileCard
+          profile={profile}
+          socialLinks={socialLinks ?? []}
+          isOwner={isOwner}
+          canUseThemes={canUseThemes(owner)}
+          canUseBanners={canUseBanners(owner)}
+        />
+      </main>
+    </OwnerBadges>
   );
 }

@@ -1,36 +1,40 @@
 /**
- * One-off dev script: rasterize the Konneqta master SVG logo into the PNG
- * icons required for an installable PWA + iOS apple-touch icon + a maskable
- * (safe-zone padded) Android icon.
+ * One-off dev script: generate the PNG icons required for an installable
+ * PWA + iOS apple-touch icon + a maskable (safe-zone padded) Android icon,
+ * plus the browser favicons.
  *
- * Output:  public/icons/{icon-192.png,icon-512.png,icon-maskable-512.png,apple-touch-180.png}
+ * Output:
+ *   public/icons/{icon-192.png,icon-512.png,icon-maskable-512.png,apple-touch-180.png}
+ *   public/{favicon-16x16.png,favicon-32x32.png,favicon-48x48.png}
  *
  * Run with:  node scripts/generate-pwa-icons.mjs
  *
- * Design contract (agreed with the brand owner, 2026-07-01):
+ * Design contract (agreed with the brand owner, 2026-07-01; updated
+ * 2026-07-20 to a new master PNG logo):
  *  - Splash / install UI background = pure black (#000000).
- *  - Logo = the supplied 600x600 `konneqta-logo.svg` wordmark.
+ *  - Logo = the supplied 1024x1024 `konneqta-logo.png` master.
  *  - Regular (non-maskable) icons: transparent background, logo fitted to ~80%.
  *  - Maskable icon: solid black background + safe-zone padding (logo at ~64%
- *    of canvas) so Android adaptive icon shapes don't crop the wordmark.
+ *    of canvas) so Android adaptive icon shapes don't crop the logo.
+ *  - The web app banner / OG image (`public/banner.png`) is NOT touched by
+ *    this script — it stays as the existing splash asset.
  */
 
 import { dirname, resolve } from "node:path";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
-const svgPath = resolve(root, "public", "konneqta-logo.svg");
+// NEW master logo (1024x1024 PNG). Replaces the old SVG wordmark source.
+const masterPath = resolve(root, "public", "konneqta-logo.png");
 const outDir = resolve(root, "public", "icons");
+const publicDir = resolve(root, "public");
 
 mkdirSync(outDir, { recursive: true });
 
-const svgBuffer = readFileSync(svgPath);
-
-// The master SVG is a 600x600 square viewBox wordmark.
 // Rasterize once at high resolution, then composite/resize for each target.
 const MASTER_PX = 1024;
 
@@ -42,7 +46,7 @@ async function makeIcon(size, logoRatio, bg, outFile) {
   const logoSize = Math.round(size * logoRatio);
   const offset = Math.round((size - logoSize) / 2);
 
-  const logo = await sharp(svgBuffer, { density: 384 })
+  const logo = await sharp(masterPath)
     .resize(logoSize, logoSize, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer();
@@ -88,4 +92,28 @@ await makeIcon(180, 0.8, "#000000", "apple-touch-180.png");
 // Maskable icon: solid black background + safe-zone padding (logo ~64%).
 await makeIcon(512, 0.64, "#000000", "icon-maskable-512.png");
 
+// ── Browser favicons (referenced in app/layout.tsx icons block) ─────────
+// Generated directly from the same master logo at the standard favicon
+// sizes. Transparent background so they sit cleanly on any browser chrome.
+async function makeFavicon(size, outFile) {
+  const logoSize = Math.round(size * 0.92); // nearly full-bleed for tiny sizes
+  await sharp(masterPath)
+    .resize(logoSize, logoSize, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .extend({
+      top: Math.round((size - logoSize) / 2),
+      bottom: Math.round((size - logoSize) / 2),
+      left: Math.round((size - logoSize) / 2),
+      right: Math.round((size - logoSize) / 2),
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toFile(resolve(publicDir, outFile));
+  console.log(`✓ ${outFile} (${size}x${size})`);
+}
+
+await makeFavicon(16, "favicon-16x16.png");
+await makeFavicon(32, "favicon-32x32.png");
+await makeFavicon(48, "favicon-48x48.png");
+
 console.log("\nAll PWA icons generated into public/icons/");
+console.log("Favicons generated into public/");

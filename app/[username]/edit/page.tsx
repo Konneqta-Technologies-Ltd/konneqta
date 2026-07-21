@@ -80,6 +80,7 @@ export default async function EditProfilePage({
         bio: card.bio ?? "",
         avatar_url: card.avatar_url ?? "",
         logo_url: card.logo_url ?? "",
+        qr_code_url: card.qr_code_url,
       }}
       initialSocialLinks={socialLinks ?? []}
       canUploadLogo={canUploadLogo(profile)}
