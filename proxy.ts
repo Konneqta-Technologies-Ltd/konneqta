@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { VISITOR_COOKIE_NAME } from "@/lib/analytics/visitor";
 
 const PROTECTED_ROUTES = ["/onboarding", "/post-login"];
-const AUTH_ROUTES = ["/auth/login", "/auth/signup", "/auth/forgot-password"];
+const AUTH_ROUTES = ["/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/verify-reset", "/auth/reset-password"];
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 function matchesRoute(pathname: string, routes: string[]): boolean {
@@ -99,6 +99,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|auth/callback|auth/reset-callback).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|auth/callback).*)",
   ],
 };

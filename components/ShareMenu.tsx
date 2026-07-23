@@ -98,20 +98,26 @@ export default function ShareMenu({
     if (sharing) return; // prevent double-clicks
     setSharing(true);
     try {
-      const result = await recordShare("native");
-      if ("blocked" in result && result.blocked) return;
-
       if (typeof navigator !== "undefined" && navigator.share) {
+        // Native sheet (mobile) — record ONLY after the user actually
+        // completes the share. Cancelling the sheet throws AbortError,
+        // which we swallow so opening (and dismissing) the sheet is NOT
+        // counted as a share.
         try {
           await navigator.share({
             title: `${title} · Konneqta`,
             text: shareText,
             url: getUrl(),
           });
+          // The promise resolved → the user chose a target and shared.
+          void recordShare("native");
         } catch {
-          // User cancelled — no action needed
+          // User cancelled or the share failed — don't record.
         }
       } else {
+        // Desktop fallback — just open the dropdown. The share is only
+        // recorded when the visitor picks a concrete target (WhatsApp,
+        // Telegram, …) or copies the link, never on this button click.
         setOpen((prev) => !prev);
       }
     } finally {

@@ -31,29 +31,37 @@ export default function Hero() {
       >
         <WavyLine
           color="#F2622E"
-          className="absolute left-[-10px] top-[330px] hidden sm:block"
+          className="absolute -left-2.5 top-82.5 hidden sm:block"
           delay={0.3}
         />
         <WavyLine
           color="#F3C23A"
-          className="absolute left-[-10px] top-[440px] hidden sm:block"
+          className="absolute -left-2.5 top-110 hidden sm:block"
           delay={0.5}
         />
+
+ <WavyLine
+          color="#2DD9A6"
+          className="absolute -left-2.5 top-135 hidden sm:block"
+          delay={0.7}
+          
+        />
+          {/* Right side */}
         <WavyLine
           color="#F2622E"
-          className="absolute right-[-10px] top-[300px] hidden sm:block"
+          className="absolute -right-2.5 top-75 hidden sm:block"
           delay={0.3}
           flip
         />
         <WavyLine
           color="#2DD9A6"
-          className="absolute right-[-10px] top-[410px] hidden sm:block"
+          className="absolute -right-2.5 top-102.5 hidden sm:block"
           delay={0.5}
           flip
         />
         <WavyLine
           color="#FBD3E4"
-          className="absolute right-[-10px] top-[520px] hidden sm:block"
+          className="absolute -right-2.5 top-130 hidden sm:block"
           delay={0.7}
           flip
         />

@@ -41,12 +41,12 @@ export const BRAND_COLORS = {
 // k-white.png is used on dark headers, k-dark.png on light backgrounds.
 export function getLogoUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://konneqta.com";
-  return `${baseUrl}/k-white.png`;
+  return `${baseUrl}/konneqta-logo.png`;
 }
 
 export function getLogoDarkUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://konneqta.com";
-  return `${baseUrl}/k-dark.png`;
+  return `${baseUrl}/konneqta-logo.png`;
 }
 
 // =============================================================================
@@ -59,13 +59,11 @@ export function getLogoDarkUrl(): string {
  * - "receipts"  → receipts@konneqta.com  (payment receipts, transaction emails)
  * - "info"      → info@konneqta.com      (general announcements, onboarding)
  * - "admin"     → admin@konneqta.com     (internal admin notifications)
- *
- * NOTE: security@konneqta.com (OTPs, password resets) is handled by Supabase
- * Auth's built-in email system, not ZeptoMail.
+ * - "security"  → security@konneqta.com  (password reset OTPs, auth alerts)
  *
  * All addresses must be verified sender domains in ZeptoMail.
  */
-export type EmailSenderType = "receipts" | "info" | "admin";
+export type EmailSenderType = "receipts" | "info" | "admin" | "security";
 
 type SenderConfig = {
   address: string;
@@ -92,6 +90,7 @@ export function getSender(type: EmailSenderType): SenderConfig {
     receipts: "Konneqta Receipts",
     info: "Konneqta",
     admin: "Konneqta Admin",
+    security: "Konneqta Security",
   };
 
   return { address, name: names[type] };

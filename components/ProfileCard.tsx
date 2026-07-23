@@ -3,6 +3,7 @@
 import { ThemeCustomization, resolveTheme } from "@/lib/themes";
 
 import AppearanceModal from "./AppearanceModal";
+import Image from "next/image";
 import { PLATFORM_MAP } from "@/lib/social-platforms";
 import ShareMenu from "./ShareMenu";
 import Spinner from "./ui/Spinner";
@@ -257,12 +258,13 @@ export default function ProfileCard({
 
             {/* ---- QR Code (back of card) ---- */}
             {profile.qr_code_url ? (
-              <div className=" flex flex-col items-center">
+              <div className=" flex flex-col items-center mx-auto w-44 h-44 relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={profile.qr_code_url}
                   alt={`Scan to view ${displayName}'s profile`}
-                  className="h-44 w-44 rounded-lg border border-zinc-200 bg-white object-contain dark:border-zinc-700"
+                  fill
+                  className=" rounded-lg border border-zinc-200 bg-white object-contain dark:border-zinc-700"
                 />
                 <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
                   Scan to connect
