@@ -7,7 +7,6 @@ import Image from "next/image";
 import Joi from "joi";
 import Link from "next/link";
 import Spinner from "@/components/ui/Spinner";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -22,8 +21,6 @@ const forgotPasswordSchema = Joi.object({
 });
 
 export default function ForgotPasswordPage() {
-
-    const supabase = createClient();
     const router = useRouter();
 
     const [email, setEmail] = useState("");
@@ -33,7 +30,6 @@ export default function ForgotPasswordPage() {
     const handleResetRequest = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validate with Joi before submitting
         const { error: validationError } = forgotPasswordSchema.validate(
             { email },
             { abortEarly: false }
@@ -48,26 +44,31 @@ export default function ForgotPasswordPage() {
 
         setIsLoading(true);
 
-        // Send a password recovery email. The recovery link points to a
-        // dedicated `/auth/reset-callback` route (no query params to lose),
-        // which exchanges the code for a session and redirects to the
-        // "set new password" page. Relying on a `next` query param through
-        // Supabase's verify redirect was unreliable and caused users to fall
-        // back to /post-login (and then to their profile), never reaching the
-        // reset page.
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/auth/reset-callback`,
-        });
+        // Custom OTP flow: server generates a 6-digit code, HMAC-hashes it,
+        // stores it in password_reset_tokens, and emails it via ZeptoMail
+        // (security@konneqta.com). Always returns { ok: true } to prevent
+        // user enumeration.
+        try {
+            const res = await fetch("/api/auth/request-reset", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
 
-        if (error) {
-            toast.error(error.message);
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                toast.error(data?.error || "Something went wrong. Please try again.");
+                setIsLoading(false);
+                return;
+            }
+
+            setEmailSent(true);
+        } catch {
+            toast.error("Network error. Please try again.");
+        } finally {
             setIsLoading(false);
-            return;
         }
-
-        setEmailSent(true);
-        setIsLoading(false);
-    }
+    };
 
     return (
         <div className="dark:bg-zinc-900">
@@ -77,7 +78,7 @@ export default function ForgotPasswordPage() {
                 <Image src="/k-logo.png" className="mx-auto pt-20" alt="Konneqta Logo" width={24} height={24} priority quality={75} />
                 <div className="text-center pt-7 pb-14 mx-auto">
                     <h1 className="text-3xl font-extrabold ">Reset your password</h1>
-                    <p className="dark:text-[#737373]">{"We'll email you a reset link"}</p>
+                    <p className="dark:text-[#737373]">{"We'll email you a verification code"}</p>
                 </div>
                 {emailSent ? (
                     <div className="max-w-full px-6 mx-auto text-center">
@@ -86,13 +87,13 @@ export default function ForgotPasswordPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                             </svg>
                         </div>
-                        <p className="mb-2">Check your inbox for a password reset link.</p>
+                        <p className="mb-2">Check your inbox for a 6-digit verification code.</p>
                         <p className="text-sm dark:text-[#737373] text-zinc-500">{"Didn't get it? Check your spam folder or try again in a few minutes."}</p>
                         <button
-                            className="mt-8 text-(--main-orange) cursor-pointer hover:underline"
-                            onClick={() => router.push("/auth/login")}
+                            className="mt-8 w-full bg-(--main-orange) text-white cursor-pointer font-semibold py-3 px-4 rounded-xl hover:opacity-90 transition"
+                            onClick={() => router.push(`/auth/verify-reset?email=${encodeURIComponent(email)}`)}
                         >
-                            Back to login
+                            Enter verification code
                         </button>
                     </div>
                 ) : (
@@ -113,7 +114,7 @@ export default function ForgotPasswordPage() {
 
                             <button className="bg-(--main-orange) text-white w-full cursor-pointer font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed" type="submit" disabled={isLoading}>
                                 {isLoading && <Spinner size="sm" className="text-white" />}
-                                {isLoading ? "Sending link..." : "Send reset link"}
+                                {isLoading ? "Sending code..." : "Send reset code"}
                             </button>
                             <p className="text-center pt-2 text-sm text-zinc-500 dark:text-zinc-400">{"Remembered your password?"}<Link href="/auth/login" className="cursor-pointer hover:text-(--main-orange)"> Login</Link> </p>
                         </div>

@@ -165,3 +165,28 @@ export async function sendAdminNotification(
     html
   );
 }
+
+/**
+ * Send a password-reset OTP to a user.
+ * Sends from security@konneqta.com. The 6-digit code is rendered large and
+ * centered in the email body (Stripe/GitHub style).
+ */
+export async function sendPasswordResetOtp(
+  toEmail: string,
+  toName: string,
+  otp: string
+): Promise<{ success: boolean; error?: string }> {
+  const { renderPasswordResetOtp } = await import(
+    "./templates/password-reset-otp"
+  );
+
+  const html = renderPasswordResetOtp({ email: toEmail, otp });
+
+  return sendEmail(
+    "security",
+    toEmail,
+    toName || "there",
+    "Your Konneqta password reset code",
+    html
+  );
+}
