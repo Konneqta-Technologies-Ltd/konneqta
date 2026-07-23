@@ -28,7 +28,7 @@ export async function generateMetadata({
   // Queries cards by slug (the URL segment) — not profiles.
   const { data: card } = await supabase
     .from("cards")
-    .select("full_name, job_title, company, bio, avatar_url, is_searchable")
+    .select("full_name, job_title, company, avatar_url, is_searchable")
     .eq("slug", username)
     .maybeSingle();
 
@@ -42,22 +42,16 @@ export async function generateMetadata({
   const fullName = card.full_name?.trim() || username;
   const jobTitle = card.job_title?.trim() || "";
   const company = card.company?.trim() || "";
-  const bio = card.bio?.trim() || "";
 
   // Pipe-separated title: "FullName | JobTitle | Company | Konneqta".
+  // The name, job title, and company live here — the bio/description is
+  // intentionally omitted (it can be bulky). A clean, short fallback
+  // description is used so strict crawlers still get a valid card.
   const titleParts = [fullName, jobTitle, company, "Konneqta"].filter(Boolean);
   const title = titleParts.join(" | ");
 
-  // Richer description (capped at ~155 chars for Google's snippet).
-  // NOTE: do NOT use emojis here — they get mojibake-corrupted in the
-  // <meta> tag serialization, and strict crawlers (WhatsApp/Telegram)
-  // drop the entire preview card when they see invalid UTF-8 bytes.
-  const descriptionRaw = [jobTitle, company && `at ${company}`, bio]
-    .filter(Boolean)
-    .join(". ");
-  const description =
-    descriptionRaw.slice(0, 157).trim() ||
-    `Connect with @${username} on Konneqta`;
+  // Short, non-bulky description. The bio is deliberately excluded.
+  const description = `Connect with ${fullName} on Konneqta`;
 
   // og:image / twitter:image are now generated dynamically by
   // app/[username]/opengraph-image.tsx (Next.js 16 file convention).

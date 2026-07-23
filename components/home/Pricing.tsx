@@ -16,10 +16,10 @@ const fadeUp: Variants = {
 };
 
 const freeFeatures = [
-  'Save contact',
+  
   'Offline sharing',
   'One card per person',
-  '50 shares monthly',
+  '30 shares monthly',
   'QR code sharing',
 ];
 
@@ -29,6 +29,7 @@ const proFeatures = [
   'Branded QR code',
   'Unlimited sharing',
   '1–3 cards per person or email',
+  'Analytics dashboard',
 ];
 
 const pricing = {
@@ -117,7 +118,7 @@ export default function Pricing() {
             Everything you need to share who you are.
           </p>
 
-          <p className="mt-6 font-display text-4xl font-bold">$0</p>
+          <p className="mt-6 font-display text-4xl font-bold">₦0</p>
 
           <ul className="mt-6 flex-1 space-y-3 text-sm">
             {freeFeatures.map((f) => (
@@ -128,9 +129,7 @@ export default function Pricing() {
             ))}
           </ul>
 
-          <button className="visible-focus mt-8 rounded-full bg-[#0a0a0a] px-5 py-3 font-semibold text-white transition-transform hover:scale-[1.02]">
-            Create my profile
-          </button>
+  
         </motion.div>
 
         {/* Pro */}
@@ -152,7 +151,7 @@ export default function Pricing() {
           </span>
           <h3 className="font-display text-xl font-bold">Stand out</h3>
           <p className="mt-2 text-sm text-white/70">
-            For creators and professionals who want more.
+            For creators & professionals who want more.
           </p>
 
           <div className="mt-6">
@@ -165,17 +164,17 @@ export default function Pricing() {
                 transition={{ duration: 0.25, ease: 'easeOut' }}
               >
                 <p className="font-display text-4xl font-bold">
-                  ${price.usd}
+                  ₦{price.ngn}
                   <span className="ml-2 text-base font-medium text-white/60">
                     {price.suffix}
                   </span>
                 </p>
                 <p className="mt-1 text-sm text-white/60">
-                  ₦{price.ngn} {price.suffix}
+                  ${price.usd} {price.suffix}
                 </p>
                 {cycle === 'yearly' && (
                   <p className="mt-1 text-xs text-[#2DD9A6]">
-                    Just $1.96/mo billed annually
+                    Just ₦2333/mo billed annually
                   </p>
                 )}
               </motion.div>
@@ -191,9 +190,7 @@ export default function Pricing() {
             ))}
           </ul>
 
-          <button className="visible-focus mt-8 rounded-full bg-[#F3EFE4] px-5 py-3 font-semibold text-[#0a0a0a] transition-transform hover:scale-[1.02]">
-            Upgrade to Pro
-          </button>
+         
         </motion.div>
 
         {/* Team / Business */}

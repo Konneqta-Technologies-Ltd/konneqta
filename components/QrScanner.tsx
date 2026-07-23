@@ -3,7 +3,6 @@
 import { extractKonneqtaPath, isKonneqtaUrl } from "@/lib/url-validation";
 import { useEffect, useRef, useState } from "react";
 
-import { useRouter } from "next/navigation";
 import { useTrack } from "@/lib/use-track";
 
 /**
@@ -32,14 +31,56 @@ type ScannerInstance = {
  * phishing launcher.
  */
 export default function QrScanner({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
   const track = useTrack();
   const scannerRef = useRef<HTMLDivElement | null>(null);
   const scannerInstanceRef = useRef<ScannerInstance | null>(null);
   const lastScanTimeRef = useRef<number>(0);
+  // startedRef = true only AFTER scanner.start() resolves; prevents calling
+  // stop() on a scanner that never entered SCANNING (the "Cannot stop,
+  // scanner is not running or paused" error).
+  const startedRef = useRef<boolean>(false);
+  // stoppingRef guards against double stop() (e.g. onDecode + unmount cleanup).
+  const stoppingRef = useRef<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+
+  /**
+   * Safe teardown of the scanner. No-ops if the scanner was never started,
+   * is already stopping, or throws — so it can be called from both the
+   * decode-success path and the useEffect cleanup without races.
+   */
+  const stopScanner = () => {
+    const sc = scannerInstanceRef.current;
+    if (!sc || stoppingRef.current || !startedRef.current) return;
+    stoppingRef.current = true;
+    startedRef.current = false;
+    try {
+      sc.stop()
+        .then(() => {
+          try {
+            sc.clear();
+          } catch {
+            /* clear() best-effort */
+          }
+        })
+        .catch(() => {
+          /* already stopped — ignore */
+        })
+        .finally(() => {
+          stoppingRef.current = false;
+        });
+    } catch {
+      // Synchronous throw from html5-qrcode (some versions reject
+      // synchronously). Swallow and best-effort clear.
+      stoppingRef.current = false;
+      try {
+        sc.clear();
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -69,12 +110,13 @@ export default function QrScanner({ onClose }: { onClose: () => void }) {
       track("profile_scanned", { scanned: path });
 
       // Stop camera before navigating (releases it ASAP)
-      const sc = scannerInstanceRef.current;
-      if (sc) {
-        sc.stop().then(() => sc.clear()).catch(() => {});
-      }
+      stopScanner();
 
-      router.push(`/${path}`);
+      // Full document navigation (not router.push) so the request is a true
+      // navigation — this ensures the service worker's NetworkFirst strategy
+      // + /offline fallback apply, instead of an RSC fetch that bypasses them
+      // and fails hard on flaky networks (ERR_INTERNET_DISCONNECTED).
+      window.location.assign(`/${path}`);
       onClose();
     };
 
@@ -98,6 +140,15 @@ export default function QrScanner({ onClose }: { onClose: () => void }) {
               // Per-frame error — ignore (noise during scanning)
             }
           )
+          .then(() => {
+            // Only now is the scanner actually in SCANNING state.
+            startedRef.current = true;
+            // If the component unmounted while start() was in flight, stop
+            // immediately to release the camera.
+            if (!mounted) {
+              stopScanner();
+            }
+          })
           .catch((err: unknown) => {
             console.error("QR scanner start error:", err);
             const msg = err instanceof Error ? err.message : String(err);
@@ -118,10 +169,7 @@ export default function QrScanner({ onClose }: { onClose: () => void }) {
 
     return () => {
       mounted = false;
-      const sc = scannerInstanceRef.current;
-      if (sc) {
-        sc.stop().then(() => sc.clear()).catch(() => {});
-      }
+      stopScanner();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

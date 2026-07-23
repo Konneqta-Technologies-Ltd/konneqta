@@ -3,6 +3,58 @@
 import { PaymentType } from "@/lib/payments/plans";
 import { useState } from "react";
 
+// ── Lazy-loaded Flutterwave SDK ────────────────────────────────────────
+// The Flutterwave checkout SDK (~677 KB) is NOT loaded globally in
+// app/layout.tsx. Instead, it is injected on demand only when a user
+// actually initiates a payment. This keeps it off the critical path for
+// 99% of visitors (home, login, public profiles, etc.).
+//
+// The loader is idempotent: concurrent calls (e.g. a double-click on the
+// Pay button) share the same <script> tag and all resolve once it loads.
+const FLW_SCRIPT_SRC = "https://checkout.flutterwave.com/v3.js";
+const FLW_SCRIPT_ID = "flutterwave-checkout-v3";
+
+function loadFlutterwaveScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // 1. Already loaded (e.g. second payment in the same session).
+    if (typeof window.FlutterwaveCheckout === "function") {
+      resolve();
+      return;
+    }
+    // 2. Already injecting — wait for the existing tag to finish.
+    const existing = document.getElementById(
+      FLW_SCRIPT_ID,
+    ) as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener(
+        "error",
+        () =>
+          reject(
+            new Error(
+              "Failed to load Flutterwave. Check your connection and try again.",
+            ),
+          ),
+        { once: true },
+      );
+      return;
+    }
+    // 3. First request — create and append the <script>.
+    const script = document.createElement("script");
+    script.id = FLW_SCRIPT_ID;
+    script.src = FLW_SCRIPT_SRC;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () =>
+      reject(
+        new Error(
+          "Failed to load Flutterwave. Check your connection and try again.",
+        ),
+      );
+    document.head.appendChild(script);
+  });
+}
+
 declare global {
   interface Window {
     FlutterwaveCheckout: (config: {
@@ -79,7 +131,13 @@ export function useFlutterwavePayment() {
 
       const session = result.data;
 
-      // Guard: ensure the Flutterwave script has loaded.
+      // Lazy-load the Flutterwave SDK on demand (idempotent — safe to call
+      // on every checkout). The `loading` state is already true, so the
+      // Pay button shows "Opening payment…" while the ~200–500 ms script
+      // fetch completes.
+      await loadFlutterwaveScript();
+
+      // Safety net: confirm the SDK actually exposed the checkout function.
       if (typeof window.FlutterwaveCheckout !== "function") {
         throw new Error(
           "Flutterwave checkout script not loaded. Please refresh and try again."

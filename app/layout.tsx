@@ -166,14 +166,10 @@ export default function RootLayout({
           <AppNavbar />
         </PostHogProvider>
         <CookieConsentBanner />
-        <Script
-          src="https://checkout.flutterwave.com/v3.js"
-          strategy="afterInteractive"
-        />
-      </body>
       {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
   <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
 )}
+      </body>
     </html>
   );
 }

@@ -21,9 +21,9 @@
  */
 
 import { dirname, resolve } from "node:path";
-import { mkdirSync } from "node:fs";
 
 import { fileURLToPath } from "node:url";
+import { mkdirSync } from "node:fs";
 import sharp from "sharp";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
