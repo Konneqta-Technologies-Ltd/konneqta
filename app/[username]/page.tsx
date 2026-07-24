@@ -25,10 +25,11 @@ export async function generateMetadata({
   const supabase = await createClient();
 
   // Look up only the public fields needed for the preview card.
-  // Queries cards by slug (the URL segment) — not profiles.
+  // Queries cards by slug (the URL segment) — not profiles. Includes `bio`
+  // so we can build a richer, SEO-length description (110–160 chars).
   const { data: card } = await supabase
     .from("cards")
-    .select("full_name, job_title, company, avatar_url, is_searchable")
+    .select("full_name, job_title, company, bio, avatar_url, is_searchable")
     .eq("slug", username)
     .maybeSingle();
 
@@ -42,23 +43,30 @@ export async function generateMetadata({
   const fullName = card.full_name?.trim() || username;
   const jobTitle = card.job_title?.trim() || "";
   const company = card.company?.trim() || "";
+  const bio = card.bio?.trim() || "";
 
   // Pipe-separated title: "FullName | JobTitle | Company | Konneqta".
-  // The name, job title, and company live here — the bio/description is
-  // intentionally omitted (it can be bulky). A clean, short fallback
-  // description is used so strict crawlers still get a valid card.
-  const titleParts = [fullName, jobTitle, company, "Konneqta"].filter(Boolean);
-  const title = titleParts.join(" | ");
+  // De-dupe with a Set so a company literally named "Konneqta" can't produce
+  // "... | Konneqta | Konneqta".
+  const title = [...new Set([fullName, jobTitle, company, "Konneqta"].filter(Boolean))].join(" | ");
 
-  // Short, non-bulky description. The bio is deliberately excluded.
-  const description = `Connect with ${fullName} on Konneqta`;
+  // Richer description targeting the 110–160 char SEO sweet spot. Prefers the
+  // user's bio; otherwise builds an informative, keyword-rich fallback that
+  // reads naturally for search snippets and social previews. Hard-capped at
+  // 155 chars so Google won't truncate mid-word.
+  const role = [jobTitle, company].filter(Boolean).join(" at ");
+  const description = (
+    bio
+      ? `${fullName}${role ? ` — ${role}. ` : ": "}${bio}`
+      : `Connect with ${fullName}${role ? ` (${role})` : ""} on Konneqta — their digital business card with all social links in one place.`
+  ).slice(0, 155);
 
-  // og:image / twitter:image are now generated dynamically by
-  // app/[username]/opengraph-image.tsx (Next.js 16 file convention).
-  // Next.js auto-wires the correct og:image + og:image:width/height tags,
-  // so we intentionally do NOT set `images` in openGraph/twitter below.
-  // This fixes the dimension-mismatch bug where the raw avatar (portrait)
-  // was declared as 1200×630, causing strict crawlers to reject the card.
+  const imageUrl = `https://www.konneqta.com/${username}/opengraph-image`;
+
+  // og:image is generated dynamically by app/[username]/opengraph-image.tsx
+  // (Next.js file convention) AND declared explicitly here so we control the
+  // exact width/height/alt. Strict crawlers (WhatsApp, LinkedIn) require the
+  // declared dimensions to match the actual served image.
   return {
     title,
     description,
@@ -73,14 +81,29 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      url: `/${username}`,
+      url: `https://www.konneqta.com/${username}`,
       siteName: "Konneqta",
+      // og:locale helps platforms localize the audience targeting.
+      locale: "en_US",
       type: "profile",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 1500,
+          alt: `${fullName} on Konneqta`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      // Explicit image so Next.js metadata merging doesn't bleed the root
+      // layout's generic "/banner.png" into profile Twitter cards.
+      images: [imageUrl],
+      // twitter:site attributes the card to the brand account.
+      site: "@konneqta",
     },
   };
 }
