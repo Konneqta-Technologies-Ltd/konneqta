@@ -27,7 +27,7 @@ export const revalidate = 3600;
 
 // Image metadata — consumed by Next.js to generate the og:image meta tags.
 export const alt = "Konneqta Profile";
-export const size = { width: 1200, height: 1500 };
+export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 // Lightweight anon client — no cookies needed for public card data.
@@ -56,6 +56,7 @@ export default async function Image({
   // Brand colors.
   const BG = "#0a0a0a";
   const ACCENT = "#7751b8";
+  const AVATAR_SIZE = 500;
 
   return new ImageResponse(
     (
@@ -80,7 +81,7 @@ export default async function Image({
             left: 0,
             right: 0,
             height: 12,
-            // background: ACCENT,
+            
             display: "flex",
           }}
         />
@@ -94,10 +95,13 @@ export default async function Image({
           <img
             src={avatarUrl}
             style={{
-              width: 760,
-              height: 760,
-              objectFit: "cover",
-              // border: `8px solid ${ACCENT}`,
+              width: AVATAR_SIZE,
+              height: AVATAR_SIZE,
+              objectFit: "contain",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              
             }}
             alt=""
           />
@@ -108,11 +112,11 @@ export default async function Image({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: 760,
-              height: 760,
+              width: AVATAR_SIZE,
+              height: AVATAR_SIZE,
               borderRadius: "50%",
-              border: `8px solid ${ACCENT}`,
-              fontSize: 360,
+              
+              fontSize: 240,
               color: ACCENT,
               fontWeight: "bold",
             }}

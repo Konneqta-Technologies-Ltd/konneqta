@@ -84,7 +84,25 @@ export default function SideNav({
         }`}
         aria-label="Navigation menu"
         aria-hidden={!open}
+        // React 19 `inert` prop: when the drawer is closed, this makes ALL
+        // descendants non-focusable and removes them from the accessibility
+        // tree. This fixes the Lighthouse a11y failure where focusable
+        // buttons/links (Close, Home, Install App, etc.) were reachable via
+        // Tab inside an [aria-hidden="true"] container. `aria-hidden` alone
+        // only hides from screen readers — it does NOT remove keyboard focus.
+        inert={!open}
       >
+        {/*
+          BULLETPROOF A11Y: Only render the interactive content when the drawer
+          is open. `inert` + `aria-hidden` hide it at runtime, but Lighthouse's
+          STATIC DOM audit still flags any focusable element inside an
+          aria-hidden container. By unmounting the content when closed, there
+          are zero focusable elements in the DOM for the audit to find.
+          The `<aside>` shell stays mounted so the slide-out CSS animation
+          plays correctly.
+        */}
+        {open && (
+        <>
         {/* ---- Header ---- */}
         <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
@@ -222,6 +240,8 @@ export default function SideNav({
           <InstallAppButton />
           {isAuthenticated && <LogoutButton />}
         </div>
+        </>
+        )}
       </aside>
     </>
   );

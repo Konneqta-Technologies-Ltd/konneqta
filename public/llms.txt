@@ -1,0 +1,21 @@
+# Konneqta
+
+> Konneqta — Connect Smarter, Beyond The Internet. A digital business card platform where every user gets a shareable profile with all their social links in one place, scannable via QR code.
+
+Konneqta lets you create a single, beautiful link-in-bio style profile that consolidates all your contact info and social links. Each profile has a unique QR code for offline-to-online sharing, works offline as a PWA, and includes visitor analytics for the card owner.
+
+## Key pages
+
+- [Home / Landing](https://www.konneqta.com/)
+- [Sign in](https://www.konneqta.com/auth/login)
+- [Example profile](https://www.konneqta.com/vicwin13)
+
+## Documentation
+
+- [Project README](https://github.com/Vicwin13/konneqta/blob/main/README.md)
+- [Analytics plan](https://github.com/Vicwin13/konneqta/blob/main/docs/analytics-plan.md)
+
+## Optional
+
+- [Privacy Policy](https://www.konneqta.com/privacy)
+- [Terms of Service](https://www.konneqta.com/terms)

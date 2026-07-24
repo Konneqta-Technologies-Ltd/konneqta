@@ -295,6 +295,23 @@ export default async function UsernamePage({
   // can surface the "share limit reached" modal.
   return (
     <OwnerBadges isOwner={isOwner} isPro={ownerIsPro}>
+      {/*
+        LCP PRELOAD: The avatar is the Largest Contentful Paint element on
+        profile pages. It's rendered inside ProfileCard (a Client Component),
+        so its `priority` prop can't emit a <link rel="preload"> hint into the
+        initial HTML. We manually preload it here (Server Component → hoisted
+        to <head>) with fetchPriority="high" so crawlers/browsers discover it
+        immediately, before JS hydration. This satisfies Lighthouse's
+        "fetchpriority=high should be applied to the image preload request".
+      */}
+      {card.avatar_url && (
+        <link
+          rel="preload"
+          as="image"
+          href={card.avatar_url}
+          fetchPriority="high"
+        />
+      )}
       <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black">
         <script
           type="application/ld+json"
