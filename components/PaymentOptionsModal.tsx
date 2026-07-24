@@ -154,7 +154,7 @@ export default function PaymentOptionsModal({
             />
             <div className="flex-1">
               <div className="font-semibold text-zinc-900 dark:text-white">
-                Auto-Renew (Card)
+                Pay with Card
               </div>
               <div className="mt-1 text-sm text-zinc-500">
                 Charged automatically each {period}. Cancel anytime. Card only.
@@ -179,7 +179,7 @@ export default function PaymentOptionsModal({
             />
             <div className="flex-1">
               <div className="font-semibold text-zinc-900 dark:text-white">
-                One-Time Payment
+                Pay with Bank Transfer
               </div>
               <div className="mt-1 text-sm text-zinc-500">
                 Pay with card, bank transfer, or USSD. Expires after{" "}

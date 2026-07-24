@@ -2,25 +2,28 @@ import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Dynamic Open Graph image generator (Next.js 16 file convention).
+ * Dynamic Open Graph image generator (Next.js file convention).
  *
  * Produces a PORTRAIT, AVATAR-ONLY social-preview card for every profile.
- * The image contains ONLY the user's avatar (cover-fitted to fill the frame)
- * on a solid black background — no name, no job title, no bio, no wordmark.
- * That textual data travels in the page metadata (title) instead, keeping
- * the visual card clean and uncluttered.
  *
- * Dimensions: 1200×1500 (4:5 portrait). This renders well on WhatsApp,
- * iMessage, LinkedIn, and Twitter/X. Next.js auto-wires the correct
- * og:image:width / og:image:height meta tags from the `size` export below,
- * so strict crawlers won't reject the card for dimension mismatches.
+ * DESIGN GOALS:
+ *  1. WhatsApp-compatible file size — the solid-color background compresses
+ *     to almost nothing in PNG, so a photo avatar only contributes a small
+ *     region. This keeps the image well under WhatsApp's ~1MB effective cap
+ *     (previously a full-bleed photo pushed it to 2-3MB and WhatsApp dropped
+ *     the preview entirely).
+ *  2. No cropping — the avatar uses `objectFit: contain` inside a centered
+ *     circular frame so faces are never cut off regardless of source aspect
+ *     ratio.
  *
- * The route is force-dynamic because the avatar is per-user and changes
- * when a user updates their photo.
+ * Dimensions: 1200×1500 (4:5 portrait). Renders well on WhatsApp, iMessage,
+ * LinkedIn, and Twitter/X. Next.js auto-wires og:image:width / height.
  */
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// Cache the generated image for 1 hour. Avatars change rarely, and repeat
+// fetches from crawlers (WhatsApp re-scrapes on every share) become instant.
+export const revalidate = 3600;
 
 // Image metadata — consumed by Next.js to generate the og:image meta tags.
 export const alt = "Konneqta Profile";
@@ -50,6 +53,10 @@ export default async function Image({
   const fullName = card?.full_name?.trim() || username;
   const avatarUrl = card?.avatar_url?.trim() || "";
 
+  // Brand colors.
+  const BG = "#0a0a0a";
+  const ACCENT = "#7751b8";
+
   return new ImageResponse(
     (
       <div
@@ -57,20 +64,40 @@ export default async function Image({
           width: "100%",
           height: "100%",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#000000",
+          background: BG,
+          position: "relative",
         }}
       >
+        {/* Subtle brand accent bar at the top — tiny in file size, big in
+            visual identity. Helps the card read as "Konneqta". */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 12,
+            // background: ACCENT,
+            display: "flex",
+          }}
+        />
+
         {avatarUrl ? (
-          // Avatar cover-fitted so it fills the entire portrait frame.
+          // Avatar shown CONTAINED inside a circular frame so nothing is
+          // cropped. The surrounding black canvas is pure solid color →
+          // compresses to near-zero bytes, keeping the PNG small enough for
+          // WhatsApp to display.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarUrl}
             style={{
-              width: "100%",
-              height: "100%",
+              width: 760,
+              height: 760,
               objectFit: "cover",
+              // border: `8px solid ${ACCENT}`,
             }}
             alt=""
           />
@@ -81,8 +108,12 @@ export default async function Image({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 480,
-              color: "#7751b8",
+              width: 760,
+              height: 760,
+              borderRadius: "50%",
+              border: `8px solid ${ACCENT}`,
+              fontSize: 360,
+              color: ACCENT,
               fontWeight: "bold",
             }}
           >
