@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import DarkModeToggle from '@/components/DarkModeToggle';
+import Link from 'next/link';
 
 export const metadata = {
   title: 'Privacy Policy — Konneqta',
@@ -46,7 +46,7 @@ export default function PrivacyPolicyPage() {
             use, disclose, and safeguard your information when you visit{' '}
             <span className="text-zinc-700 dark:text-zinc-300">
               https://www.konneqta.com
-            </span>{' '}
+            </span>
             or use our services. By using Konneqta, you agree to the practices
             described in this Privacy Policy.
           </p>
@@ -90,6 +90,13 @@ export default function PrivacyPolicyPage() {
             <ul>
               <li>Your name</li>
               <li>Email address</li>
+              <li>Profile photo/avatar</li>
+              <li>Links to social media and websites</li>
+              <li>Bio</li>
+              <li>QR code associated with their profile</li>
+              <li>Any other information they choose to publish</li>
+              <li>Job title (if provided)</li>
+              
               <li>
                 Information you voluntarily provide through forms or waitlists
               </li>
@@ -120,7 +127,7 @@ export default function PrivacyPolicyPage() {
 
           <Section number={3} id="analytics" title="Analytics">
             <p>
-              We use analytics tools, including PostHog and Vercel Analytics, to
+              We use analytics tools, including PostHog, Google Analytics, Google Search Console and Vercel Analytics, to
               better understand how visitors use our website. These tools may
               collect information such as:
             </p>
@@ -130,6 +137,7 @@ export default function PrivacyPolicyPage() {
               <li>Browser and device type</li>
               <li>General geographic location</li>
               <li>Referral sources</li>
+              <li>Other Analytic Info...</li>
             </ul>
             <p>
               This information helps us improve our website and user experience.
