@@ -47,35 +47,40 @@ export default function AppNavbar() {
   // Hide the global navbar (hamburger + SideNav + QR scanner) on routes that
   // are fully standalone (no app chrome). Must come after all hooks (Rules of
   // Hooks).
-  const HIDDEN_ROUTES = ["/waitlist", "/home", "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password","/post-login"];
+  const HIDDEN_ROUTES = ["/waitlist", "/home", "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password","/post-login","/privacy"];
   if (HIDDEN_ROUTES.includes(pathname)) return null;
 
   return (
     <>
       <div className="fixed top-4 left-4 z-40 flex items-center gap-1">
-        {/* Hamburger button */}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {/* Hamburger button — owners only. Visitors don't have app-nav
+            destinations (Home/Analytics/Settings/Logout are auth-gated),
+            so showing it to them is dead weight + an a11y trap (focusable
+            controls inside a closed, aria-hidden drawer). */}
+        {user && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+            className="cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
 
         {/* QR Scan button — available to all visitors */}
         <button
