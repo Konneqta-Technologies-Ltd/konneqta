@@ -15,7 +15,7 @@ const socialLinks = [
   { name: 'X', url: 'https://x.com/Konneqta', icon: <FaXTwitter /> },
   {
     name: 'Facebook',
-    url: 'https://www.facebook.com/konneqta/',
+    url: 'https://www.facebook.com/share/1951dS2Kkb/',
     icon: <FaFacebook />,
   },
   {
@@ -25,7 +25,7 @@ const socialLinks = [
   },
   {
     name: 'LinkedIn',
-    url: 'https://linkedin.com/company/konneqta',
+    url: 'https://www.linkein.com/in/konneqta',
     icon: <FaLinkedin />,
   },
 ];
