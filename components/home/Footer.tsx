@@ -2,8 +2,33 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { FaFacebook } from 'react-icons/fa';
+import { FaInstagram, FaXTwitter, FaLinkedin } from 'react-icons/fa6';
 
-const links = ['Privacy', 'Terms', 'Contact'];
+const links = [
+  { name: 'Privacy', url: '/privacy' },
+  { name: 'Terms', url: '/terms' },
+  { name: 'Contact', url: '/contact' },
+];
+
+const socialLinks = [
+  { name: 'X', url: 'https://x.com/Konneqta', icon: <FaXTwitter /> },
+  {
+    name: 'Facebook',
+    url: 'https://www.facebook.com/share/1951dS2Kkb/',
+    icon: <FaFacebook />,
+  },
+  {
+    name: 'Instagram',
+    url: 'https://instagram.com/konneqta',
+    icon: <FaInstagram />,
+  },
+  {
+    name: 'LinkedIn',
+    url: 'https://www.linkein.com/in/konneqta',
+    icon: <FaLinkedin />,
+  },
+];
 
 export default function Footer() {
   return (
@@ -21,16 +46,37 @@ export default function Footer() {
         </p>
       </div>
 
-      <div className="mx-auto mt-6 flex max-w-5xl justify-center gap-6 px-6 text-sm text-white/60 sm:justify-start">
-        {links.map((link) => (
-          <a
-            key={link}
-            href="#"
-            className="visible-focus transition-colors hover:text-white"
-          >
-            {link}
-          </a>
-        ))}
+      <div className="mx-auto mt-6 flex max-w-5xl flex-col items-center gap-4 px-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex justify-center gap-6 text-sm text-white/60 sm:justify-start">
+          {links.map((link) => (
+            <a
+              key={link.name}
+              href={link.url}
+              target={link.name == 'Contact' ? '_self' : '_blank'}
+              className="visible-focus transition-colors hover:text-white"
+            >
+              {link.name}
+            </a>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-white/50">Follow us</span>
+          <div className="flex items-center gap-3">
+            {socialLinks.map((socialLink) => (
+              <a
+                key={socialLink.name}
+                href={socialLink.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Konneqta on ${socialLink.name}`}
+                className="visible-focus text-white/60 transition-colors hover:text-white"
+              >
+                {socialLink.icon}
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
 
       <motion.div

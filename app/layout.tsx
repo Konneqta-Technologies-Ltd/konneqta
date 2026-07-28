@@ -12,11 +12,12 @@ import type { Metadata, Viewport } from 'next';
 
 import { Analytics } from '@vercel/analytics/next';
 import AppNavbar from '@/components/AppNavbar';
+import ConsentedGoogleAnalytics from '@/components/ConsentedGoogleAnalytics';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
 import PostHogProvider from '@/components/PostHogProvider';
 import Script from 'next/script';
-import SwRegister from "@/components/SwRegister";
-import { Toaster } from "sonner";
+import SwRegister from '@/components/SwRegister';
+import { Toaster } from 'sonner';
 
 const outfit = Outfit({
   display: 'swap',
@@ -188,6 +189,7 @@ export default function RootLayout({
             </Script>
           </>
         )}
+        <ConsentedGoogleAnalytics />
       </body>
     </html>
   );
