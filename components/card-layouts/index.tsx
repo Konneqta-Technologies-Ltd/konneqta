@@ -136,7 +136,6 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
           priority
           className="h-56 max-w-65 object-cover"
           style={{ borderRadius: avatarRadius(theme.avatarShape, "0px") }}
-          unoptimized
         />
         {/* Purple side panel */}
         <div
@@ -205,7 +204,6 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
         priority
         className="h-28 w-28 object-cover ring-2"
         style={{ borderColor: c.accent, borderRadius: avatarRadius(theme.avatarShape) }}
-        unoptimized
       />
 
       <div className="flex flex-col items-center gap-1">
@@ -264,7 +262,6 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
           height={140}
           priority
           className="h-32 w-32 rounded-2xl object-cover"
-          unoptimized
         />
       </div>
 
@@ -333,7 +330,6 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
         height={48}
         priority
         className="absolute top-6 left-8 h-12 w-12 rounded-full object-cover"
-        unoptimized
       />
 
       {/* Name huge at the bottom */}
@@ -403,7 +399,6 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           priority
           className="mb-3 h-24 w-24 rounded-full border-4 object-cover"
           style={{ borderColor: c.bg === "#000000" ? "#ffffff" : c.bg }}
-          unoptimized
         />
 
         <h1 className="text-center text-2xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>

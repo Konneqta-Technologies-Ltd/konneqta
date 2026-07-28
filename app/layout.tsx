@@ -13,7 +13,6 @@ import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import AppNavbar from '@/components/AppNavbar';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
-import {GoogleAnalytics} from "@next/third-parties/google"
 import PostHogProvider from '@/components/PostHogProvider';
 import Script from 'next/script';
 import SwRegister from "@/components/SwRegister";
@@ -166,9 +165,29 @@ export default function RootLayout({
           <AppNavbar />
         </PostHogProvider>
         <CookieConsentBanner />
-      {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
-  <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
-)}
+        {/*
+          Google Analytics — deferred via lazyOnload so the ~159 KiB gtag.js
+          bundle loads AFTER first paint + interactivity. Previously used
+          @next/third-parties <GoogleAnalytics> which defaults to
+          afterInteractive (blocks initial render). Functionally identical
+          tracking — just shifted off the critical path.
+        */}
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
+              strategy="lazyOnload"
+            />
+            <Script id="ga-init" strategy="lazyOnload">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}');
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

@@ -39,7 +39,7 @@ export default function PaymentOptionsModal({
   if (!open) return null;
 
   // Derived price/period for the header, based on the selected cycle.
-  const price = cycle === "monthly" ? "₦2,850" : "₦28,500";
+  const price = cycle === "monthly" ? "₦950" : "₦9,500";
   const period = cycle === "monthly" ? "month" : "year";
 
   const handlePay = async () => {

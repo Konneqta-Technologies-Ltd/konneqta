@@ -2,8 +2,8 @@
 
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
 import posthog from 'posthog-js';
-import { useEffect } from 'react';
 import { useCookieConsent } from './CookieConsentBanner';
+import { useEffect } from 'react';
 
 /**
  * PostHog React Provider — wraps the app to enable:
@@ -27,6 +27,9 @@ export default function PostHogProvider({
       capture_pageview: true,
       // Respect Do-Not-Track.
       opt_out_capturing_by_default: true,
+      // Disable the surveys extension bundle (~26 KiB). We don't use PostHog
+      // surveys — this stops surveys.js + its preact dep from loading.
+      disable_surveys: true,
       // Prevent capturing in tests / CI.
       loaded: (ph) => {
         if (process.env.NODE_ENV !== 'production') {

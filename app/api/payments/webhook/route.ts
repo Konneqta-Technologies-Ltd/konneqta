@@ -24,7 +24,7 @@ import { verifyAndFulfilPayment } from "@/lib/payments/verify-service";
  *
  * SECURITY
  * --------
- * We verify the `verif-hash` header matches our secret webhook hash from the
+ * We verify the `verify-hash` header matches our secret webhook hash from the
  * Flutterwave dashboard. Without this, anyone could POST a fake "successful"
  * payload and get free Pro.
  *
