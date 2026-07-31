@@ -9,15 +9,17 @@ export const dynamic = "force-dynamic";
 // Root route = the PWA launch target (manifest start_url: "/").
 // - Logged-in user  → their active card  (e.g. /john)
 // - Logged-in, no profile yet → /onboarding
-// - Anonymous visitor → /waitlist (marketing/landing)
+// - Anonymous visitor → /home (landing)
 export default async function Page() {
   const resolution = await resolveActiveCardRedirect();
 
   switch (resolution.status) {
     case "anonymous":
-      redirect("/waitlist");
+      redirect("/home");
     case "onboard":
       redirect("/onboarding");
+    case "deactivated":
+      redirect("/settings/deactivated");
     case "card":
       redirect(resolution.path);
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
+
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 
@@ -79,7 +80,7 @@ export default function CookieConsentBanner() {
               <button
                 type="button"
                 onClick={() => setCookieConsent('accepted')}
-                className="rounded-lg bg-(--main-orange) px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
+                className="rounded-lg bg-(--main-orange) px-4 py-2 text-sm font-medium text-black transition-colors hover:opacity-90"
               >
                 Accept all
               </button>

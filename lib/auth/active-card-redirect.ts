@@ -9,9 +9,10 @@ import { createClient } from "@/lib/supabase/server";
  * Decision cascade:
  *   1. No session          → "anonymous"  (caller redirects to /waitlist)
  *   2. No profile row yet   → "onboard"    (caller redirects to /onboarding)
- *   3. profiles.active_card_id set  → that card's slug
- *   4. No active card → primary card  → that card's slug
- *   5. Last resort → username slug
+ *   3. status = 'deactivated' → "deactivated" (caller redirects to /settings/deactivated)
+ *   4. profiles.active_card_id set  → that card's slug
+ *   5. No active card → primary card  → that card's slug
+ *   6. Last resort → username slug
  *
  * Note: we intentionally don't handle Pro expiry here. The [username] page
  * redirects a non-primary card to the primary when Pro has lapsed.
@@ -19,6 +20,7 @@ import { createClient } from "@/lib/supabase/server";
 export type ActiveCardResolution =
   | { status: "anonymous" }
   | { status: "onboard" }
+  | { status: "deactivated" }
   | { status: "card"; path: string };
 
 export async function resolveActiveCardRedirect(): Promise<ActiveCardResolution> {
@@ -33,12 +35,18 @@ export async function resolveActiveCardRedirect(): Promise<ActiveCardResolution>
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, active_card_id")
+    .select("username, active_card_id, status")
     .eq("id", user.id)
     .maybeSingle();
 
   if (!profile) {
     return { status: "onboard" };
+  }
+
+  // Deactivated users are redirected to a calm reactivation page instead of
+  // their (hidden) profile. Pre-migration (no status column) defaults to active.
+  if (profile.status === "deactivated") {
+    return { status: "deactivated" };
   }
 
   // Active card set → go straight to it.

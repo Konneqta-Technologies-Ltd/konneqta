@@ -4,20 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * Dynamic Open Graph image generator (Next.js file convention).
  *
- * Produces a PORTRAIT, AVATAR-ONLY social-preview card for every profile.
+ * Generates a universal Open Graph image for every public Konneqta profile.
  *
- * DESIGN GOALS:
- *  1. WhatsApp-compatible file size — the solid-color background compresses
- *     to almost nothing in PNG, so a photo avatar only contributes a small
- *     region. This keeps the image well under WhatsApp's ~1MB effective cap
- *     (previously a full-bleed photo pushed it to 2-3MB and WhatsApp dropped
- *     the preview entirely).
- *  2. No cropping — the avatar uses `objectFit: contain` inside a centered
- *     circular frame so faces are never cut off regardless of source aspect
- *     ratio.
- *
- * Dimensions: 1200×1500 (4:5 portrait). Renders well on WhatsApp, iMessage,
- * LinkedIn, and Twitter/X. Next.js auto-wires og:image:width / height.
+ * DESIGN GOALS
+ * - Uses the standard 1200×630 Open Graph aspect ratio for broad compatibility.
+ * - Preserves the entire profile image using `objectFit: contain`.
+ * - Uses Konneqta's brand color as the background instead of cropping images.
+ * - Keeps the image lightweight and cacheable for social crawlers.
  */
 
 export const runtime = "nodejs";
@@ -44,19 +37,33 @@ export default async function Image({
   const { username } = await params;
 
   // Fetch only the fields needed to render the avatar (or fallback initial).
+  // Also fetch owner_id so we can check the owner's status — a deactivated
+  // account must NOT expose an OG image (behaves as if it doesn't exist).
   const { data: card } = await supabase
     .from("cards")
-    .select("full_name, avatar_url")
+    .select("owner_id, full_name, avatar_url")
     .eq("slug", username)
     .maybeSingle();
 
-  const fullName = card?.full_name?.trim() || username;
-  const avatarUrl = card?.avatar_url?.trim() || "";
+  // If the owner has deactivated their account, render a generic "Konneqta"
+  // fallback so scrapers don't expose the user's identity.
+  let isDeactivated = false;
+  if (card?.owner_id) {
+    const { data: owner } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", card.owner_id)
+      .maybeSingle();
+    isDeactivated = owner?.status === "deactivated";
+  }
+
+  const fullName = isDeactivated ? "Konneqta" : card?.full_name?.trim() || username;
+  const avatarUrl = isDeactivated ? "" : card?.avatar_url?.trim() || "";
 
   // Brand colors.
-  const BG = "#0a0a0a";
-  const ACCENT = "#7751b8";
-  const AVATAR_SIZE = 500;
+  const BG = "#7751b8";
+  const ACCENT = "#ffffff";
+  const AVATAR_SIZE = 500  ;
 
   return new ImageResponse(
     (
@@ -70,43 +77,22 @@ export default async function Image({
           justifyContent: "center",
           background: BG,
           position: "relative",
+          overflow: "hidden",
         }}
       >
-        {/* Subtle brand accent bar at the top — tiny in file size, big in
-            visual identity. Helps the card read as "Konneqta". */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 12,
-            
-            display: "flex",
-          }}
-        />
-
         {avatarUrl ? (
-          // Avatar shown CONTAINED inside a circular frame so nothing is
-          // cropped. The surrounding black canvas is pure solid color →
-          // compresses to near-zero bytes, keeping the PNG small enough for
-          // WhatsApp to display.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarUrl}
             style={{
-              width: AVATAR_SIZE,
-              height: AVATAR_SIZE,
+              width: "96%",
+              height: "96%",
               objectFit: "contain",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              
             }}
             alt=""
           />
         ) : (
-          // Fallback when no avatar: large initial letter on black.
+          // Fallback when no avatar: large initial letter on the brand bg.
           <div
             style={{
               display: "flex",
@@ -115,7 +101,6 @@ export default async function Image({
               width: AVATAR_SIZE,
               height: AVATAR_SIZE,
               borderRadius: "50%",
-              
               fontSize: 240,
               color: ACCENT,
               fontWeight: "bold",

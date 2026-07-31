@@ -7,7 +7,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { isKonneqtaReference } from "./references";
 
 /**
- * Shared server-side payment verification + fulfilment logic.
+ * Shared server-side payment verification + fulfillment logic.
  *
  * Used by both:
  *   - `/api/payments/verify` (client-initiated after the Flutterwave modal
@@ -138,9 +138,9 @@ export async function verifyAndFulfilPayment(
     };
   }
 
-  // 8. Fulfilment — grant Pro + sync subscription if the payment is successful.
+  // 8. Fulfillment — grant Pro + sync subscription if the payment is successful.
   if (isSuccessful) {
-    await fulfilPayment(admin, payment, verification, transactionId, txRef);
+    await fulfillPayment(admin, payment, verification);
 
     // 9. 📧 Send email notifications (receipt to user + notification to admin).
     try {
@@ -200,7 +200,7 @@ export async function verifyAndFulfilPayment(
 // ── Subscription sync helper ──────────────────────────────────────────────
 // Extracted so it's testable and readable. Handles both one-time payments
 // (no subscription) and recurring payments (creates/updates subscription row).
-async function fulfilPayment(
+async function fulfillPayment(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any,
   payment: {
@@ -210,9 +210,7 @@ async function fulfilPayment(
     subscription_id: string | null;
     customer_email: string;
   },
-  verification: { data?: Record<string, unknown> },
-  transactionId: number,
-  _txRef: string
+  verification: { data?: Record<string, unknown> }
 ) {
   // Flutterwave's verify response includes the full transaction data.
   // For recurring charges, the response includes subscription info.

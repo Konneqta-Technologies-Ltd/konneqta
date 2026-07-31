@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { FaCheck } from 'react-icons/fa';
+import Link from 'next/link';
 
 type Cycle = 'monthly' | 'yearly';
 
@@ -33,8 +34,8 @@ const proFeatures = [
 ];
 
 const pricing = {
-  monthly: { usd: '2.35', ngn: '2,850', suffix: '/ month' },
-  yearly: { usd: '23.50', ngn: '28,500', suffix: '/ year' },
+  monthly: { usd: '0.95', ngn: '950', suffix: '/ month' },
+  yearly: { usd: '9.50', ngn: '9,500', suffix: '/ year' },
 };
 
 export default function Pricing() {
@@ -174,7 +175,7 @@ export default function Pricing() {
                 </p>
                 {cycle === 'yearly' && (
                   <p className="mt-1 text-xs text-[#2DD9A6]">
-                    Just ₦2333/mo billed annually
+                    Just ₦791.6/mo billed annually
                   </p>
                 )}
               </motion.div>
@@ -190,7 +191,12 @@ export default function Pricing() {
             ))}
           </ul>
 
-         
+          <Link
+            href="/refund"
+            className="mt-4 inline-block text-xs text-white/60 underline-offset-2 hover:text-white hover:underline"
+          >
+            See Refund Policy
+          </Link>
         </motion.div>
 
         {/* Team / Business */}

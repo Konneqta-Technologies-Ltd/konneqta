@@ -70,7 +70,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/${username}` },
+    alternates: { canonical: `https://www.konneqta.com/${username}`},
     // Per-card opt-out from search engines (is_searchable column).
     ...(card.is_searchable === false
       ? { robots: { index: false, follow: false } }
@@ -90,7 +90,7 @@ export async function generateMetadata({
         {
           url: imageUrl,
           width: 1200,
-          height: 1500,
+          height: 630,
           alt: `${fullName} on Konneqta`,
         },
       ],
@@ -177,9 +177,12 @@ export default async function UsernamePage({
   // Fetch the owner's entitlements (for feature gating + owner check).
   // `username` is required so isExempt() can match EXEMPT_USERNAMES.
   // `pro_expires_at` is required so isPro() can enforce subscription expiry.
+  // `status` is required so a DEACTIVATED owner's profile is hidden from the
+  // public (behaves as if it doesn't exist). Data is preserved; only the
+  // public view is suppressed until they reactivate.
   const { data: owner, error: ownerError } = await supabase
     .from("profiles")
-    .select("id, username, plan, is_exempt, pro_expires_at")
+    .select("id, username, plan, is_exempt, pro_expires_at, status")
     .eq("id", card.owner_id)
     .maybeSingle();
 
@@ -194,6 +197,21 @@ export default async function UsernamePage({
       </div>
     )
     }
+
+  // DEACTIVATED ACCOUNT: the owner has temporarily disabled their profile.
+  // Behave exactly as if the profile doesn't exist — same "not found" view
+  // a missing card would render. Data is preserved in the DB; only the
+  // public surface is suppressed.
+  if (owner.status === "deactivated") {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p>Profile not found.</p>
+        <Link href="/" className="mt-4 text-blue-600 underline">
+          Go Home
+        </Link>
+      </div>
+    );
+  }
 
 
   // ── SUBSCRIPTION EXPIRY: read-time feature reversion ─────────────────

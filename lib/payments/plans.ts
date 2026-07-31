@@ -42,7 +42,7 @@
     monthly: {
       id: "premium_upgrade_monthly",
       name: "Monthly Plan",
-      amount: 2850, // ◄ Charged on Month 1
+      amount: 950, // ◄ Charged on Month 1
       cycle: "monthly",
       currency: "NGN",
       description: "Your Konneqta Premium subscription",
@@ -53,7 +53,7 @@
     yearly: {
       id: "premium_upgrade_yearly",
       name: "Yearly Plan",
-      amount: 28500, // ◄ Charged on Year 1
+      amount: 9500, // ◄ Charged on Year 1
       cycle: "yearly",
       currency: "NGN",
       description: "Your Konneqta Premium subscription",

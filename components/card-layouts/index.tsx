@@ -134,9 +134,9 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
           width={290}
           height={290}
           priority
+          unoptimized
           className="h-56 max-w-65 object-cover"
           style={{ borderRadius: avatarRadius(theme.avatarShape, "0px") }}
-          unoptimized
         />
         {/* Purple side panel */}
         <div
@@ -157,10 +157,11 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
         </h1>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-light" style={{ color: c.subtext }}>
+            <p className="text-sm text-left font-light" style={{ color: c.subtext }}>
               {profile.job_title}
             </p>
-            <p className="text-sm font-medium" style={{ color: c.subtext }}>
+            <span className="w-1 h-1 bg-white rounded-full"> </span>
+            <p className="text-sm text-left font-medium" style={{ color: c.subtext }}>
               {profile.company}
             </p>
           </div>
@@ -200,12 +201,12 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
       <Image
         src={avatarSrc(profile.avatar_url)}
         alt={profile.username}
-        width={120}
-        height={120}
+        width={140}
+        height={140}
         priority
-        className="h-28 w-28 object-cover ring-2"
-        style={{ borderColor: c.accent, borderRadius: avatarRadius(theme.avatarShape) }}
         unoptimized
+        className="h-32 w-32 object-cover ring-2"
+        style={{ borderColor: c.accent, borderRadius: avatarRadius(theme.avatarShape) }}
       />
 
       <div className="flex flex-col items-center gap-1">
@@ -216,9 +217,12 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
           {name}
         </h1>
         {(profile.job_title || profile.company) && (
-          <p className="text-center text-sm" style={{ color: c.subtext }}>
+          <p className="text-center flex items-center justify-center gap-2 text-sm" style={{ color: c.subtext }}>
             {profile.job_title}
+            <span className="text-4xl">
+
             {profile.job_title && profile.company ? " · " : ""}
+            </span>
             {profile.company}
           </p>
         )}
@@ -228,8 +232,8 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
         <Image
           src={profile.logo_url}
           alt={`${name} logo`}
-          width={32}
-          height={32}
+          width={24}
+          height={24}
           className="h-8 w-8 rounded object-contain"
           unoptimized
         />
@@ -254,52 +258,63 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
   const name = displayName(profile);
 
   return (
-    <div className="flex h-full w-full items-center gap-4 px-5">
+    <div className=" items-center mx-auto ">
       {/* Left: avatar */}
-      <div className="flex w-2/5 justify-center">
+      <div className="flex  w-full h-45 justify-center">
         <Image
           src={avatarSrc(profile.avatar_url)}
           alt={profile.username}
           width={140}
           height={140}
           priority
-          className="h-32 w-32 rounded-2xl object-cover"
           unoptimized
+          className="h-45 w-full flex items-center justify-center rounded-2xl object-cover"
         />
       </div>
 
       {/* Right: info */}
-      <div className="flex w-3/5 flex-col gap-2">
-        {profile.logo_url && (
-          <Image
-            src={profile.logo_url}
-            alt={`${name} logo`}
-            width={28}
-            height={28}
-            className="h-7 w-7 rounded object-contain"
-            unoptimized
-          />
-        )}
-        <h1 className="text-left text-xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>
+      <div className=" flex items-center pt-4  justify-evenly">
+      
+      <div>
+
+        <h1 className="text-left text-xl max-w-min font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>
           {name}
         </h1>
+      </div>
+      <hr className="w-18 border border-white rotate-90"/>
+      <div className=" flex flex-col self-start items-start">
+
         {profile.job_title && (
-          <p className="text-sm" style={{ color: c.accent }}>
+          <p className="text-sm font-medium" style={{ color: c.accent }}>
             {profile.job_title}
           </p>
         )}
+        <div className="flex justify-center items-center gap-1">
+
         {profile.company && (
           <p className="text-sm" style={{ color: c.subtext }}>
             {profile.company}
           </p>
         )}
+        {profile.logo_url && (
+          <Image
+          src={profile.logo_url}
+          alt={`${name} logo`}
+          width={18}
+          height={18}
+          className="h-4 w-4 object-contain"
+          unoptimized
+          />
+        )}
+        </div>
+        </div>
+        </div>
         {profile.bio && (
-          <p className="mt-1 text-xs" style={{ color: c.subtext }}>
+          <p className="pt-8 text-xs" style={{ color: c.subtext }}>
             {profile.bio}
           </p>
         )}
-        <FlipButton accent={c.accent} onFlip={onFlip} className="mt-2 self-start" />
-      </div>
+        <FlipButton accent={c.accent} onFlip={onFlip} className="mt-8 mx-auto  " />
     </div>
   );
 }
@@ -312,7 +327,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
   const name = displayName(profile);
 
   return (
-    <div className="relative flex h-full w-full flex-col justify-end px-8 pb-12">
+    <div className="relative flex h-full w-full flex-col  justify-end px-8 pb-12">
       {/* Logo as corner mark, top-right */}
       {profile.logo_url && (
         <Image
@@ -320,7 +335,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
           alt={`${name} logo`}
           width={24}
           height={24}
-          className="absolute top-6 right-6 h-6 w-6 rounded object-contain"
+          className="absolute top-7 right-6 h-10 w-10 rounded object-contain"
           unoptimized
         />
       )}
@@ -332,14 +347,14 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
         width={48}
         height={48}
         priority
-        className="absolute top-6 left-8 h-12 w-12 rounded-full object-cover"
         unoptimized
+        className="absolute top-2 left-6 h-20 w-20 rounded-full object-cover"
       />
 
       {/* Name huge at the bottom */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col justify-center items-center gap-2">
         <h1
-          className="text-left text-3xl font-bold leading-tight"
+          className="text-center text-5xl pb-6 font-bold leading-tight"
           style={{ color: c.text, fontFamily: theme.fontFamily }}
         >
           {name}
@@ -358,7 +373,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
         </p>
       )}
 
-      <FlipButton accent={c.accent} onFlip={onFlip} className="mt-6 self-start" />
+      <FlipButton accent={c.accent} onFlip={onFlip} className="mt-6 self-center" />
     </div>
   );
 }
@@ -401,9 +416,9 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           width={100}
           height={100}
           priority
-          className="mb-3 h-24 w-24 rounded-full border-4 object-cover"
-          style={{ borderColor: c.bg === "#000000" ? "#ffffff" : c.bg }}
           unoptimized
+          className="mb-3 h-45 w-45 rounded-full border-4 object-cover"
+          style={{ borderColor: c.bg === "#000000" ? "#ffffff" : c.bg }}
         />
 
         <h1 className="text-center text-2xl font-bold" style={{ color: c.text, fontFamily: theme.fontFamily }}>

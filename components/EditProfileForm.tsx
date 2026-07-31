@@ -6,6 +6,11 @@ import {
   isSafeHttpUrl,
   safeFileExtension,
 } from "@/lib/url-validation";
+import {
+  AVATAR_OPTIONS,
+  LOGO_OPTIONS,
+  compressImage,
+} from "@/lib/image";
 import { useRef, useState } from "react";
 
 import CardSwitcher from "./CardSwitcher";
@@ -114,7 +119,10 @@ export default function EditProfileForm({
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Compress in-browser before storing for upload (≤512px JPEG for avatars,
+  // ≤256px PNG for logos). Visually lossless for small thumbnails while
+  // keeping payloads tiny so Lighthouse stays happy.
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
@@ -125,15 +133,16 @@ export default function EditProfileForm({
       toast.error("Image must be less than 5MB");
       return;
     }
+    const compressed = await compressImage(file, AVATAR_OPTIONS);
     if (avatarPreview && avatarPreview.startsWith("blob:")) {
       URL.revokeObjectURL(avatarPreview);
     }
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarFile(compressed);
+    setAvatarPreview(URL.createObjectURL(compressed));
     setAvatarRemoved(false);
   };
 
-  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
@@ -144,11 +153,12 @@ export default function EditProfileForm({
       toast.error("Logo must be less than 5MB");
       return;
     }
+    const compressed = await compressImage(file, LOGO_OPTIONS);
     if (logoPreview && logoPreview.startsWith("blob:")) {
       URL.revokeObjectURL(logoPreview);
     }
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
+    setLogoFile(compressed);
+    setLogoPreview(URL.createObjectURL(compressed));
     setLogoRemoved(false);
   };
 
