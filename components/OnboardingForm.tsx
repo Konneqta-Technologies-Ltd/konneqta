@@ -18,6 +18,7 @@ import InfoTip from "./InfoTip";
 import ProGate from "./ProGate";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import Spinner from "./ui/Spinner";
+import { awardMilestone } from "@/lib/feedback/score";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -324,6 +325,13 @@ export default function OnboardingForm({
       }
 
       const cardId = cardRow.id;
+
+      // Award CREATED_CARD feedback milestone (one-time, fire-and-forget).
+      void awardMilestone(user.id, "CREATED_CARD");
+      // Award UPLOADED_AVATAR milestone if the user uploaded a photo.
+      if (avatarFile) {
+        void awardMilestone(user.id, "UPLOADED_AVATAR");
+      }
 
       // 3b. Point active_card_id at the new card so /post-login can
       //     redirect straight to it on future logins.

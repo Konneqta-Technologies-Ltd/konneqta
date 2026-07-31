@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import FeedbackTrigger from "./feedback/FeedbackTrigger";
 import SideNav from "./nav/SideNav";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -126,6 +127,13 @@ export default function AppNavbar() {
       {scannerOpen && (
         <QrScanner onClose={() => setScannerOpen(false)} />
       )}
+
+      {/*
+        Feedback auto-trigger — only renders for authenticated users on app
+        pages (this component returns null on legal/auth/waitlist routes via
+        the HIDDEN_ROUTES check above, and the trigger self-gates on auth).
+      */}
+      {user && <FeedbackTrigger />}
     </>
   );
 }
