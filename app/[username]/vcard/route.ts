@@ -39,6 +39,18 @@ export async function GET(
     return new Response("Not Found", { status: 404 });
   }
 
+  // DEACTIVATED ACCOUNT: hide the vCard too — the profile behaves as if it
+  // doesn't exist across every public surface.
+  const { data: owner } = await supabase
+    .from("profiles")
+    .select("status")
+    .eq("id", card.owner_id)
+    .maybeSingle();
+
+  if (owner?.status === "deactivated") {
+    return new Response("Not Found", { status: 404 });
+  }
+
   // Build the canonical profile URL from the incoming request host.
   const url = new URL(_req.url);
   const profileUrl = `${url.origin}/${card.slug}`;

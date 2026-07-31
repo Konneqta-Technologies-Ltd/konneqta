@@ -31,12 +31,13 @@ function escapeHtml(text: string): string {
 }
 
 function formatAmount(amount: number, currency: string): string {
-  const displayAmount = amount / 100;
+  // Flutterwave returns NGN amounts in whole naira (e.g. 950 = ₦950),
+  // NOT in kobo/cents. Do NOT divide by 100.
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency: currency,
     minimumFractionDigits: 2,
-  }).format(displayAmount);
+  }).format(amount);
 }
 
 export function renderPaymentReceipt(data: PaymentEmailData): string {

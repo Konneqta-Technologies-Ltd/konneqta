@@ -26,7 +26,7 @@ export default function UpgradeButton({ show }: { show: boolean }) {
       <button
         type="button"
         onClick={() => setModalOpen(true)}
-        className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
+        className="flex items-center gap-1.5 rounded-full px-4 py-1.5 cursor-pointer text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
         style={{
           background: "linear-gradient(135deg, #FF6B2C, #8B5CF6)",
         }}

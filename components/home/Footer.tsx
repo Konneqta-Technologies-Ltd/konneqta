@@ -1,13 +1,15 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import Image from 'next/image';
+import { FaInstagram, FaLinkedin, FaXTwitter } from 'react-icons/fa6';
+
 import { FaFacebook } from 'react-icons/fa';
-import { FaInstagram, FaXTwitter, FaLinkedin } from 'react-icons/fa6';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 const links = [
   { name: 'Privacy', url: '/privacy' },
   { name: 'Terms', url: '/terms' },
+  { name: 'Refund', url: '/refund' },
   { name: 'Contact', url: '/contact' },
 ];
 
@@ -37,7 +39,7 @@ export default function Footer() {
         <Image
           src="/k-white.png"
           alt="Logo"
-          className="object-contain w-[150px]"
+          className="object-contain w-37.5"
           width={150}
           height={40}
         />

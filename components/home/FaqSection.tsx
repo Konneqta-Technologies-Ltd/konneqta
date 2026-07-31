@@ -16,7 +16,7 @@ const fadeUp: Variants = {
 const faqs = [
   {
     q: 'What makes Konneqta different ?',
-    a: 'Other tools just organize links. Konneqta helps you present your professional identity. It brings together your contact details, social profiles, portfolio, business information, and more into one trusted digital identity card that you can share anywhere.',
+    a: 'Other tools just organize links. Konneqta helps you present your professional identity. It brings together your contact details, social profiles, portfolio, business information, and more into one trusted digital identity card that you can share anywhere. The app works offline',
   },
   {
     q: "Do I need an app to view someone's Konneqta card?",

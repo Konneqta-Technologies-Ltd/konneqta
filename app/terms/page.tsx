@@ -1,9 +1,10 @@
-import Link from 'next/link';
 import DarkModeToggle from '@/components/DarkModeToggle';
+import Link from 'next/link';
 
 export const metadata = {
   title: 'Terms of Use — Konneqta',
   description: 'The terms governing your access to and use of Konneqta.',
+  alternates: { canonical: '/terms' },
 };
 
 const SECTIONS = [
@@ -58,7 +59,6 @@ export default function TermsOfUsePage() {
         {/* On-this-page nav */}
         <nav className="hidden lg:block">
           <div className="sticky top-14">
-            3
             <p className="mb-4 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-600">
               On this page
             </p>
@@ -181,7 +181,7 @@ export default function TermsOfUsePage() {
               available&rdquo; basis. While we strive to provide reliable
               services, we do not guarantee uninterrupted availability,
               error-free operation, or that the service will meet every
-              user&apos;s expectations.
+   user&apos;s expectations.
             </p>
           </Section>
 
