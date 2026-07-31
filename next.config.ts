@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     // Next.js 16 requires an explicit qualities allowlist
-    qualities: [75],
+    qualities: [75,90, 100],
     remotePatterns: supabaseHost
       ? [
           {

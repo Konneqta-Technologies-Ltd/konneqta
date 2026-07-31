@@ -6,6 +6,11 @@ import {
   isSafeHttpUrl,
   safeFileExtension,
 } from "@/lib/url-validation";
+import {
+  AVATAR_OPTIONS,
+  LOGO_OPTIONS,
+  compressImage,
+} from "@/lib/image";
 import { dataUrlToBlob, generateQrDataUrl, getCanonicalProfileUrl } from "@/lib/qr";
 import { useEffect, useRef, useState } from "react";
 
@@ -130,8 +135,10 @@ export default function OnboardingForm({
   }, [form.username]);
 
   // Store the selected file locally + show a preview.
-  // Upload only happens on submit (see handleSubmit).
-  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload only happens on submit (see handleSubmit). The image is compressed
+  // in the browser first (resize ≤512px, JPEG quality 0.92) so we never store
+  // or serve a multi-megabyte photo — visually lossless for a small avatar.
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -144,13 +151,16 @@ export default function OnboardingForm({
       return;
     }
 
+    // Compress + resize before storing the file for upload on submit.
+    const compressed = await compressImage(file, AVATAR_OPTIONS);
+
     // Revoke previous preview to avoid memory leaks
     if (avatarPreview) {
       URL.revokeObjectURL(avatarPreview);
     }
 
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarFile(compressed);
+    setAvatarPreview(URL.createObjectURL(compressed));
   };
 
   useEffect(() => {
@@ -162,7 +172,9 @@ export default function OnboardingForm({
   // Store the selected logo file locally (no preview, just a name indicator).
   // Upload only happens on submit. Strict image-only check enforced both
   // client-side here and server-side via the Supabase bucket's allowed_mime_types.
-  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Compressed in-browser (≤256px PNG) so oversized source art doesn't bloat
+  // the upload; transparency is preserved by keeping the PNG output format.
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -175,7 +187,8 @@ export default function OnboardingForm({
       return;
     }
 
-    setLogoFile(file);
+    const compressed = await compressImage(file, LOGO_OPTIONS);
+    setLogoFile(compressed);
   };
 
   // ---- Social link handlers ----

@@ -18,6 +18,10 @@ export default async function PostLoginPage() {
             redirect('/');
         case 'onboard':
             redirect('/onboarding');
+        case 'deactivated':
+            // Deactivated users land on a calm reactivation page, not their
+            // (hidden) profile.
+            redirect('/settings/deactivated');
         case 'card':
             redirect(resolution.path);
     }

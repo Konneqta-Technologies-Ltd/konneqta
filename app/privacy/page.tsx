@@ -4,6 +4,7 @@ import Link from 'next/link';
 export const metadata = {
   title: 'Privacy Policy — Konneqta',
   description: 'How Konneqta collects, uses, and protects your information.',
+  alternates: { canonical: '/privacy' },
 };
 
 const SECTIONS = [
@@ -96,7 +97,7 @@ export default function PrivacyPolicyPage() {
               <li>QR code associated with their profile</li>
               <li>Any other information they choose to publish</li>
               <li>Job title (if provided)</li>
-              
+
               <li>
                 Information you voluntarily provide through forms or waitlists
               </li>

@@ -31,18 +31,18 @@ export default function Hero() {
       >
         <WavyLine
           color="#F2622E"
-          className="absolute -left-2.5 top-82.5 hidden sm:block"
+          className="absolute -left-2.5 top-75   hidden sm:block"
           delay={0.3}
         />
         <WavyLine
           color="#F3C23A"
-          className="absolute -left-2.5 top-110 hidden sm:block"
+          className="absolute -left-2.5 top-102 hidden sm:block"
           delay={0.5}
         />
 
  <WavyLine
           color="#2DD9A6"
-          className="absolute -left-2.5 top-135 hidden sm:block"
+          className="absolute -left-2.5 top-130 hidden sm:block"
           delay={0.7}
           
         />
@@ -55,7 +55,7 @@ export default function Hero() {
         />
         <WavyLine
           color="#2DD9A6"
-          className="absolute -right-2.5 top-102.5 hidden sm:block"
+          className="absolute -right-2.5 top-102   hidden sm:block"
           delay={0.5}
           flip
         />
@@ -123,7 +123,7 @@ export default function Hero() {
             className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-            Built for African creators &amp; professionals
+            Built for  Creators &amp; Professionals
           </motion.span>
 
           <motion.h1
