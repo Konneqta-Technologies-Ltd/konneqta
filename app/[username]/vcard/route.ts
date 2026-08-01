@@ -1,7 +1,8 @@
+import { getAdminClient, recordEvent } from "@/lib/analytics/server";
+
 import { buildVCard } from "@/lib/vcard";
 import { createClient } from "@/lib/supabase/server";
 import { getVisitorId } from "@/lib/analytics/visitor";
-import { recordEvent } from "@/lib/analytics/server";
 
 /**
  * vCard (.vcf) download route.
@@ -27,8 +28,6 @@ export async function GET(
   const supabase = await createClient();
 
   // Look up the card by slug.
-  // phone + show_phone are PER-CARD now (moved off profiles) so each card
-  // has its own contact number.
   const { data: card } = await supabase
     .from("cards")
     .select("id, owner_id, slug, full_name, phone, show_phone")
@@ -56,9 +55,6 @@ export async function GET(
   const profileUrl = `${url.origin}/${card.slug}`;
 
   // ── ANALYTICS: vCard download (fire-and-forget) ──────────────────────
-  // Record the download for the card owner. Visitor id is read-only here
-  // (no cookie set on a download route to keep headers clean). Errors are
-  // swallowed by recordEvent so a tracking hiccup never breaks the .vcf.
   const visitorId = await getVisitorId();
   void recordEvent({
     owner_id: card.owner_id,
@@ -66,6 +62,27 @@ export async function GET(
     event_type: "vcard_download",
     visitor_id: visitorId,
   });
+
+  // Award FIRST_VCARD_DOWNLOAD feedback milestone (one-time, atomic) to the
+  // card OWNER (not the visitor). Uses the service-role client since this is
+  // a public route with no auth session. Fire-and-forget — wrapped in a
+  // catch so a missing SERVICE_ROLE_KEY or a DB error never breaks the .vcf.
+  void (async () => {
+    try {
+      const { error } = await getAdminClient().rpc(
+        "award_feedback_milestone",
+        {
+          p_user_id: card.owner_id,
+          p_milestone: 8, // FIRST_VCARD_DOWNLOAD bit
+        }
+      );
+      if (error) {
+        console.warn("[vcard] feedback milestone RPC failed:", error.message);
+      }
+    } catch (err) {
+      console.warn("[vcard] feedback milestone error (non-fatal):", err);
+    }
+  })();
 
   const vcf = buildVCard({
     fullName: card.full_name,

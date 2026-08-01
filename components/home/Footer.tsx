@@ -44,7 +44,7 @@ export default function Footer() {
           height={40}
         />
         <p className="text-sm text-white/50">
-          Made for African digital culture.
+          Made for the world wide digital culture.
         </p>
       </div>
 
