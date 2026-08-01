@@ -15,7 +15,7 @@
  *   6. Return the feedback ID (shown to the user as their reference).
  *
  * SECURITY
- *   The Sheets URL is server-only (FEEDBACK_GOOGLE_SCRIPT_URL). The user's
+ *   The Sheets URL is server-only (GOOGLE_SCRIPT_URL). The user's
  *   email is included for follow-up but never exposed to the browser.
  */
 
@@ -110,8 +110,16 @@ export async function POST(req: Request) {
     // --- Send to Google Sheets (non-blocking on success) -------------------
     // We don't fail the whole request if Sheets is down — the user still gets
     // their feedback ID and their submission timestamp is recorded. The error
-    // is logged server-side for ops to catch.
-    await sendToGoogleSheets(payload);
+    // is logged server-side for ops to catch. sendToGoogleSheets() now reads &
+    // logs the Apps Script response body, so check the returned boolean here
+    // to flag logical failures (e.g. wrong sheet, missing header) clearly.
+    const sheetsOk = await sendToGoogleSheets(payload);
+    if (!sheetsOk) {
+      console.warn(
+        `[api/feedback] Google Sheets write failed for feedback ${feedbackId}. ` +
+          "See [feedback] logs above for the Apps Script response."
+      );
+    }
 
     // --- Record submission timestamp ---------------------------------------
     // Uses the RPC-free UPDATE (users can update their own profile row).
