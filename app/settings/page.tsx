@@ -1,5 +1,6 @@
 import DeactivateAccountButton from "@/components/nav/DeactivateAccountButton";
 import DeleteAccountButton from "@/components/nav/DeleteAccountButton";
+import FeedbackSettingsButton from "@/components/feedback/FeedbackSettingsButton";
 import GoBackButton from "@/components/GoBackButton";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -82,6 +83,20 @@ export default async function SettingsPage() {
               </dd>
             </div>
           </dl>
+        </section>
+
+        {/* Feedback */}
+        <section className="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Feedback
+          </h2>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Share ideas, report issues, or tell us what you love. We read every
+            piece of feedback.
+          </p>
+          <div className="mt-4 max-w-xs">
+            <FeedbackSettingsButton />
+          </div>
         </section>
 
         {/* Legal */}

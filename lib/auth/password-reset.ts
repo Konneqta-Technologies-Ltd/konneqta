@@ -65,7 +65,9 @@ export async function requestReset(
     ipAddress: string | null
 ): Promise<RequestResetResult> {
     const normalizedEmail = email.trim().toLowerCase();
+    console.log("1. Creating admin client...");
     const supabase = createAdminClient();
+    console.log("2.  admin client created...");
     const now = new Date();
 
     // --- Rate limit: 1 request per email per 60s ---
@@ -94,7 +96,18 @@ export async function requestReset(
     }
 
     // --- Look up the user (silently skip if unknown — no enumeration) ---
-    const { data: userList } = await supabase.auth.admin.listUsers();
+    console.log("3. Listing users...");
+
+const { data: userList, error: listUsersError } =
+    await supabase.auth.admin.listUsers();
+
+console.log("listUsersError:", listUsersError);
+
+if (listUsersError) {
+    throw listUsersError;
+}
+
+console.log("4. Users loaded:", userList.users.length);
     const user = userList?.users?.find((u) => u.email?.toLowerCase() === normalizedEmail);
 
     // --- Invalidate all previous unused OTPs for this email ---
@@ -110,7 +123,12 @@ export async function requestReset(
         const otpHash = hashOtp(otp);
         const expiresAt = new Date(now.getTime() + OTP_TTL_MINUTES * 60 * 1000);
 
-        await supabase.from("password_reset_tokens").insert({
+
+        console.log("5. Inserting reset token...");
+
+        const {error: insertError} =await supabase
+        .from("password_reset_tokens")
+        .insert({
             email: normalizedEmail,
             user_id: user.id,
             otp_hash: otpHash,
@@ -118,9 +136,19 @@ export async function requestReset(
             expires_at: expiresAt.toISOString(),
         });
 
+
+if (insertError) {
+    console.error("Insert error:", insertError);
+    throw insertError;
+}
+
+console.log("6. Token inserted");
         // Send the email (imported lazily so the browser bundle never sees it).
         const { sendPasswordResetOtp } = await import("@/lib/emails/zeptomail");
+        console.log('7. Sending Zepto email')
         await sendPasswordResetOtp(user.email!, user.email!, otp);
+
+        console.log('8. Email sent')
     }
 
     return { ok: true };

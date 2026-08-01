@@ -9,7 +9,9 @@ export async function POST(req: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        sheet : "waitlist",
+        ...body,}),
     });
 
     const data = await response.json();

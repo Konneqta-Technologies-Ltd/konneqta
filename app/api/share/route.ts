@@ -117,6 +117,19 @@ export async function POST(req: Request) {
       channel,
     });
 
+    // --- Award FIRST_SHARE feedback milestone (one-time, atomic) ----------
+    // Fire-and-forget — errors won't block the share. The RPC is idempotent.
+    void supabase
+      .rpc("award_feedback_milestone", {
+        p_user_id: card.owner_id,
+        p_milestone: 4, // FIRST_SHARE bit
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.warn("[share] feedback milestone RPC failed:", error.message);
+        }
+      });
+
     // Recompute the count after the insert so the badge ticks down live.
     const after = await getMonthlyShareCountWithLimit(
       card.owner_id,
