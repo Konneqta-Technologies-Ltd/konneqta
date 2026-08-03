@@ -15,6 +15,8 @@ import { dataUrlToBlob, generateQrDataUrl, getCanonicalProfileUrl } from "@/lib/
 import { useEffect, useRef, useState } from "react";
 
 import InfoTip from "./InfoTip";
+import Link from "next/link";
+import { PLAN_LIMITS } from "@/lib/entitlements";
 import ProGate from "./ProGate";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import Spinner from "./ui/Spinner";
@@ -193,7 +195,17 @@ export default function OnboardingForm({
   };
 
   // ---- Social link handlers ----
+  // Onboarding users are always FREE tier, so the link cap is the free limit
+  // (3). Once they upgrade to Pro, they can add up to 7 from the edit page.
+  const maxLinks = PLAN_LIMITS.free.maxSocialLinks;
+
   const addSocialLink = () => {
+    if (socialLinks.length >= maxLinks) {
+      toast.error(
+        `Free accounts are limited to ${maxLinks} social links. Upgrade to Pro for ${PLAN_LIMITS.pro.maxSocialLinks}.`,
+      );
+      return;
+    }
     setSocialLinks((prev) => [...prev, { platform: 'website', url: '' }]);
   };
 
@@ -785,11 +797,15 @@ export default function OnboardingForm({
             <div className="mb-1 flex items-center justify-between">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Social Links
+                <span className="ml-2 text-xs font-normal text-zinc-400 dark:text-zinc-500">
+                  {socialLinks.length}/{maxLinks}
+                </span>
               </label>
               <button
                 type="button"
                 onClick={addSocialLink}
-                className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                disabled={socialLinks.length >= maxLinks}
+                className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -802,11 +818,27 @@ export default function OnboardingForm({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="M12 5v14M5 12h14" />
+                <path d="M12 5v14M5 12h14" />
                 </svg>
                 Add Link
               </button>
             </div>
+
+            {/* Upgrade prompt when the free-tier link limit is reached */}
+            {socialLinks.length >= maxLinks && (
+              <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-(--main-orange)/30 bg-(--main-orange)/5 px-3 py-2 text-xs">
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  Free limit reached ({maxLinks} links). Upgrade to Pro for up to{' '}
+                  {PLAN_LIMITS.pro.maxSocialLinks} links.
+                </span>
+                <Link
+                  href="/payment"
+                  className="shrink-0 font-medium text-(--main-orange) hover:underline"
+                >
+                  Upgrade
+                </Link>
+              </div>
+            )}
 
             <div className="scrollable-links flex min-h-10 max-h-64 flex-col gap-2 overflow-y-auto pr-1">
               {socialLinks.length === 0 && (

@@ -110,10 +110,13 @@ export async function generateMetadata({
 
 export default async function UsernamePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ src?: string }>;
 }) {
   const { username } = await params;
+  const { src: srcParam } = await searchParams;
   const supabase = await createClient();
 
   // ── PRIMARY CARD LOOKUP ──────────────────────────────────────────────
@@ -276,7 +279,10 @@ export default async function UsernamePage({
   const headersList = await headers();
   const referer = headersList.get("referer");
   const geo = parseGeo((name) => headersList.get(name));
-  const source = parseSource({ srcParam: null, referer });
+  // Read the ?src= query param so QR-code scans (src=qr, baked into the QR
+  // payload by lib/qr.ts) are attributed correctly. Previously this was
+  // hardcoded to null, so QR scans were always mislabelled "direct".
+  const source = parseSource({ srcParam: srcParam ?? null, referer });
 
   // Fire-and-forget — don't let a slow insert delay the render.
   void recordEvent({
@@ -288,6 +294,23 @@ export default async function UsernamePage({
     country: geo.country,
     city: geo.city,
   });
+
+  // ── ANALYTICS: dedicated QR-scan event ───────────────────────────────
+  // When a visitor arrives via the printed/saved QR code (?src=qr), record a
+  // distinct `qr_scan` event in addition to the profile_view above. This lets
+  // the analytics dashboard surface "X QR scans" as its own metric, separate
+  // from generic profile views.
+  if (source === "qr") {
+    void recordEvent({
+      owner_id: card.owner_id,
+      card_id: card.id,
+      event_type: "qr_scan",
+      source,
+      visitor_id: visitorId,
+      country: geo.country,
+      city: geo.city,
+    });
+  }
 
   // ── SEO: schema.org Person JSON-LD ────────────────────────────────────
   // Tells Google this page represents a Person. Built from the card data we
