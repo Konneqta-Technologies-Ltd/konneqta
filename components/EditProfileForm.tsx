@@ -15,6 +15,8 @@ import { useRef, useState } from "react";
 
 import CardSwitcher from "./CardSwitcher";
 import InfoTip from "./InfoTip";
+import Link from "next/link";
+import { PLAN_LIMITS } from "@/lib/entitlements";
 import ProGate from "./ProGate";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import Spinner from "./ui/Spinner";
@@ -47,6 +49,11 @@ interface EditProfileFormProps {
   initialSocialLinks: { id?: string; platform: string; url: string }[];
   canUploadLogo?: boolean;
   maxCards: number;
+  /**
+   * Max social links allowed for this user's tier (free=3, pro=7, exempt=∞).
+   * Infinity means no enforced cap (UI hides the counter + upgrade prompt).
+   */
+  maxSocialLinks: number;
   cardId: string;
   cardSlug: string;
   isPrimaryCard: boolean;
@@ -82,6 +89,7 @@ export default function EditProfileForm({
   initialSocialLinks,
   canUploadLogo = false,
   maxCards = 1,
+  maxSocialLinks,
   cardId,
   cardSlug,
   isPrimaryCard,
@@ -182,7 +190,17 @@ export default function EditProfileForm({
     if (logoInputRef.current) logoInputRef.current.value = "";
   };
 
+  // ---- Social link limit (count-based, tier-aware) ----
+  // Free = 3, Pro = 7, Exempt = Infinity (no cap, no upgrade prompt).
+  const hasLinkLimit = Number.isFinite(maxSocialLinks);
+
   const addSocialLink = () => {
+    if (hasLinkLimit && socialLinks.length >= maxSocialLinks) {
+      toast.error(
+        `Your plan allows up to ${maxSocialLinks} social links. Upgrade to Pro for ${PLAN_LIMITS.pro.maxSocialLinks}.`,
+      );
+      return;
+    }
     setSocialLinks((prev) => [...prev, { platform: "website", url: "" }]);
   };
   const removeSocialLink = (index: number) => {
@@ -498,12 +516,32 @@ export default function EditProfileForm({
           {/* Social Links */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Social Links</label>
-              <button type="button" onClick={addSocialLink} className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Social Links
+                {hasLinkLimit && (
+                  <span className="ml-2 text-xs font-normal text-zinc-400 dark:text-zinc-500">
+                    {socialLinks.length}/{maxSocialLinks}
+                  </span>
+                )}
+              </label>
+              <button type="button" onClick={addSocialLink} disabled={hasLinkLimit && socialLinks.length >= maxSocialLinks} className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                 Add Link
               </button>
             </div>
+
+            {/* Upgrade prompt when the tier's link limit is reached */}
+            {hasLinkLimit && socialLinks.length >= maxSocialLinks && (
+              <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-(--main-orange)/30 bg-(--main-orange)/5 px-3 py-2 text-xs">
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  Limit reached ({maxSocialLinks} links). Upgrade to Pro for up to{" "}
+                  {PLAN_LIMITS.pro.maxSocialLinks} links.
+                </span>
+                <Link href="/payment" className="shrink-0 font-medium text-(--main-orange) hover:underline">
+                  Upgrade
+                </Link>
+              </div>
+            )}
             <div className="scrollable-links flex min-h-10 max-h-50 flex-col gap-2 overflow-y-auto pr-1">
               {socialLinks.map((link, index) => {
                 const platform = SOCIAL_PLATFORMS.find((p) => p.id === link.platform);

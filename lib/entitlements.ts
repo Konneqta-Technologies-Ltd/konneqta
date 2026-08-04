@@ -41,6 +41,16 @@ export type PlanLimits = {
   canUseThemes: boolean;
   canUseBanners: boolean;
   canUseSignature: boolean;
+  /**
+   * How many social links a user may add to a card.
+   * Free = 3, Pro = 7.
+   *
+   * This is a COUNT-based limit (how many links), not a platform-based one
+   * (which specific platforms) — users can mix-and-match any platforms from
+   * the full list up to their tier's cap. A future "Pro+" tier can raise this
+   * number to unlock more slots without touching the platform list.
+   */
+  maxSocialLinks: number;
 };
 
 /** Plan-level limits. Used by the multi-card feature (Phase 4). */
@@ -53,6 +63,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     canUseThemes: false,
     canUseBanners: false,
     canUseSignature: false,
+    // Free users can add up to 3 social links (any mix of platforms).
+    maxSocialLinks: 3,
   },
   pro: {
     maxCards: 3,
@@ -62,6 +74,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     canUseThemes: true,
     canUseBanners: true,
     canUseSignature: true,
+    // Pro users can add up to 7 social links (any mix of platforms).
+    maxSocialLinks: 7,
   },
 };
 
@@ -201,4 +215,18 @@ export function getMaxCards(profile: EntitlementProfile | null | undefined): num
 export function getMaxShares(profile: EntitlementProfile | null | undefined): number {
   if (isExempt(profile)) return Infinity;
   return getFeatureFlags(profile).maxShares;
+}
+
+/**
+ * How many social links can this user add to a single card?
+ * Exempt users are unlimited → Infinity. Pro = 7. Free = 3.
+ *
+ * This is the READ side only — the real enforcement happens server-side in
+ * the onboarding / save-card routes (clients can't be trusted to count
+ * honestly). The UI uses this to disable the "Add link" button and show an
+ * upgrade prompt when the limit is reached.
+ */
+export function getMaxSocialLinks(profile: EntitlementProfile | null | undefined): number {
+  if (isExempt(profile)) return Infinity;
+  return getFeatureFlags(profile).maxSocialLinks;
 }

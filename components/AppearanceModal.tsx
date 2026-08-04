@@ -137,7 +137,13 @@ export default function AppearanceModal({
 
       const { error } = await supabase.storage
         .from("banners")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, {
+          upsert: true,
+          // Explicit contentType prevents Supabase Storage from inferring the
+          // wrong MIME (which can trigger a 400). Matches the file's type
+          // (already validated to be jpeg/png/webp above).
+          contentType: file.type,
+        });
 
       if (error) {
         toast.error(error.message);
