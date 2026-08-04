@@ -3,7 +3,9 @@
 import { ThemeCustomization, resolveTheme } from "@/lib/themes";
 
 import AppearanceModal from "./AppearanceModal";
+import ConnectButton from "./connect/ConnectButton";
 import Image from "next/image";
+import { KONNEQT_SOURCES } from "@/lib/konneqts";
 import { PLATFORM_MAP } from "@/lib/social-platforms";
 import ShareMenu from "./ShareMenu";
 import Spinner from "./ui/Spinner";
@@ -427,6 +429,16 @@ export default function ProfileCard({
                 <path d="M8 14h.01M12 14h.01M16 14h.01" />
               </svg>
             </IconButton>
+          )}
+
+          {/* Connect — visitors only. Creates a Konneqt (logged-in) or opens
+              the guest form (anonymous). Sits between Save Contact and Share. */}
+          {!isOwner && (
+            <ConnectButton
+              targetUsername={profile.username}
+              targetDisplayName={displayName}
+              source={KONNEQT_SOURCES.PROFILE_PAGE}
+            />
           )}
 
           <Tooltip label="Share" side="top">

@@ -39,7 +39,8 @@ export type AnalyticsEventType =
   | "profile_view"
   | "share"
   | "qr_scan"
-  | "vcard_download";
+  | "vcard_download"
+  | "konneqt";
 
 export type RecordEventInput = {
   owner_id: string;
