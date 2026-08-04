@@ -51,6 +51,16 @@ export type PlanLimits = {
    * number to unlock more slots without touching the platform list.
    */
   maxSocialLinks: number;
+  /**
+   * How many Konneqts (connections) are VISIBLE on the Konneqts page.
+   * Free = 10, Pro = unlimited.
+   *
+   * IMPORTANT: this is DISPLAY-ONLY. Every connection is always stored — a
+   * user is never blocked from making a new connection because they're on the
+   * free tier. The limit only controls how many rows the Konneqts page
+   * returns; the rest are counted for the "🔒 N more · Upgrade" footer.
+   */
+  maxVisibleKonneqts: number;
 };
 
 /** Plan-level limits. Used by the multi-card feature (Phase 4). */
@@ -65,6 +75,9 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     canUseSignature: false,
     // Free users can add up to 3 social links (any mix of platforms).
     maxSocialLinks: 3,
+    // Free users see their 10 most recent Konneqts (the rest are stored +
+    // surfaced via an upgrade prompt). Connections are never blocked.
+    maxVisibleKonneqts: 10,
   },
   pro: {
     maxCards: 3,
@@ -76,6 +89,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     canUseSignature: true,
     // Pro users can add up to 7 social links (any mix of platforms).
     maxSocialLinks: 7,
+    // Pro users see all their Konneqts.
+    maxVisibleKonneqts: Infinity,
   },
 };
 
@@ -229,4 +244,17 @@ export function getMaxShares(profile: EntitlementProfile | null | undefined): nu
 export function getMaxSocialLinks(profile: EntitlementProfile | null | undefined): number {
   if (isExempt(profile)) return Infinity;
   return getFeatureFlags(profile).maxSocialLinks;
+}
+
+/**
+ * How many Konneqts are visible on the Konneqts page?
+ * Exempt users are unlimited → Infinity. Pro = Infinity. Free = 10.
+ *
+ * DISPLAY-ONLY: every connection is always stored regardless of this limit.
+ * The Konneqts page uses this to cap the rows it returns and to compute the
+ * "🔒 N more · Upgrade" count. A user is never blocked from connecting.
+ */
+export function getMaxVisibleKonneqts(profile: EntitlementProfile | null | undefined): number {
+  if (isExempt(profile)) return Infinity;
+  return getFeatureFlags(profile).maxVisibleKonneqts;
 }

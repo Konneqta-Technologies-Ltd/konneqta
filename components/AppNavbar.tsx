@@ -88,7 +88,7 @@ export default function AppNavbar() {
           type="button"
           onClick={() => setScannerOpen(true)}
           aria-label="Scan QR code"
-          className="cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          className="cursor-pointer bg-(--main-orange) rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-800 dark:hover:bg-zinc-200"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
