@@ -19,7 +19,7 @@ const item: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
 
-export default function Hero() {
+export default function Hero({ cardPath, firstName }: { cardPath: string | null; firstName: string | null }) {
   return (
     <section className="relative overflow-hidden bg-[#0a0a0a] pt-10 pb-20 sm:pb-36 md:pb-44">
       {/* ambient decoration layer */}
@@ -68,18 +68,18 @@ export default function Hero() {
         <FloatingDot
           color="#F3C23A"
           size={10}
-          className="left-[60px] sm:left-[160px] top-[220px] sm:block"
+          className="left-15 sm:left-40 top-55 sm:block"
         />
         <FloatingDot
           color="#2DD9A6"
           size={10}
-          className="right-[35px] sm:right-[195px] top-[195px] sm:block"
+          className="right-8.75 sm:right-48.75 top-48.75 sm:block"
           duration={4}
         />
         <FloatingDot
           color="#F3C23A"
           size={8}
-          className="right-[35px] sm:right-[165px] top-[345px] sm:top-[545px] sm:block"
+          className="right-8.75 sm:right-41.25 top-86.25 sm:top-136.25 sm:block"
           duration={3}
         />
       </div>
@@ -89,25 +89,36 @@ export default function Hero() {
         <Image
           src="/k-white.png"
           alt="Logo"
-          className="w-[100px] object-contain"
+          className="w-25 object-contain"
           width={100}
           height={30}
         />
 
         <nav className="flex items-center gap-6">
-          <Link
-            href="/auth/signup"
-            className="visible-focus rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-          >
-            Sign up
-          </Link>
+          {cardPath ? (
+            <Link
+              href={cardPath}
+              className="visible-focus rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#6B21D4] transition-colors hover:bg-white/90"
+            >
+              {firstName ? `Hi, ${firstName}` : 'Go to my card'}
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/auth/signup"
+                className="visible-focus rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+              >
+                Sign up
+              </Link>
 
-          <Link
-            href="/auth/login"
-            className="visible-focus text-sm font-semibold text-white/80 transition-colors hover:text-white"
-          >
-            Login
-          </Link>
+              <Link
+                href="/auth/login"
+                className="visible-focus text-sm font-semibold text-white/80 transition-colors hover:text-white"
+              >
+                Login
+              </Link>
+            </>
+          )}
         </nav>
       </div>
 
@@ -144,7 +155,16 @@ export default function Hero() {
           </motion.p>
 
           <motion.div variants={item} className="mt-10">
-            <SignInWithGoogle />
+            {cardPath ? (
+              <Link
+                href={cardPath}
+                className="visible-focus inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-sm font-semibold text-[#6B21D4] transition-colors hover:bg-white/90"
+              >
+                Go to my card
+              </Link>
+            ) : (
+              <SignInWithGoogle />
+            )}
           </motion.div>
         </motion.div>
       </div>

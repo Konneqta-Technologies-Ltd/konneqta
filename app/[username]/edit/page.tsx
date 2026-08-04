@@ -1,4 +1,4 @@
-import { canUploadLogo, getMaxCards } from "@/lib/entitlements";
+import { canUploadLogo, getMaxCards, getMaxSocialLinks } from "@/lib/entitlements";
 
 import EditProfileForm from "@/components/EditProfileForm";
 import { createClient } from "@/lib/supabase/server";
@@ -85,6 +85,7 @@ export default async function EditProfilePage({
       initialSocialLinks={socialLinks ?? []}
       canUploadLogo={canUploadLogo(profile)}
       maxCards={getMaxCards(profile)}
+      maxSocialLinks={getMaxSocialLinks(profile)}
       // New multi-card props:
       cardId={card.id}
       cardSlug={card.slug}
