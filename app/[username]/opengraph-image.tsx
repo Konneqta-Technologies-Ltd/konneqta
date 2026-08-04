@@ -78,6 +78,7 @@ export default async function Image({
           background: BG,
           position: "relative",
           overflow: "hidden",
+          
         }}
       >
         {avatarUrl ? (
@@ -87,7 +88,9 @@ export default async function Image({
             style={{
               width: "96%",
               height: "96%",
-              objectFit: "contain",
+              objectFit: "cover",
+              objectPosition: "top",
+              
             }}
             alt=""
           />
