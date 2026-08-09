@@ -124,8 +124,16 @@ export default function EditProfileForm({
   ) => {
     // Username is now LOCKED (card #1 slug = username, can't change)
     if (e.target.name === "username") return;
+    
+    // For all other fields, handle validation if needed
+    if (e.target.name === "full_name" || e.target.name === "job_title" || e.target.name === "company" || e.target.name === "bio") {
+      // Could add validation here if needed
+    }
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+  
+  // Check for invalid username characters (used for error handling)
+  const usernameHasInvalidChars = /^[a-z0-9_]{3,20}$/.test(form.username.trim()) === false;
 
   // Compress in-browser before storing for upload (≤512px JPEG for avatars,
   // ≤256px PNG for logos). Visually lossless for small thumbnails while
@@ -303,7 +311,18 @@ export default function EditProfileForm({
         .eq("id", cardId);
 
       if (cardError) {
-        toast.error(cardError.message);
+        // Provide user-friendly error messages based on the database error
+        let errorMessage = cardError.message;
+        
+        if (errorMessage.toLowerCase().includes('duplicate') || errorMessage.toLowerCase().includes('unique constraint')) {
+          errorMessage = 'This username is already taken. Please choose another.';
+        } else if (errorMessage.toLowerCase().includes('violates constraint') || errorMessage.toLowerCase().includes('character')) {
+          errorMessage = 'Username contains invalid characters. Please use only lowercase letters, numbers, and underscores.';
+        } else if (errorMessage.includes('profile_pkey')) {
+          errorMessage = 'There\'s an issue with your username. Please ensure it\'s 3-20 characters and contains only a-z, 0-9, or _.';
+        }
+        
+        toast.error(errorMessage);
         return;
       }
 
@@ -436,7 +455,7 @@ export default function EditProfileForm({
           {/* Username — LOCKED (multi-card: username is immutable) */}
           <div>
             <label htmlFor="username" className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Username{" "}
+              Username
               <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">(locked — this is your account identity)</span>
             </label>
             <input id="username" type="text" name="username" value={form.username} disabled className={disabledInputClassName} />

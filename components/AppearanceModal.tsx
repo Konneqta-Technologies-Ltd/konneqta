@@ -100,10 +100,16 @@ export default function AppearanceModal({
     "/banners/banner-6.jpg",
   ];
 
-  // Whether banners are actionable. If the user isn't Pro, the gallery is
-  // shown as a teaser (clicking a banner shows an upgrade prompt) rather
-  // than silently ignoring the click.
-  const bannersLocked = !canUseBanners;
+   // Whether banners are actionable. If the user isn't Pro, the gallery is
+   // shown as a teaser (clicking a banner shows an upgrade prompt) rather
+   // than silently ignoring the click.
+   const bannersLocked = !canUseBanners;
+  
+  // Include the uploaded banner in the gallery so it shows in the preview area
+  // Only show it if it's selected and the user is Pro (can upload)
+  const BANNER_GALLERY_WITH_UPLOAD = selectedBanner && selectedBanner.startsWith('http') && !bannersLocked
+    ? [selectedBanner, ...BANNER_GALLERY]
+    : BANNER_GALLERY;
 
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -511,8 +517,12 @@ export default function AppearanceModal({
             {/* Gallery — always visible. For free users each banner gets a
                  Pro lock overlay; clicking it shows an upgrade toast. */}
             <div className="flex flex-wrap gap-2">
-              {BANNER_GALLERY.map((url) => {
+              {BANNER_GALLERY_WITH_UPLOAD.map((url) => {
                 const isSelected = selectedBanner === url;
+                
+                // Check if this is the uploaded banner (vs a preset)
+                const isUploaded = url.startsWith('http');
+                
                 return (
                   <button
                     key={url}
@@ -536,6 +546,17 @@ export default function AppearanceModal({
                       alt="Banner option"
                       className="h-full w-full object-cover"
                     />
+                    
+                    {/* Badge for uploaded banner */}
+                    {isUploaded && (
+                      <div className="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-(--main-orange) text-white shadow-sm">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                      </div>
+                    )}
+                    
                     {/* Pro lock overlay for free users */}
                     {bannersLocked && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">

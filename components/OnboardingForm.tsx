@@ -91,7 +91,9 @@ export default function OnboardingForm({
   const username = form.username.trim();
   const usernameTooShort = username.length > 0 && username.length < 3;
   const usernameInvalid =
-    username.length >= 3 && !/^[a-z0-9_]{3,20}$/.test(username);
+    username.length >= 3 && !/^(?!.*[_]$)[a-z0-9_]{3,20}$/.test(username);
+  // Check for leading/trailing underscores specifically
+  const usernameHasUnderscoreAtStartOrEnd = /^[a-z0-9_][a-z0-9_]*[_]?[a-z0-9_]*$/.test(username) === false;
 
   // Final status used by the UI (combines derived + async)
   const usernameStatus:
@@ -301,7 +303,18 @@ export default function OnboardingForm({
       });
 
       if (profileError) {
-        toast.error(profileError.message);
+        // Provide user-friendly error messages based on the database error
+        let errorMessage = profileError.message;
+        
+        if (errorMessage.toLowerCase().includes('duplicate') || errorMessage.toLowerCase().includes('unique constraint')) {
+          errorMessage = 'This username is already taken. Please choose another.';
+        } else if (errorMessage.toLowerCase().includes('violates constraint') || errorMessage.toLowerCase().includes('character')) {
+          errorMessage = 'Username contains invalid characters. Please use only lowercase letters, numbers, and underscores.';
+        } else if (errorMessage.includes('profile_pkey')) {
+          errorMessage = 'There\'s an issue with your username. Please ensure it\'s 3-20 characters and contains only a-z, 0-9, or _.';
+        }
+        
+        toast.error(errorMessage);
         return;
       }
 
