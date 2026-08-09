@@ -150,8 +150,7 @@ export default function Hero({ cardPath, firstName }: { cardPath: string | null;
             variants={item}
             className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg"
           >
-            One elegant profile for your bio, links and contact made to share by
-            QR and WhatsApp, wherever you go.
+            Konneqta is a digital identity card platform that lets creators and professionals build a shareable digital profile with QR codes and WhatsApp-ready links — all in one place
           </motion.p>
 
           <motion.div variants={item} className="mt-10">
