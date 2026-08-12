@@ -70,6 +70,15 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // PWA name override: iOS Safari derives the "Add to Home Screen" app name
+    // from <title> by default. Since profile <title> includes the user's name
+    // for SEO, we explicitly pin the apple-mobile-web-app-title to "Konneqta"
+    // so the installed PWA always shows the brand name, never the username.
+    appleWebApp: {
+      capable: true,
+      title: "Konneqta",
+      statusBarStyle: "black-translucent",
+    },
     alternates: { canonical: `https://www.konneqta.com/${username}`},
     // Per-card opt-out from search engines (is_searchable column).
     ...(card.is_searchable === false

@@ -50,9 +50,15 @@ export async function GET(
     return new Response("Not Found", { status: 404 });
   }
 
-  // Build the canonical profile URL from the incoming request host.
-  const url = new URL(_req.url);
-  const profileUrl = `${url.origin}/${card.slug}`;
+  // Build the canonical profile URL from the production site URL (set via
+  // NEXT_PUBLIC_SITE_URL). Using the request Host header is unreliable behind
+  // reverse proxies / load balancers and previously baked `localhost` into the
+  // vCard URL field. This mirrors the pattern used in lib/qr.ts and
+  // app/[username]/page.tsx.
+  const origin = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.konneqta.com"
+  ).replace(/\/$/, "");
+  const profileUrl = `${origin}/${card.slug}`;
 
   // ── ANALYTICS: vCard download (fire-and-forget) ──────────────────────
   const visitorId = await getVisitorId();
