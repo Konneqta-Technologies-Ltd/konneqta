@@ -159,7 +159,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+      {/* bg-black prevents a white flash on PWA launch / splash before CSS
+          hydrates; matches the manifest background_color (#000000). */}
+      <body className="min-h-full flex flex-col bg-black" suppressHydrationWarning>
         <PostHogProvider>
           {children}
           <Toaster position="top-right" richColors />

@@ -13,7 +13,7 @@
  * 2026-07-20 to a new master PNG logo):
  *  - Splash / install UI background = pure black (#000000).
  *  - Logo = the supplied 1024x1024 `konneqta-logo.png` master.
- *  - Regular (non-maskable) icons: transparent background, logo fitted to ~80%.
+ *  - Regular (non-maskable) icons: solid black background, logo fitted to ~80%.
  *  - Maskable icon: solid black background + safe-zone padding (logo at ~64%
  *    of canvas) so Android adaptive icon shapes don't crop the logo.
  *  - The web app banner / OG image (`public/banner.png`) is NOT touched by
@@ -80,10 +80,14 @@ async function makeIcon(size, logoRatio, bg, outFile) {
   console.log(`✓ ${outFile} (${size}x${size}, logo ${Math.round(logoRatio * 100)}%)`);
 }
 
-// Regular icons: transparent background, logo at ~80%.
-await makeIcon(MASTER_PX, 0.8, null, "icon-master.png");
-await makeIcon(192, 0.8, null, "icon-192.png");
-await makeIcon(512, 0.8, null, "icon-512.png");
+// Regular icons: solid black background, logo at ~80%.
+// NOTE: Previously these used transparent backgrounds, but some Android and
+// iOS launch screens render the transparent areas as WHITE instead of
+// respecting the manifest's background_color, producing a white splash.
+// A solid black background here guarantees the splash is always black.
+await makeIcon(MASTER_PX, 0.8, "#000000", "icon-master.png");
+await makeIcon(192, 0.8, "#000000", "icon-192.png");
+await makeIcon(512, 0.8, "#000000", "icon-512.png");
 
 // Apple touch icon MUST be opaque (iOS adds rounded corners itself).
 // Use a solid black background so it matches the splash theme.
