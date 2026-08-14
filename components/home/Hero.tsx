@@ -141,9 +141,9 @@ export default function Hero({ cardPath, firstName }: { cardPath: string | null;
             variants={item}
             className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl"
           >
-            Connect Smarter
-            <br />
-            Everywhere.
+            Introduce yourself in 
+            <br/>
+            One Tap          
           </motion.h1>
 
           <motion.p
