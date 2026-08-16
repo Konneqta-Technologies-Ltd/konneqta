@@ -33,6 +33,8 @@ interface OnboardingFormProps {
 type SocialLink = {
   platform: string;
   url: string;
+  /** Optional custom display name (only used by the "other"/Custom Link platform). */
+  label?: string;
 };
 
 export default function OnboardingForm({
@@ -225,6 +227,37 @@ export default function OnboardingForm({
     );
   };
 
+  // Switching platforms in the dropdown. For "email" we pre-fill the account
+  // email (users almost always want their own address, and a raw email — NOT
+  // a mailto: URL — is what the DB CHECK constraint and safeHref() expect).
+  // Switching away from email clears the auto-filled value so it doesn't
+  // silently fail http(s) validation on submit.
+  const handlePlatformChange = (index: number, newPlatform: string) => {
+    setSocialLinks((prev) =>
+      prev.map((link, i) => {
+        if (i !== index) return link;
+        if (newPlatform === 'email') {
+          const trimmed = link.url.trim();
+          const alreadyEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+          return {
+            ...link,
+            platform: newPlatform,
+            url: alreadyEmail ? trimmed : form.email,
+          };
+        }
+        if (link.platform === 'email' && link.url.trim() === form.email) {
+          return { ...link, platform: newPlatform, url: '' };
+        }
+        // Leaving "other" (Custom Link) — drop the custom name; it only
+        // applies to custom links and would be dead data on real platforms.
+        if (link.platform === 'other') {
+          return { ...link, platform: newPlatform, label: '' };
+        }
+        return { ...link, platform: newPlatform };
+      }),
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -388,6 +421,11 @@ export default function OnboardingForm({
           profile_id: user.id, // keep for backward compat
           platform: link.platform,
           url: link.url.trim(),
+          // Custom display name — only stored for "Custom Link" entries.
+          label:
+            link.platform === 'other' && link.label?.trim()
+              ? link.label.trim()
+              : null,
         }));
 
       if (linksToInsert.length > 0) {
@@ -818,7 +856,7 @@ export default function OnboardingForm({
                 type="button"
                 onClick={addSocialLink}
                 disabled={socialLinks.length >= maxLinks}
-                className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="flex cursor-pointer border border-(--main-orange) items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -875,7 +913,7 @@ export default function OnboardingForm({
                       <select
                         value={link.platform}
                         onChange={(e) =>
-                          updateSocialLink(index, 'platform', e.target.value)
+                          handlePlatformChange(index, e.target.value)
                         }
                         className={`w-36 rounded-lg border border-zinc-300 bg-white py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 ${
                           PlatformIcon ? 'pl-8 pr-2' : 'px-2'
@@ -889,16 +927,31 @@ export default function OnboardingForm({
                       </select>
                     </div>
 
-                    {/* URL input */}
-                    <input
-                      type="url"
-                      value={link.url}
-                      onChange={(e) =>
-                        updateSocialLink(index, 'url', e.target.value)
-                      }
-                      placeholder={platform?.placeholder ?? 'https://...'}
-                      className={inputClassName}
-                    />
+                    {/* URL / email input — email gets the right keyboard +
+                        native validation so raw addresses pass the form. */}
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <input
+                        type={link.platform === 'email' ? 'email' : 'url'}
+                        value={link.url}
+                        onChange={(e) =>
+                          updateSocialLink(index, 'url', e.target.value)
+                        }
+                        placeholder={platform?.placeholder ?? 'https://...'}
+                        className={inputClassName}
+                      />
+                      {link.platform === 'other' && (
+                        <input
+                          type="text"
+                          value={link.label ?? ''}
+                          onChange={(e) =>
+                            updateSocialLink(index, 'label', e.target.value)
+                          }
+                          maxLength={20}
+                          placeholder='Link name (e.g. "My Shop") — shown on your card'
+                          className={inputClassName}
+                        />
+                      )}
+                    </div>
 
                     {/* Remove button */}
                     <button
