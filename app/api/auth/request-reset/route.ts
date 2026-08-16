@@ -55,15 +55,12 @@ export async function POST(request: Request) {
         // Always return ok to prevent user enumeration.
         return NextResponse.json({ ok: true });
     } catch (err) {
-         console.error("========== REQUEST RESET ERROR ==========");
-    console.error(err);
-      return NextResponse.json(
-        {
-            ok: false,
-            error: err instanceof Error ? err.message : String(err),
-            stack: err instanceof Error ? err.stack : undefined,
-        },
-        { status: 500 }
-    )
+        // Log full details server-side only — never echo internals/stack
+        // to the client (information disclosure).
+        console.error("request-reset failed:", err);
+        return NextResponse.json(
+            { ok: false, error: "Something went wrong. Please try again." },
+            { status: 500 }
+        );
     }
 }

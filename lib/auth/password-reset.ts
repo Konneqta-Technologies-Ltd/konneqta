@@ -54,6 +54,68 @@ function generateOtp(): string {
 }
 
 // ---------------------------------------------------------------------------
+// User lookup by email
+// ---------------------------------------------------------------------------
+/**
+ * Find an auth user by email.
+ *
+ * Primary path: ONE indexed query against `public.auth_user_emails`, a
+ * trigger-maintained mirror of auth.users (see supabase/auth-email-lookup.sql).
+ * This scales to any user-base size.
+ *
+ * Fallback (only while the migration hasn't been run): bounded pagination
+ * over auth.admin.listUsers. A single un-paginated listUsers() call returns
+ * just the first page (~50 users) and silently missed everyone beyond it —
+ * the root cause of "reset email never arrives" for some accounts.
+ */
+async function findUserByEmail(
+    supabase: ReturnType<typeof createAdminClient>,
+    normalizedEmail: string
+): Promise<{ id: string; email?: string } | null> {
+    // --- Fast path: trigger-maintained lookup table ---
+    const { data: mirrorRows, error: mirrorError } = await supabase
+        .from("auth_user_emails")
+        .select("user_id")
+        .eq("email", normalizedEmail)
+        .limit(1);
+
+    if (!mirrorError) {
+        // Table exists: no row means the user genuinely doesn't exist.
+        return mirrorRows && mirrorRows.length > 0
+            ? { id: mirrorRows[0].user_id, email: normalizedEmail }
+            : null;
+    }
+
+    // PGRST205 = table not in schema cache → migration not run yet.
+    // Any other error is logged, then we still fall through so a flaky
+    // mirror never blocks password resets.
+    if (mirrorError.code !== "PGRST205") {
+        console.error("auth_user_emails lookup failed:", mirrorError.message);
+    }
+
+    // --- Fallback: bounded pagination over listUsers (pre-migration) ---
+    const PER_PAGE = 1000; // PostgREST maximum per page
+    const MAX_PAGES = 50; // safety bound (50k users) — run the SQL migration beyond this
+    for (let page = 1; page <= MAX_PAGES; page++) {
+        const { data: list, error: listError } = await supabase.auth.admin
+            .listUsers({ page, perPage: PER_PAGE });
+
+        if (listError) {
+            console.error("listUsers failed:", listError.message);
+            return null;
+        }
+
+        const hit = list.users.find(
+            (u) => u.email?.toLowerCase() === normalizedEmail
+        );
+        if (hit) return { id: hit.id, email: hit.email };
+
+        if (list.users.length < PER_PAGE) break; // last page — stop
+    }
+    return null;
+}
+
+// ---------------------------------------------------------------------------
 // requestReset
 // ---------------------------------------------------------------------------
 export interface RequestResetResult {
@@ -65,9 +127,7 @@ export async function requestReset(
     ipAddress: string | null
 ): Promise<RequestResetResult> {
     const normalizedEmail = email.trim().toLowerCase();
-    console.log("1. Creating admin client...");
     const supabase = createAdminClient();
-    console.log("2.  admin client created...");
     const now = new Date();
 
     // --- Rate limit: 1 request per email per 60s ---
@@ -96,19 +156,7 @@ export async function requestReset(
     }
 
     // --- Look up the user (silently skip if unknown — no enumeration) ---
-    console.log("3. Listing users...");
-
-const { data: userList, error: listUsersError } =
-    await supabase.auth.admin.listUsers();
-
-console.log("listUsersError:", listUsersError);
-
-if (listUsersError) {
-    throw listUsersError;
-}
-
-console.log("4. Users loaded:", userList.users.length);
-    const user = userList?.users?.find((u) => u.email?.toLowerCase() === normalizedEmail);
+    const user = await findUserByEmail(supabase, normalizedEmail);
 
     // --- Invalidate all previous unused OTPs for this email ---
     await supabase
@@ -123,32 +171,25 @@ console.log("4. Users loaded:", userList.users.length);
         const otpHash = hashOtp(otp);
         const expiresAt = new Date(now.getTime() + OTP_TTL_MINUTES * 60 * 1000);
 
+        const { error: insertError } = await supabase
+            .from("password_reset_tokens")
+            .insert({
+                email: normalizedEmail,
+                user_id: user.id,
+                otp_hash: otpHash,
+                ip_address: ipAddress,
+                expires_at: expiresAt.toISOString(),
+            });
 
-        console.log("5. Inserting reset token...");
+        if (insertError) {
+            console.error("Failed to store reset token:", insertError.message);
+            throw insertError;
+        }
 
-        const {error: insertError} =await supabase
-        .from("password_reset_tokens")
-        .insert({
-            email: normalizedEmail,
-            user_id: user.id,
-            otp_hash: otpHash,
-            ip_address: ipAddress,
-            expires_at: expiresAt.toISOString(),
-        });
-
-
-if (insertError) {
-    console.error("Insert error:", insertError);
-    throw insertError;
-}
-
-console.log("6. Token inserted");
         // Send the email (imported lazily so the browser bundle never sees it).
         const { sendPasswordResetOtp } = await import("@/lib/emails/zeptomail");
-        console.log('7. Sending Zepto email')
-        await sendPasswordResetOtp(user.email!, user.email!, otp);
-
-        console.log('8. Email sent')
+        const recipient = user.email ?? normalizedEmail;
+        await sendPasswordResetOtp(recipient, recipient, otp);
     }
 
     return { ok: true };

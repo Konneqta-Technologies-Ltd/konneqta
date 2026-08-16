@@ -22,6 +22,8 @@ import { TbWorld } from "react-icons/tb";
 export type SocialPlatform = {
   id: string;
   label: string;
+  /** Compact label shown under the icon on the card back (defaults to label). */
+  shortLabel?: string;
   placeholder: string;
   urlPrefix?: string;
   /** Brand glyph from react-icons (falls back to a globe for web/unknown). */
@@ -35,7 +37,8 @@ export type SocialPlatform = {
 export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   {
     id: "website",
-    label: "Website / Portfolio",
+    label: "My Website",
+    shortLabel: "Website",
     placeholder: "https://your-site.com",
     icon: TbWorld,
   },
@@ -54,6 +57,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   {
     id: "twitter",
     label: "X (Twitter)",
+    shortLabel: "X",
     placeholder: "https://x.com/you",
     icon: FaXTwitter,
   },
@@ -126,6 +130,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   {
     id: "other",
     label: "Custom Link",
+    shortLabel: "Link",
     placeholder: "https://...",
     icon: FaLink,
   },
