@@ -182,7 +182,7 @@ export default async function UsernamePage({
   // Fetch the social links for this card
   const { data: socialLinks } = await supabase
     .from("social_links")
-    .select("platform, url")
+    .select("platform, url, label")
     .eq("card_id", card.id)
     .order("created_at", { ascending: true });
 

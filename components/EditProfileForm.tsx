@@ -46,7 +46,7 @@ interface EditProfileFormProps {
     logo_url: string;
     qr_code_url?: string | null;
   };
-  initialSocialLinks: { id?: string; platform: string; url: string }[];
+  initialSocialLinks: { id?: string; platform: string; url: string; label?: string | null }[];
   canUploadLogo?: boolean;
   maxCards: number;
   /**
@@ -64,6 +64,8 @@ type SocialLink = {
   id?: string;
   platform: string;
   url: string;
+  /** Optional custom display name (only used by the "other"/Custom Link platform). */
+  label?: string;
 };
 
 /**
@@ -102,7 +104,11 @@ export default function EditProfileForm({
   const [form, setForm] = useState(initialProfile);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(
     initialSocialLinks.length > 0
-      ? initialSocialLinks
+      ? // Normalize DB nulls → undefined so the local SocialLink type holds.
+        initialSocialLinks.map(({ label, ...rest }) => ({
+          ...rest,
+          label: label ?? undefined,
+        }))
       : [{ platform: "website", url: "" }]
   );
 
@@ -217,6 +223,37 @@ export default function EditProfileForm({
   const updateSocialLink = (index: number, field: keyof SocialLink, value: string) => {
     setSocialLinks((prev) =>
       prev.map((link, i) => (i === index ? { ...link, [field]: value } : link))
+    );
+  };
+
+  // Switching platforms in the dropdown. For "email" we pre-fill the account
+  // email (users almost always want their own address, and a raw email — NOT
+  // a mailto: URL — is what the DB CHECK constraint and safeHref() expect).
+  // Switching away from email clears the auto-filled value so it doesn't
+  // silently fail http(s) validation on submit.
+  const handlePlatformChange = (index: number, newPlatform: string) => {
+    setSocialLinks((prev) =>
+      prev.map((link, i) => {
+        if (i !== index) return link;
+        if (newPlatform === "email") {
+          const trimmed = link.url.trim();
+          const alreadyEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+          return {
+            ...link,
+            platform: newPlatform,
+            url: alreadyEmail ? trimmed : form.email,
+          };
+        }
+        if (link.platform === "email" && link.url.trim() === form.email) {
+          return { ...link, platform: newPlatform, url: "" };
+        }
+        // Leaving "other" (Custom Link) — drop the custom name; it only
+        // applies to custom links and would be dead data on real platforms.
+        if (link.platform === "other") {
+          return { ...link, platform: newPlatform, label: "" };
+        }
+        return { ...link, platform: newPlatform };
+      })
     );
   };
 
@@ -351,6 +388,11 @@ export default function EditProfileForm({
           profile_id: user.id, // keep for backward compat
           platform: link.platform,
           url: link.url.trim(),
+          // Custom display name — only stored for "Custom Link" entries.
+          label:
+            link.platform === "other" && link.label?.trim()
+              ? link.label.trim()
+              : null,
         }));
 
       if (linksToInsert.length > 0) {
@@ -543,7 +585,9 @@ export default function EditProfileForm({
                   </span>
                 )}
               </label>
-              <button type="button" onClick={addSocialLink} disabled={hasLinkLimit && socialLinks.length >= maxSocialLinks} className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800">
+              <button type="button" onClick={addSocialLink} 
+              disabled={hasLinkLimit && socialLinks.length >= maxSocialLinks} 
+              className="flex cursor-pointer items-center gap-1 border border-(--main-orange) rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                 Add Link
               </button>
@@ -569,12 +613,30 @@ export default function EditProfileForm({
                   <div key={index} className="flex shrink-0 items-start gap-2">
                     <div className="relative shrink-0">
                       {PlatformIcon && <PlatformIcon className="pointer-events-none absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />}
-                      <select value={link.platform} onChange={(e) => updateSocialLink(index, "platform", e.target.value)}
+                      <select value={link.platform} onChange={(e) => handlePlatformChange(index, e.target.value)}
                         className={`w-30 rounded-lg border border-zinc-300 bg-white py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 ${PlatformIcon ? "pl-8 pr-2" : "px-2"}`}>
                         {SOCIAL_PLATFORMS.map((p) => (<option key={p.id} value={p.id}>{p.label}</option>))}
                       </select>
                     </div>
-                    <input type="url" value={link.url} onChange={(e) => updateSocialLink(index, "url", e.target.value)} placeholder={platform?.placeholder ?? "https://..."} className={inputClassName} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <input
+                        type={link.platform === "email" ? "email" : "url"}
+                        value={link.url}
+                        onChange={(e) => updateSocialLink(index, "url", e.target.value)}
+                        placeholder={platform?.placeholder ?? "https://..."}
+                        className={inputClassName}
+                      />
+                      {link.platform === "other" && (
+                        <input
+                          type="text"
+                          value={link.label ?? ""}
+                          onChange={(e) => updateSocialLink(index, "label", e.target.value)}
+                          maxLength={20}
+                          placeholder='Link name (e.g. "My Shop") — shown on your card'
+                          className={inputClassName}
+                        />
+                      )}
+                    </div>
                     <button type="button" onClick={() => removeSocialLink(index)} className="mt-0.5 shrink-0 cursor-pointer rounded-md p-2 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40" aria-label="Remove link">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                     </button>

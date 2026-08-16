@@ -22,6 +22,8 @@ import { useTrack } from "@/lib/use-track";
 type SocialLink = {
   platform: string;
   url: string;
+  /** Optional custom display name (set for "Custom Link" entries). */
+  label?: string | null;
 };
 
 type Profile = {
@@ -234,24 +236,39 @@ export default function ProfileCard({
                   const platform = PLATFORM_MAP[link.platform];
                   const Icon = platform?.icon;
                   const label = platform?.label ?? link.platform;
-                  const href = safeHref(link.url, link.platform === "email");
+                  // Caption under the icon: user's custom name (Custom Link)
+                  // → compact platform name → full label.
+                  const shortLabel =
+                    (link.platform === "other" && link.label?.trim()) ||
+                    platform?.shortLabel ||
+                    label;
+                  const isEmail = link.platform === "email";
+                  const href = safeHref(link.url, isEmail);
                   if (!href) return null;
                   return (
                     <a
                       key={index}
                       href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      // mailto: opens the mail client — a new tab would be
+                      // left sitting empty, so only web links get _blank.
+                      {...(isEmail
+                        ? {}
+                        : { target: "_blank", rel: "noopener noreferrer" })}
                       aria-label={label}
-                      className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-200 text-zinc-900 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+                      className="group flex w-14 flex-col items-center gap-1"
                     >
-                      {Icon ? (
-                        <Icon className="h-5 w-5" />
-                      ) : (
-                        <span className="text-xs font-medium uppercase">
-                          {label.charAt(0)}
-                        </span>
-                      )}
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-zinc-900 transition-colors group-hover:border-zinc-400 group-hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-50 group-hover:dark:border-zinc-600 group-hover:dark:bg-zinc-900">
+                        {Icon ? (
+                          <Icon className="h-5 w-5" />
+                        ) : (
+                          <span className="text-xs font-medium uppercase">
+                            {label.charAt(0)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="max-w-14 truncate text-[10px] text-zinc-400 dark:text-zinc-500">
+                        {shortLabel}
+                      </span>
                     </a>
                   );
                 })

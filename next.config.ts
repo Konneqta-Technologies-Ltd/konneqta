@@ -40,6 +40,22 @@ const nextConfig: NextConfig = {
         ]
       : [],
   },
+  // ADDED: Host-based redirect for old Vercel domain
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "konneqta.vercel.app",
+          },
+        ],
+        destination: "https://www.konneqta.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 // @serwist/turbopack wraps the Next config to enable Turbopack-native service
