@@ -1,6 +1,6 @@
 import { canUseBanners, canUseThemes, isPro } from "@/lib/entitlements";
+import { notFound, redirect } from "next/navigation";
 
-import Link from "next/link";
 import type { Metadata } from "next";
 import OwnerBadges from "@/components/OwnerBadges";
 import ProfileCard from "@/components/ProfileCard";
@@ -12,7 +12,6 @@ import { headers } from "next/headers";
 import { parseGeo } from "@/lib/analytics/geo";
 import { parseSource } from "@/lib/analytics/source";
 import { recordEvent } from "@/lib/analytics/server";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +78,9 @@ export async function generateMetadata({
       title: "Konneqta",
       statusBarStyle: "black-translucent",
     },
-    alternates: { canonical: `https://www.konneqta.com/${username}`},
+    // Relative self-canonical — Next.js resolves it against metadataBase
+    // (https://www.konneqta.com) set in the root layout.
+    alternates: { canonical: `/${username}` },
     // Per-card opt-out from search engines (is_searchable column).
     ...(card.is_searchable === false
       ? { robots: { index: false, follow: false } }
@@ -151,15 +152,10 @@ export default async function UsernamePage({
     console.error("[username] card query error:", cardError.message);
   }
 
+  // Real 404 (not a 200 soft-404) so deleted/typo'd slugs drop out of
+  // Google's index instead of becoming thin duplicates of the homepage.
   if (cardError || !card) {
-     return (
-    <div className="flex h-screen flex-col items-center justify-center">
-      <p>Profile not found.</p>
-      <Link href="/" className="mt-4 text-blue-600 underline">
-        Go Home
-      </Link>
-    </div>
-  );
+    notFound();
   }
 
   // ── OPTIONAL: custom theme overrides ─────────────────────────────────
@@ -198,31 +194,16 @@ export default async function UsernamePage({
     .eq("id", card.owner_id)
     .maybeSingle();
 
-    if(ownerError || !owner) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center">
-        <p>Profile owner could not be verified.</p>
-        <Link href="/" className="mt-4 text-blue-600 underline">
-          Go Home
-        </Link>
-
-      </div>
-    )
-    }
+  if (ownerError || !owner) {
+    notFound();
+  }
 
   // DEACTIVATED ACCOUNT: the owner has temporarily disabled their profile.
   // Behave exactly as if the profile doesn't exist — same "not found" view
   // a missing card would render. Data is preserved in the DB; only the
   // public surface is suppressed.
   if (owner.status === "deactivated") {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center">
-        <p>Profile not found.</p>
-        <Link href="/" className="mt-4 text-blue-600 underline">
-          Go Home
-        </Link>
-      </div>
-    );
+    notFound();
   }
 
 

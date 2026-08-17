@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 /**
  * /konneqts route — redirects authenticated users to their own Konneqts page.
@@ -7,6 +8,14 @@ import { createClient } from "@/lib/supabase/server";
  * This maintains backward compatibility for direct access to /konneqts while
  * ensuring users only see their own connections (not others').
  */
+
+// This is a private, auth-gated router (never renders content) — keep it out
+// of search indexes entirely rather than self-canonicalizing.
+export const metadata: Metadata = {
+  title: "Konneqts · Konneqta",
+  robots: { index: false, follow: false },
+};
+
 export default async function KonneqtsPage() {
   const supabase = await createClient();
 

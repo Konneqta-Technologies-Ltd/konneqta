@@ -40,9 +40,18 @@ const nextConfig: NextConfig = {
         ]
       : [],
   },
-  // ADDED: Host-based redirect for old Vercel domain
+  // Redirects:
+  // 1. Host-based redirect for the old Vercel domain.
+  // 2. /home → / : the landing page now lives at the domain root ("/"). A
+  //    permanent (308) redirect consolidates all links, bookmarks, and search
+  //    equity that pointed at the old /home URL onto the canonical root.
   async redirects() {
     return [
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
       {
         source: "/:path*",
         has: [

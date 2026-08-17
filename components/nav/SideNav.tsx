@@ -134,7 +134,7 @@ export default function SideNav({
         {/* ---- Top nav links ---- */}
         <nav className="flex flex-col gap-1 p-3">
           <Link
-            href="/home"
+            href="/"
             onClick={onClose}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
           >

@@ -31,18 +31,15 @@ const baseUrl =
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Static, indexable pages ────────────────────────────────────────────
+  // "/" is the landing page (renders content for anonymous visitors and
+  // crawlers). The old /home path 308-redirects to "/", so it is NOT listed
+  // here — a sitemap URL must be indexable, not a redirect.
   const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
-    },
-    {
-      url: `${baseUrl}/home`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
     },
     {
       url: `${baseUrl}/waitlist`,
