@@ -6,6 +6,7 @@ import DarkModeToggle from "@/components/DarkModeToggle";
 import Image from "next/image";
 import Joi from "joi";
 import Link from "next/link";
+import SignInWithGoogle from "@/components/SignInWithGoogle";
 import Spinner from "@/components/ui/Spinner";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -122,6 +123,17 @@ export default function LoginPage() {
                         {isLoading && <Spinner size="sm" className="text-white" />}
                         {isLoading ? "Logging in..." : "Continue"}
                     </button>
+
+                    <div className="flex items-center gap-3 pt-4" aria-hidden="true">
+                        <span className="h-px flex-1 bg-zinc-300 dark:bg-zinc-700" />
+                        <span className="text-xs uppercase tracking-wide text-zinc-400 dark:text-zinc-500">or</span>
+                        <span className="h-px flex-1 bg-zinc-300 dark:bg-zinc-700" />
+                    </div>
+
+                    <div className="pt-4">
+                        <SignInWithGoogle label="Sign in with Google" variant="auth" />
+                    </div>
+
                     <p className="text-center pt-2 text-sm text-zinc-500 dark:text-zinc-400">{"Don't have an account?"}<Link href="/auth/signup" className="cursor-pointer hover:text-(--main-orange)"> Create one</Link> </p>
                     </div>
                 </form>
