@@ -59,6 +59,9 @@ export default function AppNavbar() {
   const SIGNUP_HIDDEN_ROUTES = ["/", "/terms", "/refund", "/contact", "/auth/verify-reset"];
   const showSignUp = !user && !SIGNUP_HIDDEN_ROUTES.includes(pathname);
 
+const QR_HIDDEN_ROUTES = ["/"];
+  const showQrButton = !QR_HIDDEN_ROUTES.includes(pathname);
+
   return (
     <>
       <div className="fixed top-4 left-4 z-40 flex items-center gap-1">
@@ -92,6 +95,10 @@ export default function AppNavbar() {
         )}
 
         {/* QR Scan button — available to all visitors */}
+        {
+          showQrButton && (
+
+      
         <button
           type="button"
           onClick={() => setScannerOpen(true)}
@@ -123,6 +130,8 @@ export default function AppNavbar() {
             <path d="M12 21v-1" />
           </svg>
         </button>
+        )
+        }
       </div>
 
       {/* Sign Up pill — top-right, guests only (mirrors the QR scan button
