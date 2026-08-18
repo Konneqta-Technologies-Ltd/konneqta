@@ -13,6 +13,7 @@ import {
 } from "@/lib/image";
 import { useRef, useState } from "react";
 
+import { BIO_MAX_CHARS } from "@/components/card-layouts/CardBio";
 import CardSwitcher from "./CardSwitcher";
 import InfoTip from "./InfoTip";
 import Link from "next/link";
@@ -172,7 +173,7 @@ export default function EditProfileForm({
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Logo must be less than 5MB");
+      toast.error("Image must be less than 5MB");
       return;
     }
     const compressed = await compressImage(file, LOGO_OPTIONS);
@@ -568,10 +569,16 @@ export default function EditProfileForm({
             ) : null}
           </div>
 
-          {/* Bio */}
+          {/* Bio — capped at 160 chars for new input; existing longer bios
+              are grandfathered (they load + save fine, just can't grow). */}
           <div>
             <label htmlFor="bio" className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Bio</label>
-            <textarea id="bio" name="bio" placeholder="What do you want people to know?" value={form.bio} onChange={handleChange} rows={3} className={inputClassName} />
+            <textarea id="bio" name="bio" placeholder="What do you want people to know?" value={form.bio} onChange={handleChange} rows={3} maxLength={BIO_MAX_CHARS} className={inputClassName} />
+            <p className={`mt-1 text-right text-xs ${form.bio.length > BIO_MAX_CHARS ? "text-red-500" : "text-zinc-400 dark:text-zinc-500"}`}>
+              {form.bio.length > BIO_MAX_CHARS
+                ? `${form.bio.length} chars — trim to ${BIO_MAX_CHARS} or less to extend`
+                : `${form.bio.length}/${BIO_MAX_CHARS}`}
+            </p>
           </div>
 
           {/* Social Links */}
