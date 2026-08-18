@@ -110,13 +110,13 @@ export default function KonneqtCard({ data }: { data: KonneqtCardData }) {
       <h3 className="mt-3 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
         {data.displayName}
       </h3>
-      <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mt-0.5 truncate text-xs text-balance text-zinc-500 dark:text-zinc-400">
         {sublabel}
       </p>
 
       {/* Guest note (if any) */}
       {data.type === "guest" && data.note && (
-        <p className="mt-2 line-clamp-2 text-xs italic text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 line-clamp-2 text-balance text-xs italic text-zinc-500 dark:text-zinc-400">
           &ldquo;{data.note}&rdquo;
         </p>
       )}

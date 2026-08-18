@@ -100,8 +100,9 @@ export default function OnboardingForm({
   const usernameInvalid =
     username.length >= 3 && !/^(?!.*[_]$)[a-z0-9_]{3,20}$/.test(username);
   const usernameReserved = username.length >= 3 && isReservedUsername(username);
-  // Check for leading/trailing underscores specifically
-  const usernameHasUnderscoreAtStartOrEnd = /^[a-z0-9_][a-z0-9_]*[_]?[a-z0-9_]*$/.test(username) === false;
+  // Trailing underscore specifically — allowed characters, invalid placement.
+  // (A LEADING underscore is intentionally allowed.)
+  const usernameEndsWithUnderscore = username.endsWith('_');
 
   // Final status used by the UI (combines derived + async)
   const usernameStatus:
@@ -110,10 +111,13 @@ export default function OnboardingForm({
     | 'available'
     | 'taken'
     | 'reserved'
-    | 'invalid' = usernameTooShort
+    | 'invalid'
+    | 'trailing-underscore' = usernameTooShort
     ? 'idle'
     : usernameInvalid
-      ? 'invalid'
+      ? usernameEndsWithUnderscore
+        ? 'trailing-underscore'
+        : 'invalid'
       : usernameReserved
         ? 'reserved'
         : usernameCheck;
@@ -363,7 +367,8 @@ export default function OnboardingForm({
         } else if (errorMessage.toLowerCase().includes('violates constraint') || errorMessage.toLowerCase().includes('character')) {
           errorMessage = 'Username contains invalid characters. Please use only lowercase letters, numbers, and underscores.';
         } else if (errorMessage.includes('profile_pkey')) {
-          errorMessage = 'There\'s an issue with your username. Please ensure it\'s 3-20 characters and contains only a-z, 0-9, or _.';
+          errorMessage =
+            "We couldn't create your profile. Double-check your username (3–20 letters, numbers, underscores) and try again.";
         }
         
         toast.error(errorMessage);
@@ -610,7 +615,7 @@ export default function OnboardingForm({
               onChange={handleChange}
               required
               className={
-                usernameStatus === 'taken' || usernameStatus === 'invalid' || usernameStatus === 'reserved'
+                usernameStatus === 'taken' || usernameStatus === 'invalid' || usernameStatus === 'reserved' || usernameStatus === 'trailing-underscore'
                   ? inputClassName +
                     ' border-red-500 focus:border-(--main-orange) focus:ring-red-500'
                   : usernameStatus === 'available'
@@ -620,14 +625,18 @@ export default function OnboardingForm({
               }
             />
             {/* Username availability feedback */}
-            {usernameStatus === 'invalid' && (
+            {(usernameStatus === 'invalid' || usernameStatus === 'trailing-underscore') && (
               <p className="mt-1 text-xs text-red-500">
-                3–20 characters, letters/numbers/underscores only
+                {usernameStatus === 'trailing-underscore'
+                  ? "Usernames can't end with an underscore — remove the last _"
+                  : username.length > 20
+                    ? 'Too long — usernames are 3–20 characters.'
+                    : 'Use 3–20 lowercase letters, numbers or underscores — no spaces or symbols.'}
               </p>
             )}
             {usernameStatus === 'reserved' && (
               <p className="mt-1 text-xs text-red-500">
-                @{username} is reserved — please choose another name
+                @{username} is reserved and can&rsquo;t be used — try another
               </p>
             )}
             {usernameStatus === 'checking' && (
@@ -1056,11 +1065,11 @@ export default function OnboardingForm({
                 : usernameStatus === 'checking'
                   ? 'Checking username...'
                   : usernameStatus === 'taken'
-                    ? 'Username taken — try another'
-                    : usernameStatus === 'invalid'
+                    ? 'Username taken — pick another'
+                    : usernameStatus === 'invalid' || usernameStatus === 'trailing-underscore'
                       ? 'Fix username to continue'
                       : usernameStatus === 'reserved'
-                        ? 'Username is reserved'
+                        ? 'That name is reserved'
                         : 'Create Profile'}
           </button>
         </form>
