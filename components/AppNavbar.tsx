@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import FeedbackTrigger from "./feedback/FeedbackTrigger";
+import Link from "next/link";
 import SideNav from "./nav/SideNav";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -50,6 +51,13 @@ export default function AppNavbar() {
   // Hooks).
   const HIDDEN_ROUTES = ["/waitlist", "/home", "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password","/post-login","/privacy"];
   if (HIDDEN_ROUTES.includes(pathname)) return null;
+
+  // Routes where something else already occupies the fixed top-right corner
+  // (DarkModeToggle on /terms, /refund, /contact, /auth/verify-reset) or the
+  // page has its own sign-up affordance (homepage Hero). The Sign Up pill
+  // mirrors the QR scan button's top-left placement for guests.
+  const SIGNUP_HIDDEN_ROUTES = ["/", "/terms", "/refund", "/contact", "/auth/verify-reset"];
+  const showSignUp = !user && !SIGNUP_HIDDEN_ROUTES.includes(pathname);
 
   return (
     <>
@@ -116,6 +124,18 @@ export default function AppNavbar() {
           </svg>
         </button>
       </div>
+
+      {/* Sign Up pill — top-right, guests only (mirrors the QR scan button
+          on the left). Sends visitors to the signup page where they can
+          register with email or Google. */}
+      {showSignUp && (
+        <Link
+          href="/auth/signup"
+          className="visible-focus fixed top-4 right-4 z-40 rounded-full bg-(--main-orange) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+        >
+          Sign Up
+        </Link>
+      )}
 
       <SideNav
         open={open}

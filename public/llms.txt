@@ -6,7 +6,7 @@ Konneqta lets you create a single, beautiful link-in-bio style profile that cons
 
 ## Key pages
 
-- [Home / Landing](https://www.konneqta.com/home)
+- [Home / Landing](https://www.konneqta.com/)
 - [Sign in](https://www.konneqta.com/auth/login)
 - [Example profile](https://www.konneqta.com/vicwin13)
 

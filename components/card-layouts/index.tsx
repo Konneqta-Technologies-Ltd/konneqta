@@ -12,6 +12,7 @@
  * only its accent colors change. That lives in ProfileCard, not here.
  */
 
+import CardBio from "./CardBio";
 import Image from "next/image";
 import type { ThemePreset } from "@/lib/themes";
 
@@ -179,9 +180,12 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
       </div>
 
       {profile.bio && (
-        <p className="my-3 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          {profile.bio}
-        </p>
+        <CardBio
+          bio={profile.bio}
+          accent={c.accent}
+          className="my-3 text-center text-sm w-10/12 mx-auto text-zinc-600 dark:text-zinc-400"
+          interactive={!!onFlip}
+        />
       )}
 
       <FlipButton accent={c.accent} onFlip={onFlip} className="mt-8" />
@@ -240,9 +244,13 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
       )}
 
       {profile.bio && (
-        <p className="text-center text-xs" style={{ color: c.subtext }}>
-          {profile.bio}
-        </p>
+        <CardBio
+          bio={profile.bio}
+          color={c.subtext}
+          accent={c.accent}
+          className="text-center text-xs w-10/12 mx-auto"
+          interactive={!!onFlip}
+        />
       )}
 
       <FlipButton accent={c.accent} onFlip={onFlip} className="mt-4" />
@@ -273,7 +281,7 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
       </div>
 
       {/* Right: info */}
-      <div className=" flex items-center pt-4  justify-evenly">
+      <div className=" flex items-center pt-4  justify-center">
       
       <div>
 
@@ -282,7 +290,7 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
         </h1>
       </div>
       <hr className="w-18 border border-white rotate-90"/>
-      <div className=" flex flex-col self-start items-start">
+      <div className=" flex flex-col self-center items-start">
 
         {profile.job_title && (
           <p className="text-sm font-medium" style={{ color: c.accent }}>
@@ -310,9 +318,13 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
         </div>
         </div>
         {profile.bio && (
-          <p className="pt-8 text-xs" style={{ color: c.subtext }}>
-            {profile.bio}
-          </p>
+          <CardBio
+            bio={profile.bio}
+            color={c.subtext}
+            accent={c.accent}
+            className="pt-8 text-xs w-10/12 mx-auto"
+            interactive={!!onFlip}
+          />
         )}
         <FlipButton accent={c.accent} onFlip={onFlip} className="mt-8 mx-auto  " />
     </div>
@@ -354,7 +366,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
       {/* Name huge at the bottom */}
       <div className="flex flex-col justify-center items-center gap-2">
         <h1
-          className="text-center text-5xl pb-6 font-bold leading-tight"
+          className="text-center text-5xl pb-3 font-bold leading-tight"
           style={{ color: c.text, fontFamily: theme.fontFamily }}
         >
           {name}
@@ -368,9 +380,13 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
       </div>
 
       {profile.bio && (
-        <p className="mt-3 max-w-xs text-sm" style={{ color: c.subtext }}>
-          {profile.bio}
-        </p>
+        <CardBio
+          bio={profile.bio}
+          color={c.subtext}
+          accent={c.accent}
+          className="mt-3 max-w-xs text-sm "
+          interactive={!!onFlip}
+        />
       )}
 
       <FlipButton accent={c.accent} onFlip={onFlip} className="mt-6 self-center" />
@@ -445,9 +461,13 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
         )}
 
         {profile.bio && (
-          <p className="mt-2 max-w-xs text-center text-xs" style={{ color: c.subtext }}>
-            {profile.bio}
-          </p>
+          <CardBio
+            bio={profile.bio}
+            color={c.subtext}
+            accent={c.accent}
+            className="mt-2 max-w-xs text-center text-xs w-10/12 mx-auto"
+            interactive={!!onFlip}
+          />
         )}
 
         <FlipButton accent={c.accent} onFlip={onFlip} className="mt-4" />

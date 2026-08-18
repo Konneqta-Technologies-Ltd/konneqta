@@ -14,6 +14,7 @@ import {
 import { dataUrlToBlob, generateQrDataUrl, getCanonicalProfileUrl } from "@/lib/qr";
 import { useEffect, useRef, useState } from "react";
 
+import { BIO_MAX_CHARS } from "@/components/card-layouts/CardBio";
 import InfoTip from "./InfoTip";
 import Link from "next/link";
 import { PLAN_LIMITS } from "@/lib/entitlements";
@@ -22,6 +23,7 @@ import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import Spinner from "./ui/Spinner";
 import { awardMilestone } from "@/lib/feedback/score";
 import { createClient } from "@/lib/supabase/client";
+import { isReservedUsername } from "@/lib/reserved-usernames";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -89,11 +91,15 @@ export default function OnboardingForm({
     });
   };
 
-  // Derived validation — computed during render, no setState needed
+  // Derived validation — computed during render, no setState needed.
+  // Reserved-word check is instant + local (zero network) so unusable names
+  // get feedback on the very keystroke that types them; it mirrors the DB's
+  // validate_card_slug list plus the Next.js routes sharing /<name>.
   const username = form.username.trim();
   const usernameTooShort = username.length > 0 && username.length < 3;
   const usernameInvalid =
     username.length >= 3 && !/^(?!.*[_]$)[a-z0-9_]{3,20}$/.test(username);
+  const usernameReserved = username.length >= 3 && isReservedUsername(username);
   // Check for leading/trailing underscores specifically
   const usernameHasUnderscoreAtStartOrEnd = /^[a-z0-9_][a-z0-9_]*[_]?[a-z0-9_]*$/.test(username) === false;
 
@@ -103,15 +109,26 @@ export default function OnboardingForm({
     | 'checking'
     | 'available'
     | 'taken'
+    | 'reserved'
     | 'invalid' = usernameTooShort
     ? 'idle'
     : usernameInvalid
       ? 'invalid'
-      : usernameCheck;
+      : usernameReserved
+        ? 'reserved'
+        : usernameCheck;
 
-  // Debounced availability check — only runs for valid usernames
+  // Debounced availability check — only runs for valid, non-reserved names.
+  // 250ms: fast typists hit ~5-8 keys/sec, so shorter debounces fire mid-word
+  // queries (wasted round-trips, rate-limit risk) without feedback feeling
+  // any sooner — the network round-trip dominates either way.
+  // STALE-RESPONSE GUARD: a reply is applied only if the typed username is
+  // still the one it was issued for — out-of-order replies are dropped, so
+  // the UI can never show a status for a name the user is no longer typing.
+  // HEAD query: fetches no rows, just the exact count over the indexed
+  // unique column — tiny payload, same accuracy.
   useEffect(() => {
-    if (!username || usernameTooShort || usernameInvalid) {
+    if (!username || usernameTooShort || usernameInvalid || usernameReserved) {
       return;
     }
 
@@ -119,11 +136,13 @@ export default function OnboardingForm({
       try {
         setUsernameCheck('checking');
         const supabase = createClient();
-        const { data, error } = await supabase
+        const { count, error } = await supabase
           .from('profiles')
-          .select('username')
-          .eq('username', username)
-          .maybeSingle();
+          .select('username', { count: 'exact', head: true })
+          .eq('username', username);
+
+        // Stale-response guard: user typed something else in the meantime.
+        if (username !== form.username.trim()) return;
 
         if (error) {
           console.error('username check error:', error);
@@ -131,11 +150,11 @@ export default function OnboardingForm({
           return;
         }
 
-        setUsernameCheck(data ? 'taken' : 'available');
+        setUsernameCheck((count ?? 0) > 0 ? 'taken' : 'available');
       } catch {
         setUsernameCheck('idle');
       }
-    }, 500); // 500ms debounce
+    }, 250); // 250ms debounce
 
     return () => clearTimeout(debounceTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -591,7 +610,7 @@ export default function OnboardingForm({
               onChange={handleChange}
               required
               className={
-                usernameStatus === 'taken' || usernameStatus === 'invalid'
+                usernameStatus === 'taken' || usernameStatus === 'invalid' || usernameStatus === 'reserved'
                   ? inputClassName +
                     ' border-red-500 focus:border-(--main-orange) focus:ring-red-500'
                   : usernameStatus === 'available'
@@ -604,6 +623,11 @@ export default function OnboardingForm({
             {usernameStatus === 'invalid' && (
               <p className="mt-1 text-xs text-red-500">
                 3–20 characters, letters/numbers/underscores only
+              </p>
+            )}
+            {usernameStatus === 'reserved' && (
+              <p className="mt-1 text-xs text-red-500">
+                @{username} is reserved — please choose another name
               </p>
             )}
             {usernameStatus === 'checking' && (
@@ -824,7 +848,7 @@ export default function OnboardingForm({
             </ProGate>
           </div>
 
-          {/* Bio */}
+          {/* Bio — capped at 160 chars (matches the card's display limit). */}
           <div>
             <label
               htmlFor="bio"
@@ -839,8 +863,12 @@ export default function OnboardingForm({
               value={form.bio}
               onChange={handleChange}
               rows={3}
+              maxLength={BIO_MAX_CHARS}
               className={inputClassName}
             />
+            <p className="mt-1 text-right text-xs text-zinc-400 dark:text-zinc-500">
+              {form.bio.length}/{BIO_MAX_CHARS}
+            </p>
           </div>
 
           {/* ---- Social Links (dynamic) ---- */}
@@ -1031,7 +1059,9 @@ export default function OnboardingForm({
                     ? 'Username taken — try another'
                     : usernameStatus === 'invalid'
                       ? 'Fix username to continue'
-                      : 'Create Profile'}
+                      : usernameStatus === 'reserved'
+                        ? 'Username is reserved'
+                        : 'Create Profile'}
           </button>
         </form>
       </div>

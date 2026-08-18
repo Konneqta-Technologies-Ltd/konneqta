@@ -27,7 +27,7 @@ const socialLinks = [
   },
   {
     name: 'LinkedIn',
-    url: 'https://www.linkein.com/in/konneqta',
+    url: 'https://www.linkedin.com/company/konneqta/',
     icon: <FaLinkedin />,
   },
 ];
