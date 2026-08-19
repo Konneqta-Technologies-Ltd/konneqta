@@ -10,13 +10,13 @@ import { useState } from "react";
  *   full here and saving them is never blocked.
  *
  * BIO_PREVIEW_CHARS — bios longer than this get the See more/See less toggle.
- *   Kept at 85 (not 100) because the collapsed preview appends "…See more"
+ *   Kept at 70 (not 100) because the collapsed preview appends "…See more"
  *   inline (~12 chars of visual width); 85 + the link ≈ the 100 chars that
  *   previously fit on 2 lines, so the collapsed state can never spill onto a
  *   third line.
  */
-export const BIO_MAX_CHARS = 160;
-export const BIO_PREVIEW_CHARS = 60;
+export const BIO_MAX_CHARS = 1500;
+export const BIO_PREVIEW_CHARS = 70;
 
 /**
  * CardBio — theme-aware bio block for the card front layouts.
@@ -31,7 +31,7 @@ export const BIO_PREVIEW_CHARS = 60;
  *     clamped paragraph, so it can never exceed 2 lines. No toggle is shown
  *     when there is no hidden text left.
  *   - Expanded: the full bio lives in a box pinned to EXACTLY 2 lines
- *     (leading-normal = 1.5 → h-[3em] = 2 × 1.5em) that scrolls internally
+ *     (leading-normal = 1.5 → h-[4em] = 2 × 1.5em) that scrolls internally
  *     (overflow-y-auto, thin scrollbar via .scrollable-links). A "See less"
  *     link (text-xs) sits inline at the very end of the text inside the
  *     scroll area. The height never changes, so the avatar/content above and
@@ -64,7 +64,7 @@ export default function CardBio({
     "cursor-pointer whitespace-nowrap text-xs font-medium underline underline-offset-2";
   const centered = className.includes("text-center");
 
-  // Short bio — natural flow clamped at 2 lines. No toggle, no fixed box.
+  // Short bio — natural flow clamped at 3 lines. No toggle, no fixed box.
   if (bio.length <= BIO_PREVIEW_CHARS) {
     return (
       <p
@@ -107,9 +107,9 @@ export default function CardBio({
     );
   }
 
-  // Expanded — full bio in the fixed 2-line box, scrolling internally, with
+  // Expanded — full bio in the fixed, scrolling internally, with
   // "See less" inline at the very end of the text.
-  const boxClass = `scrollable-links h-[3em] leading-normal overflow-y-auto ${className} ${
+  const boxClass = `scrollable-links h-[4em] leading-normal overflow-y-auto ${className} ${
     centered ? "mx-auto" : ""
   }`;
 
