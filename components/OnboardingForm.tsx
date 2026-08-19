@@ -402,6 +402,12 @@ export default function OnboardingForm({
         .single();
 
       if (cardError) {
+        // ROLLBACK: the profile row was already committed in step 2. Without
+        // this, the user is stuck: /<username> 404s (the public page reads
+        // from `cards`) and retrying hits a duplicate-key error on username.
+        // The route deletes the caller's profile ONLY when they have zero
+        // cards, so a retry starts from a clean slate.
+        await fetch('/api/onboarding/rollback', { method: 'POST' });
         toast.error(cardError.message);
         return;
       }
