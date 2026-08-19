@@ -24,9 +24,14 @@ export default function DarkModeToggle() {
 
   function toggleTheme() {
     if (isDark) {
+      // Add .light so the prefers-color-scheme fallback in globals.css
+      // (:root:not(.light)) can't re-apply dark variables after an
+      // explicit light choice.
       document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
       localStorage.setItem("theme", "light");
     } else {
+      document.documentElement.classList.remove("light");
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
     }
