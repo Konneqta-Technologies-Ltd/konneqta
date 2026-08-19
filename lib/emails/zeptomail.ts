@@ -190,3 +190,114 @@ export async function sendPasswordResetOtp(
     html
   );
 }
+
+/**
+ * Resolve the admin notification inbox.
+ *
+ * Prefers ADMIN_NOTIFICATION_EMAIL; falls back to info@konneqta.com so
+ * contact/feedback alerts reach the team even if the env var only ever held
+ * a personal address (or was unset in an environment).
+ */
+function getAdminInbox(): string {
+  return process.env.ADMIN_NOTIFICATION_EMAIL || "info@konneqta.com";
+}
+
+/**
+ * Contact form emails — confirmation to the sender + alert to the admin.
+ *
+ * Both send from info@konneqta.com. Failures are logged inside sendEmail and
+ * returned per-recipient; the caller (API route) treats them as non-fatal so
+ * a ZeptoMail hiccup can never fail the user's submission.
+ */
+export async function sendContactEmails(data: {
+  name: string;
+  email: string;
+  message: string;
+  date: string;
+}): Promise<void> {
+  const [{ renderContactConfirmation }, { renderContactAdminAlert }] =
+    await Promise.all([
+      import("./templates/contact-confirmation"),
+      import("./templates/contact-admin-alert"),
+    ]);
+
+  const confirmationHtml = renderContactConfirmation(data);
+  const adminHtml = renderContactAdminAlert(data);
+
+  const results = await Promise.allSettled([
+    sendEmail(
+      "info",
+      data.email,
+      data.name || "there",
+      "We received your message — Konneqta",
+      confirmationHtml
+    ),
+    sendEmail(
+      "info",
+      getAdminInbox(),
+      "Konneqta Team",
+      `New Contact Message — ${data.name}`,
+      adminHtml
+    ),
+  ]);
+
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      console.error(`[zeptomail] contact email ${i === 0 ? "confirmation" : "admin alert"} rejected:`, r.reason);
+    } else if (!r.value.success) {
+      console.warn(`[zeptomail] contact email ${i === 0 ? "confirmation" : "admin alert"} failed:`, r.value.error);
+    }
+  });
+}
+
+/**
+ * Feedback emails — confirmation to the user + alert to the admin.
+ *
+ * Both send from info@konneqta.com. The `metrics` payload (the full
+ * FeedbackPayload already assembled by /api/feedback) feeds the admin alert's
+ * engagement section. Failures are logged, never thrown.
+ */
+export async function sendFeedbackEmails(
+  data: {
+    feedbackId: string;
+    email: string;
+    sentiment: "positive" | "neutral" | "negative";
+    comment: string;
+    date: string;
+  },
+  metrics: import("@/lib/feedback/google-sheets").FeedbackPayload
+): Promise<void> {
+  const [{ renderFeedbackConfirmation }, { renderFeedbackAdminAlert }] =
+    await Promise.all([
+      import("./templates/feedback-confirmation"),
+      import("./templates/feedback-admin-alert"),
+    ]);
+
+  const confirmationHtml = renderFeedbackConfirmation(data);
+  const adminHtml = renderFeedbackAdminAlert(data, metrics);
+
+  const results = await Promise.allSettled([
+    sendEmail(
+      "info",
+      data.email,
+      "there",
+      `Thanks for your feedback — ${data.feedbackId}`,
+      confirmationHtml
+    ),
+    sendEmail(
+      "info",
+      getAdminInbox(),
+      "Konneqta Team",
+      `New Feedback ${data.feedbackId} — ${data.sentiment}`,
+      adminHtml
+    ),
+  ]);
+
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      console.error(`[zeptomail] feedback email ${i === 0 ? "confirmation" : "admin alert"} rejected:`, r.reason);
+    } else if (!r.value.success) {
+      console.warn(`[zeptomail] feedback email ${i === 0 ? "confirmation" : "admin alert"} failed:`, r.value.error);
+    }
+  });
+}
