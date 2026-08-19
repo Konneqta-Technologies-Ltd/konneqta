@@ -32,9 +32,9 @@ export default async function ResetPasswordPage() {
     }
 
     return (
-        <div className="dark:bg-zinc-900">
+        <div className="min-h-screen bg-white dark:bg-zinc-900">
             <DarkModeToggle />
-            <div className="dark:bg-zinc-900 md:max-w-md mx-auto h-screen dark:text-white text-zinc-900 ">
+            <div className="bg-white dark:bg-zinc-900 md:max-w-md mx-auto h-screen dark:text-white text-zinc-900 ">
                 <Image src="/k-logo.png" className="mx-auto pt-20" alt="Konneqta Logo" width={24} height={24} priority quality={75} />
                 <div className="text-center pt-7 pb-14 mx-auto">
                     <h1 className="text-3xl font-extrabold ">Set a new password</h1>

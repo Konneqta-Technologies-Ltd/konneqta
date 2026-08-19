@@ -154,6 +154,11 @@ export default function RootLayout({
                   var theme = localStorage.getItem('theme');
                   if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('dark');
+                  } else if (theme === 'light') {
+                    // Explicit light choice — set .light so the
+                    // prefers-color-scheme fallback in globals.css
+                    // (:root:not(.light)) can't re-apply dark variables.
+                    document.documentElement.classList.add('light');
                   }
                 } catch(e) {}
               })();

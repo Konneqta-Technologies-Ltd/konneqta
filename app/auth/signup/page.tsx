@@ -105,10 +105,10 @@ export default function SignUpPage() {
     }
 
     return (
-        <div className= "dark:bg-zinc-900 h-220">
+        <div className="min-h-screen bg-white dark:bg-zinc-900">
 
             <DarkModeToggle />
-            <div className="dark:bg-zinc-900 md:max-w-md mx-auto min-h-full dark:text-white text-zinc-900 ">
+            <div className="bg-white dark:bg-zinc-900 md:max-w-md mx-auto min-h-full dark:text-white text-zinc-900 ">
                 <Image src="/k-logo.png" className="mx-auto pt-7" alt="Konneqta Logo" width={24} height={24} priority quality={75} />
                 <div className="text-center pt-3 pb-12 mx-auto">
                     <h1 className="text-3xl font-extrabold ">Create your account</h1>

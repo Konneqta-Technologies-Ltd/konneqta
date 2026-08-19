@@ -16,16 +16,16 @@ import { useState } from "react";
  *   third line.
  */
 export const BIO_MAX_CHARS = 160;
-export const BIO_PREVIEW_CHARS = 64;
+export const BIO_PREVIEW_CHARS = 60;
 
 /**
  * CardBio — theme-aware bio block for the card front layouts.
  *
  * Behavior by bio length:
- * - ≤ 85 chars: natural flow, clamped at 2 lines (line-clamp-2 — one line
+ * - ≤ 60 chars: natural flow, clamped at 2 lines (line-clamp-2 — one line
  *   stays one line, two stay two). No "See more", no fixed box.
- * - > 85 chars:
- *   - Collapsed: the text is truncated at 85 chars + an inline "See more"
+ * - > 60 chars:
+ *   - Collapsed: the text is truncated at 60 chars + an inline "See more"
  *     link (text-xs, theme-accent, underlined) directly after the ellipsis —
  *     reads as "...See more". The whole thing sits in the same 2-line
  *     clamped paragraph, so it can never exceed 2 lines. No toggle is shown
@@ -76,15 +76,15 @@ export default function CardBio({
     );
   }
 
-  // Collapsed — 85-char preview + "... See more" inline, clamped to 2 lines.
+  // Collapsed — 60-char preview + "... See more" inline, clamped to 2 lines.
   if (!expanded) {
-    const preview = `${bio.slice(0, BIO_PREVIEW_CHARS).trimEnd()}…`;
+    const preview = `${bio.slice(0, BIO_PREVIEW_CHARS).trimEnd()}.`;
     return (
       <p
         className={`${className} line-clamp-2`}
         style={color ? { color } : undefined}
       >
-        {preview}{" "}
+        {preview}
         {interactive ? (
           <button
             type="button"
