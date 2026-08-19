@@ -24,6 +24,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { getTotals } from "@/lib/analytics/queries";
 import { computeScore } from "@/lib/feedback/score";
+import { sendFeedbackEmails } from "@/lib/emails/zeptomail";
 import {
   generateFeedbackId,
   sendToGoogleSheets,
@@ -129,6 +130,20 @@ export async function POST(req: Request) {
         feedback_last_submitted_at: new Date().toISOString(),
       })
       .eq("id", user.id);
+
+    // --- Emails (best-effort — never fail the submission) -------------------
+    // Confirmation to the user (with their reference ID) + alert to the
+    // admin inbox. sendFeedbackEmails logs its own failures internally.
+    await sendFeedbackEmails(
+      {
+        feedbackId,
+        email: user.email ?? "",
+        sentiment: payload.sentiment,
+        comment: payload.comment,
+        date: payload.timestamp,
+      },
+      payload
+    );
 
     return NextResponse.json({ ok: true, feedbackId });
   } catch (err) {

@@ -433,7 +433,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           height={100}
           priority
           unoptimized
-          className="mb-3 h-45 w-45 rounded-full border-4 object-cover"
+          className="mb-3 h-30 w-30 rounded-full border-4 object-cover"
           style={{ borderColor: c.bg === "#000000" ? "#ffffff" : c.bg }}
         />
 
