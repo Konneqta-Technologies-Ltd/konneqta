@@ -424,7 +424,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
       />
 
       {/* Content (z-20) */}
-      <div className="relative z-20 flex h-full flex-col items-center justify-end pb-10">
+      <div className="relative z-20 flex h-full flex-col items-center justify-end pb-15">
         {/* Avatar overlapping */}
         <Image
           src={avatarSrc(profile.avatar_url)}
@@ -470,7 +470,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           />
         )}
 
-        <FlipButton accent={c.accent} onFlip={onFlip} className="mt-4" />
+        <FlipButton accent={c.accent} onFlip={onFlip} className="mt-20" />
       </div>
     </div>
   );

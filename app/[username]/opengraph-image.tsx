@@ -89,7 +89,7 @@ export default async function Image({
               width: "96%",
               height: "96%",
               objectFit: "cover",
-              objectPosition: "top",
+              objectPosition: "center",
               
             }}
             alt=""

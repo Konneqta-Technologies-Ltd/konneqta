@@ -319,7 +319,7 @@ export default async function UsernamePage({
   });
 
   // OwnerBadges wraps the page content in a ShareCountProvider (for owners
-  // only) and renders the top-right cluster (PlanBadge + ShareCounter +
+  // only) and renders the top-right cluster (theme toggle + ShareCounter +
   // UpgradeButton) side-by-side with no overlap. Nesting the content inside
   // it means the ShareMenu (within ProfileCard) shares the provider, so a
   // successful share ticks the counter down live, and a 429 from the server
