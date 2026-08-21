@@ -21,7 +21,7 @@ export type ActiveCardResolution =
   | { status: "anonymous" }
   | { status: "onboard" }
   | { status: "deactivated" }
-  | { status: "card"; path: string };
+  | { status: "card"; path: string; name: string | null };
 
 export async function resolveActiveCardRedirect(): Promise<ActiveCardResolution> {
   const supabase = await createClient();
@@ -53,27 +53,39 @@ export async function resolveActiveCardRedirect(): Promise<ActiveCardResolution>
   if (profile.active_card_id) {
     const { data: card } = await supabase
       .from("cards")
-      .select("slug")
+      .select("slug, full_name")
       .eq("id", profile.active_card_id)
       .maybeSingle();
 
     if (card) {
-      return { status: "card", path: `/${card.slug}` };
+      return {
+        status: "card",
+        path: `/${card.slug}`,
+        name: card.full_name,
+      };
     }
   }
 
   // No active card set → fall back to their primary card.
   const { data: primaryCard } = await supabase
     .from("cards")
-    .select("slug")
+    .select("slug, full_name")
     .eq("owner_id", user.id)
     .eq("is_primary", true)
     .maybeSingle();
 
   if (primaryCard) {
-    return { status: "card", path: `/${primaryCard.slug}` };
+    return {
+      status: "card",
+      path: `/${primaryCard.slug}`,
+      name: primaryCard.full_name,
+    };
   }
 
   // Last resort: use the username directly (shouldn't happen post-migration).
-  return { status: "card", path: `/${profile.username}` };
+  return {
+    status: "card",
+    path: `/${profile.username}`,
+    name: null,
+  };
 }

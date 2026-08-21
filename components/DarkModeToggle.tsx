@@ -19,7 +19,23 @@ function subscribe(callback: () => void): () => void {
   return () => observer.disconnect();
 }
 
-export default function DarkModeToggle() {
+/**
+ * Dark/Light mode toggle button.
+ *
+ * - Default (no className): fixed top-right icon button — used on standalone
+ *   pages (legal, auth, etc.) where nothing else occupies the corner.
+ * - With className: fully inline/class-driven — used inside clusters like the
+ *   profile owner badges row or the SideNav drawer.
+ *
+ * Shows a sun icon in dark mode (tap → light) and a moon icon in light mode
+ * (tap → dark). The choice is persisted to localStorage and applied by
+ * toggling the `.dark`/`.light` classes on <html>.
+ */
+export default function DarkModeToggle({
+  className,
+}: {
+  className?: string;
+}) {
   const isDark = useSyncExternalStore(subscribe, getIsDark, getServerSnapshot);
 
   function toggleTheme() {
@@ -37,11 +53,14 @@ export default function DarkModeToggle() {
     }
   }
 
+  const defaultClassName =
+    "fixed top-4 right-4 z-50 rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800";
+
   return (
     <button
       onClick={toggleTheme}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="fixed top-4 right-4 z-50 rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      className={className ?? defaultClassName}
     >
       {isDark ? (
         /* Sun icon */

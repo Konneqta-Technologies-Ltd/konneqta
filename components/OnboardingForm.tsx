@@ -820,7 +820,7 @@ export default function OnboardingForm({
                     ? 'bg-(--main-orange)'
                     : 'bg-zinc-300 dark:bg-zinc-700'
                 }`}
-                aria-label="Show phone number in contact file"
+                aria-label="Show phone number on profile and in contact file"
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -830,11 +830,11 @@ export default function OnboardingForm({
               </button>
               <span className="text-xs text-zinc-600 dark:text-zinc-400">
                 {form.phone.trim()
-                  ? 'Show in contact file'
+                  ? 'Show on profile and in contact file'
                   : 'Enter a number to enable'}
               </span>
               <InfoTip
-                content="When ON, your phone number is included in the .vcf contact file people download from your profile via “Save Contact”. When OFF (default), it stays private."
+                content="When ON, your phone number is shown publicly on your card and included in the .vcf contact file people download via Save Contact. When OFF (default), it stays private."
                 side="top"
               />
             </div>

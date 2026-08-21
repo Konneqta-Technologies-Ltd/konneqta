@@ -32,6 +32,8 @@ export type CardLayoutProfile = {
   full_name: string | null;
   job_title: string | null;
   company: string | null;
+  /** Already privacy-gated by the server; absent when the owner opted out. */
+  phone?: string | null;
   bio: string | null;
   avatar_url: string | null;
   logo_url: string | null;
@@ -50,6 +52,39 @@ export type CardLayoutProps = {
 };
 
 const displayName = (p: CardLayoutProfile) => p.full_name || p.username;
+
+/** Render an approved phone number as compact, theme-aware contact metadata. */
+function PhoneLine({
+  phone,
+  color,
+  interactive,
+  className = "",
+}: {
+  phone?: string | null;
+  color: string;
+  interactive: boolean;
+  className?: string;
+}) {
+  if (!phone) return null;
+
+  const sharedProps = {
+    className: `block text-xs ${interactive ? "transition-opacity hover:opacity-80" : ""} ${className}`,
+    style: { color },
+  };
+
+  if (!interactive) {
+    return <span {...sharedProps}>{phone}</span>;
+  }
+
+  return (
+    <a
+      href={`tel:${phone}`}
+      {...sharedProps}
+    >
+      {phone}
+    </a>
+  );
+}
 
 /**
  * Fallback avatar used when a card has no avatar_url. Guaranteed to render
@@ -177,6 +212,12 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
             />
           )}
         </div>
+        <PhoneLine
+          phone={profile.phone}
+          color={c.subtext}
+          interactive={!!onFlip}
+          className="mt-2 text-left"
+        />
       </div>
 
       {profile.bio && (
@@ -242,6 +283,12 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
           unoptimized
         />
       )}
+      <PhoneLine
+        phone={profile.phone}
+        color={c.subtext}
+        interactive={!!onFlip}
+        className="text-center"
+      />
 
       {profile.bio && (
         <CardBio
@@ -317,6 +364,12 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
         </div>
         </div>
         </div>
+        <PhoneLine
+          phone={profile.phone}
+          color={c.subtext}
+          interactive={!!onFlip}
+          className="mt-2 text-center"
+        />
         {profile.bio && (
           <CardBio
             bio={profile.bio}
@@ -377,6 +430,12 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
             {profile.company ? ` · ${profile.company}` : ""}
           </p>
         )}
+        <PhoneLine
+          phone={profile.phone}
+          color={c.subtext}
+          interactive={!!onFlip}
+          className="text-center"
+        />
       </div>
 
       {profile.bio && (
@@ -402,17 +461,17 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
   const name = displayName(profile);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-3xl">
+    <div className="relative h-full w-full overflow-hidden rounded-2xl">
       {/* Banner background (z-0) */}
       {bannerUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={bannerUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover "
         />
       ) : (
-        <div className="absolute inset-0" style={{ background: c.bg }} />
+        <div className="absolute inset-0 " style={{ background: c.bg }} />
       )}
 
       {/* Legibility overlay (z-10) — gradient transparent→dark */}
@@ -424,7 +483,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
       />
 
       {/* Content (z-20) */}
-      <div className="relative z-20 flex h-full flex-col items-center justify-end pb-10">
+      <div className="relative z-20 flex h-full flex-col items-center justify-end pb-15">
         {/* Avatar overlapping */}
         <Image
           src={avatarSrc(profile.avatar_url)}
@@ -433,7 +492,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           height={100}
           priority
           unoptimized
-          className="mb-3 h-30 w-30 rounded-full border-4 object-cover"
+          className="mb-3 h-35 w-35 rounded-full border-4 object-cover"
           style={{ borderColor: c.bg === "#000000" ? "#ffffff" : c.bg }}
         />
 
@@ -459,6 +518,12 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
             unoptimized
           />
         )}
+        <PhoneLine
+          phone={profile.phone}
+          color={c.subtext}
+          interactive={!!onFlip}
+          className="mt-1 text-center"
+        />
 
         {profile.bio && (
           <CardBio
@@ -470,7 +535,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           />
         )}
 
-        <FlipButton accent={c.accent} onFlip={onFlip} className="mt-4" />
+        <FlipButton accent={c.accent} onFlip={onFlip} className="mt-20" />
       </div>
     </div>
   );
