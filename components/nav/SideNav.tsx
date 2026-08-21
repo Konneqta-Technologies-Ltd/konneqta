@@ -1,5 +1,6 @@
 "use client";
 
+import DarkModeToggle from "@/components/DarkModeToggle";
 import { useEffect, useState } from "react";
 
 import InstallAppButton from "./InstallAppButton";
@@ -10,8 +11,12 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Slide-out side navigation drawer.
  *
- * Slides in from the left with a dark backdrop overlay. The three action
- * buttons are stacked at the bottom of the drawer.
+ * Slides in from the left with a dark backdrop overlay. The action buttons
+ * are stacked at the bottom of the drawer, with the Contact Us / Feedback
+ * text links above them.
+ *
+ * The drawer header carries the dark/light mode toggle so every authenticated
+ * page (profile, konneqts, settings, analytics, edit) gets theme control.
  *
  * Closes on: backdrop click, Escape key, or button activation (each button
  * handles its own routing).
@@ -103,32 +108,38 @@ export default function SideNav({
         */}
         {open && (
         <>
-        {/* ---- Header ---- */}
+        {/* ---- Header (title + theme toggle + close) ---- */}
         <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             Menu
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close menu"
-            className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex items-center gap-1">
+            {/* Dark/Light toggle — gives every authenticated page
+                (profile, konneqts, settings, analytics, edit) theme control
+                right from the drawer. */}
+            <DarkModeToggle className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800" />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close menu"
+              className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* ---- Top nav links ---- */}
@@ -205,7 +216,7 @@ export default function SideNav({
               </Link>
 
               <Link
-                href={`${username}/konneqts`}
+                href={`/${username}/konneqts`}
                 onClick={onClose}
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
               >
@@ -262,6 +273,26 @@ export default function SideNav({
 
         {/* ---- Action buttons (bottom, stacked) ---- */}
         <div className="space-y-3 border-t border-zinc-200 p-5 dark:border-zinc-800">
+          {/* Contact Us / Feedback — plain left-aligned text links, stacked.
+              Feedback routes to Settings, which hosts the "Share Feedback"
+              button (no standalone /feedback page). Dark/light aware. */}
+          <div className="flex flex-col items-start gap-1 pb-1 text-left">
+            <Link
+              href="/contact"
+              onClick={onClose}
+              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Contact Us
+            </Link>
+            <Link
+              href="/settings"
+              onClick={onClose}
+              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Feedback
+            </Link>
+          </div>
+
           <InstallAppButton />
           {isAuthenticated && <LogoutButton />}
         </div>

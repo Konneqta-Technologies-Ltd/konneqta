@@ -530,7 +530,7 @@ export default function EditProfileForm({
             </div>
           </div>
 
-          {/* Phone + show-in-vCard toggle */}
+          {/* Phone + public-display/contact-file consent toggle */}
           <div>
             <label htmlFor="phone" className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Phone</label>
             <input id="phone" type="tel" name="phone" placeholder="+44 7700 900000" value={form.phone} onChange={handleChange} className={inputClassName} />
@@ -538,11 +538,11 @@ export default function EditProfileForm({
               <button type="button" role="switch" aria-checked={form.show_phone} disabled={form.phone.trim().length === 0}
                 onClick={() => setForm((prev) => ({ ...prev, show_phone: !prev.show_phone }))}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${form.show_phone ? "bg-(--main-orange)" : "bg-zinc-300 dark:bg-zinc-700"}`}
-                aria-label="Show phone number in contact file">
+                aria-label="Show phone number on profile and in contact file">
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.show_phone ? "translate-x-4" : "translate-x-0.5"}`} />
               </button>
-              <span className="text-xs text-zinc-600 dark:text-zinc-400">{form.phone.trim() ? "Show in contact file" : "Enter a number to enable"}</span>
-              <InfoTip content="When ON, your phone number is included in the .vcf contact file people download." side="top" />
+              <span className="text-xs text-zinc-600 dark:text-zinc-400">{form.phone.trim() ? "Show on profile and in contact file" : "Enter a number to enable"}</span>
+              <InfoTip content="When ON, your phone number is shown publicly on your card and included in the .vcf contact file people download. When OFF, it stays private." side="top" />
             </div>
           </div>
 

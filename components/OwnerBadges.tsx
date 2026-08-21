@@ -5,7 +5,7 @@ import {
   useShareCount,
 } from "@/components/analytics/ShareCountProvider";
 
-import PlanBadge from "@/components/PlanBadge";
+import DarkModeToggle from "@/components/DarkModeToggle";
 import type { ReactNode } from "react";
 import ShareCounter from "@/components/analytics/ShareCounter";
 import UpgradeButton from "@/components/UpgradeButton";
@@ -96,11 +96,14 @@ function OwnerCluster({ isPro }: { isPro: boolean }) {
 
   return (
     <>
-      {/* Fixed top-right cluster: [Upgrade] [ShareCounter] [PlanBadge] */}
+      {/* Fixed top-right cluster: [Upgrade] [ShareCounter] [DarkModeToggle] */}
       <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
         <UpgradeButton show={!isPro} />
         <ShareCounter />
-        <PlanBadge isPro={isPro} show />
+        {/* Replaced the old Freemium/Premium PlanBadge with the dark/light
+            theme toggle — the owner cluster sits on every profile page, so
+            the toggle is always one tap away. */}
+        <DarkModeToggle className="cursor-pointer rounded-full border border-zinc-200 bg-white/80 p-2 text-zinc-600 shadow-sm backdrop-blur transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-300 dark:hover:bg-zinc-800" />
       </div>
 
       {/* Modal pops when the owner is at 0 shares and hasn't dismissed it. */}
@@ -117,7 +120,8 @@ function OwnerCluster({ isPro }: { isPro: boolean }) {
  * OwnerBadges — the fixed top-right cluster shown ONLY to the profile owner.
  *
  * Wraps the page content in a ShareCountProvider so that:
- *   - PlanBadge + ShareCounter + UpgradeButton all sit side-by-side (no overlap)
+ *   - the DarkModeToggle + ShareCounter + UpgradeButton all sit side-by-side
+ *     (no overlap)
  *   - the live share count drives the "0/limit" upgrade modal
  *   - the ShareMenu (nested inside `children` → ProfileCard) can call
  *     `refresh()` after a successful share to tick the badge down live, and

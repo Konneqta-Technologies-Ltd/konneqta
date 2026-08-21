@@ -60,8 +60,10 @@ export default async function KonneqtsPage({
 
   if (error || !profile) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center">
-        <p>Profile not found.</p>
+      <div className="flex h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-black">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Profile not found.
+        </p>
       </div>
     );
   }
@@ -75,8 +77,10 @@ export default async function KonneqtsPage({
   // Deactivated profiles cannot have visible connections
   if (profile.status === "deactivated") {
     return (
-      <div className="flex h-screen flex-col items-center justify-center">
-        <p>This profile is not active.</p>
+      <div className="flex h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-black">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          This profile is not active.
+        </p>
       </div>
     );
   }
@@ -202,7 +206,7 @@ export default async function KonneqtsPage({
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-              {profile.username}&apos;s Konneqts
+              {`${profile.username}'s Konneqts`}
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               {totalCount} {totalCount === 1 ? "connection" : "connections"}

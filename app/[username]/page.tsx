@@ -143,7 +143,7 @@ export default async function UsernamePage({
   const { data: card, error: cardError } = await supabase
     .from("cards")
     .select(
-      "id, owner_id, slug, is_primary, full_name, job_title, company, bio, avatar_url, logo_url, qr_code_url, theme, banner_url"
+      "id, owner_id, slug, is_primary, full_name, job_title, company, phone, show_phone, bio, avatar_url, logo_url, qr_code_url, theme, banner_url"
     )
     .eq("slug", username)
     .maybeSingle();
@@ -241,6 +241,10 @@ export default async function UsernamePage({
     full_name: card.full_name,
     job_title: card.job_title,
     company: card.company,
+    // Never pass a private phone number into the client component. The
+    // owner-controlled flag and a non-empty value are both required.
+    phone:
+      card.show_phone && card.phone?.trim() ? card.phone.trim() : null,
     bio: card.bio,
     avatar_url: card.avatar_url,
     // Logo is Pro-only — hide when expired
@@ -319,7 +323,7 @@ export default async function UsernamePage({
   });
 
   // OwnerBadges wraps the page content in a ShareCountProvider (for owners
-  // only) and renders the top-right cluster (PlanBadge + ShareCounter +
+  // only) and renders the top-right cluster (theme toggle + ShareCounter +
   // UpgradeButton) side-by-side with no overlap. Nesting the content inside
   // it means the ShareMenu (within ProfileCard) shares the provider, so a
   // successful share ticks the counter down live, and a 429 from the server

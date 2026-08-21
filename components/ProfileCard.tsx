@@ -33,6 +33,7 @@ type Profile = {
   full_name: string | null;
   job_title: string | null;
   company: string | null;
+  phone: string | null;
   bio: string | null;
   avatar_url: string | null;
   logo_url: string | null;
@@ -205,6 +206,7 @@ export default function ProfileCard({
                 full_name: profile.full_name,
                 job_title: profile.job_title,
                 company: profile.company,
+                phone: profile.phone,
                 bio: profile.bio,
                 avatar_url: profile.avatar_url,
                 logo_url: profile.logo_url,
@@ -217,7 +219,10 @@ export default function ProfileCard({
 
           {/* ---------- BACK ---------- */}
           <div
-            className="flex flex-col rounded-3xl border border-zinc-200 bg-zinc-900 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+            // The card back is intentionally theme-mode independent. It
+            // keeps the same dark surface and white icons in both light and
+            // dark app modes; only the surrounding app chrome changes.
+            className="flex flex-col rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-sm"
             style={{
               position: "absolute",
               inset: 0,
@@ -228,7 +233,7 @@ export default function ProfileCard({
           >
             <div className="scrollable-links flex min-h-0 flex-1 flex-wrap content-start justify-center gap-3 overflow-y-auto pr-1">
               {socialLinks.length === 0 ? (
-                <p className="text-center text-sm text-zinc-400 dark:text-zinc-500">
+                <p className="text-center text-sm text-zinc-400">
                   No links added yet.
                 </p>
               ) : (
@@ -257,7 +262,7 @@ export default function ProfileCard({
                       aria-label={label}
                       className="group flex w-14 flex-col items-center gap-1"
                     >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-zinc-900 transition-colors group-hover:border-zinc-400 group-hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-50 group-hover:dark:border-zinc-600 group-hover:dark:bg-zinc-900">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 text-zinc-50 transition-colors group-hover:border-zinc-600 group-hover:bg-zinc-800">
                         {Icon ? (
                           <Icon className="h-5 w-5" />
                         ) : (
@@ -266,7 +271,7 @@ export default function ProfileCard({
                           </span>
                         )}
                       </span>
-                      <span className="max-w-14 truncate text-[10px] text-zinc-400 dark:text-zinc-500">
+                      <span className="max-w-14 truncate text-[10px] text-zinc-400">
                         {shortLabel}
                       </span>
                     </a>
@@ -278,14 +283,13 @@ export default function ProfileCard({
             {/* ---- QR Code (back of card) ---- */}
             {profile.qr_code_url ? (
               <div className=" flex flex-col items-center mx-auto w-44 h-44 relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <Image
                   src={profile.qr_code_url}
                   alt={`Scan to view ${displayName}'s profile`}
                   fill
-                  className=" rounded-lg border border-zinc-200 bg-white object-contain dark:border-zinc-700"
+                  className=" rounded-lg border border-zinc-800 bg-white object-contain"
                 />
-                <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+                <p className="mt-1 text-[10px] text-zinc-400">
                   Scan to connect
                 </p>
               </div>
@@ -520,6 +524,7 @@ export default function ProfileCard({
             full_name: profile.full_name,
             job_title: profile.job_title,
             company: profile.company,
+            phone: profile.phone,
             bio: profile.bio,
             avatar_url: profile.avatar_url,
             logo_url: profile.logo_url,
