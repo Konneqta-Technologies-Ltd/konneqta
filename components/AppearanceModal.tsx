@@ -14,6 +14,7 @@ type ProfileData = {
   full_name: string | null;
   job_title: string | null;
   company: string | null;
+  phone?: string | null;
   bio: string | null;
   avatar_url: string | null;
   logo_url: string | null;

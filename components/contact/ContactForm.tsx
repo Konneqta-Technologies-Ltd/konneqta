@@ -146,11 +146,11 @@ export default function ContactForm() {
             </motion.p>
           )}
 
-          <p className="mt-4 text-xs text-white/50">
+          <p className="mt-4 text-xs dark:text-white/50  ">
             Prefer email? Reach us directly at{' '}
             <a
               href="mailto:info@konneqta.com"
-              className="text-white/70 underline hover:text-white"
+              className="dark:text-white/70 text-(--main-orange)   underline dark:hover:text-white"
             >
               info@konneqta.com
             </a>
