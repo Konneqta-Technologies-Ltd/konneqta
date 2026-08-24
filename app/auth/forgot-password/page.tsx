@@ -55,10 +55,10 @@ export default function ForgotPasswordPage() {
                 body: JSON.stringify({ email }),
             });
 
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                toast.error(data?.error || "Something went wrong. Please try again.");
-                setIsLoading(false);
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok || data?.ok === false) {
+                toast.error(data?.error || "We could not send the reset code. Please try again.");
                 return;
             }
 
