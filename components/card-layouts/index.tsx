@@ -216,7 +216,7 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
           phone={profile.phone}
           color={c.subtext}
           interactive={!!onFlip}
-          className="mt-2 text-left"
+          className="mt-1 text-sm text-left"
         />
       </div>
 
@@ -287,10 +287,10 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
         phone={profile.phone}
         color={c.subtext}
         interactive={!!onFlip}
-        className="text-center"
+        className="text-center text-sm"
       />
 
-      {profile.bio && (
+      {profile.bio && (      
         <CardBio
           bio={profile.bio}
           color={c.subtext}
@@ -368,7 +368,7 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
           phone={profile.phone}
           color={c.subtext}
           interactive={!!onFlip}
-          className="mt-2 text-center"
+          className="mt-1 text-center text-sm"
         />
         {profile.bio && (
           <CardBio
@@ -443,7 +443,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
           bio={profile.bio}
           color={c.subtext}
           accent={c.accent}
-          className="mt-3 max-w-xs text-sm "
+          className="mt-2 max-w-xs text-sm "
           interactive={!!onFlip}
         />
       )}
@@ -522,7 +522,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
           phone={profile.phone}
           color={c.subtext}
           interactive={!!onFlip}
-          className="mt-1 text-center"
+          className="mt-1 text-center text-sm"
         />
 
         {profile.bio && (

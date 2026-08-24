@@ -79,17 +79,14 @@ async function findUserByEmail(
         .eq("email", normalizedEmail)
         .limit(1);
 
-    if (!mirrorError) {
-        // Table exists: no row means the user genuinely doesn't exist.
-        return mirrorRows && mirrorRows.length > 0
-            ? { id: mirrorRows[0].user_id, email: normalizedEmail }
-            : null;
+    if (!mirrorError && mirrorRows && mirrorRows.length > 0) {
+        return { id: mirrorRows[0].user_id, email: normalizedEmail };
     }
 
-    // PGRST205 = table not in schema cache → migration not run yet.
-    // Any other error is logged, then we still fall through so a flaky
-    // mirror never blocks password resets.
-    if (mirrorError.code !== "PGRST205") {
+    // Fall back when the mirror is unavailable or has not been backfilled.
+    // A mirror table can exist while an older auth user is missing from it;
+    // treating that as a definite miss causes a silent reset-email failure.
+    if (mirrorError && mirrorError.code !== "PGRST205") {
         console.error("auth_user_emails lookup failed:", mirrorError.message);
     }
 
@@ -131,11 +128,16 @@ export async function requestReset(
     const now = new Date();
 
     // --- Rate limit: 1 request per email per 60s ---
-    const { count: emailCount } = await supabase
+    const { count: emailCount, error: emailRateLimitError } = await supabase
         .from("password_reset_tokens")
         .select("id", { count: "exact", head: true })
         .eq("email", normalizedEmail)
         .gte("created_at", new Date(now.getTime() - EMAIL_RATE_LIMIT_SECONDS * 1000).toISOString());
+
+    if (emailRateLimitError) {
+        console.error("Email reset rate-limit lookup failed:", emailRateLimitError.message);
+        throw emailRateLimitError;
+    }
 
     if ((emailCount ?? 0) >= 1) {
         // Silently succeed to avoid enumeration — no email is sent.
@@ -144,11 +146,16 @@ export async function requestReset(
 
     // --- Rate limit: 5 requests per IP per 60s ---
     if (ipAddress) {
-        const { count: ipCount } = await supabase
+        const { count: ipCount, error: ipRateLimitError } = await supabase
             .from("password_reset_tokens")
             .select("id", { count: "exact", head: true })
             .eq("ip_address", ipAddress)
             .gte("created_at", new Date(now.getTime() - IP_RATE_LIMIT_SECONDS * 1000).toISOString());
+
+        if (ipRateLimitError) {
+            console.error("IP reset rate-limit lookup failed:", ipRateLimitError.message);
+            throw ipRateLimitError;
+        }
 
         if ((ipCount ?? 0) >= IP_RATE_LIMIT_MAX) {
             return { ok: true };
@@ -159,11 +166,16 @@ export async function requestReset(
     const user = await findUserByEmail(supabase, normalizedEmail);
 
     // --- Invalidate all previous unused OTPs for this email ---
-    await supabase
+    const { error: invalidateError } = await supabase
         .from("password_reset_tokens")
         .update({ used: true })
         .eq("email", normalizedEmail)
         .eq("used", false);
+
+    if (invalidateError) {
+        console.error("Failed to invalidate previous reset tokens:", invalidateError.message);
+        throw invalidateError;
+    }
 
     // Only generate + store + email if the user actually exists.
     if (user) {
@@ -189,7 +201,20 @@ export async function requestReset(
         // Send the email (imported lazily so the browser bundle never sees it).
         const { sendPasswordResetOtp } = await import("@/lib/emails/zeptomail");
         const recipient = user.email ?? normalizedEmail;
-        await sendPasswordResetOtp(recipient, recipient, otp);
+        const emailResult = await sendPasswordResetOtp(recipient, recipient, otp);
+
+        if (!emailResult.success) {
+            // Do not let a failed delivery consume the retry window. The OTP
+            // is already unusable without the email, so remove it before
+            // returning the failure to the API route.
+            await supabase
+                .from("password_reset_tokens")
+                .delete()
+                .eq("otp_hash", otpHash)
+                .eq("user_id", user.id);
+
+            throw new Error(`Password reset email was not sent: ${emailResult.error || "unknown email error"}`);
+        }
     }
 
     return { ok: true };

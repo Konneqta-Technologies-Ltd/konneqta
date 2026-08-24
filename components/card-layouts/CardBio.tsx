@@ -16,7 +16,7 @@ import { useState } from "react";
  *   third line.
  */
 export const BIO_MAX_CHARS = 1500;
-export const BIO_PREVIEW_CHARS = 70;
+export const BIO_PREVIEW_CHARS = 64;
 
 /**
  * CardBio — theme-aware bio block for the card front layouts.
