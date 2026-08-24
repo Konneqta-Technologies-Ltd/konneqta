@@ -66,13 +66,13 @@ export default function SignUpPage() {
             { firstName, lastName, email, password, confirmPassword },
             { abortEarly: false }
         );
-
+     
         if (validationError) {
             validationError.details.forEach((detail) => {
                 toast.error(detail.message);
             });
             return;
-        }
+        }                      
 
         setIsLoading(true);
 
@@ -105,7 +105,7 @@ export default function SignUpPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white dark:bg-zinc-900">
+        <div className="h-230 bg-white dark:bg-zinc-900">
 
             <DarkModeToggle />
             <div className="bg-white dark:bg-zinc-900 md:max-w-md mx-auto min-h-full dark:text-white text-zinc-900 ">
@@ -194,7 +194,7 @@ export default function SignUpPage() {
                     
                     <div>
 
-                    <button className="bg-(--main-orange) text-white w-full cursor-pointer font-semibold mt-8 py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed" type="submit" disabled={isLoading}>
+                    <button className="bg-(--main-orange) text-white w-full cursor-pointer font-semibold mt-4 py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed" type="submit" disabled={isLoading}>
                         {isLoading && (
                             <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -214,7 +214,7 @@ export default function SignUpPage() {
                         <SignInWithGoogle label="Sign up with Google" variant="auth" />
                     </div>
 
-                    <p className="text-center pt-2 text-sm text-zinc-500 dark:text-zinc-400">{"Already have an account?"}<Link href="/auth/login" className="cursor-pointer hover:text-(--main-orange)"> Login</Link> </p>
+                    <p className="text-center mb-10 pt-2 text-sm text-zinc-500 dark:text-zinc-400">{"Already have an account?"}<Link href="/auth/login" className="cursor-pointer hover:text-(--main-orange)"> Login</Link> </p>
                     </div>
                 </form>
             </div>

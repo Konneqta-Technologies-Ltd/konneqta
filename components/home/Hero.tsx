@@ -19,7 +19,13 @@ const item: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
 
-export default function Hero({ cardPath, firstName }: { cardPath: string | null; firstName: string | null }) {
+export default function Hero({
+  cardPath,
+  firstName,
+}: {
+  cardPath: string | null;
+  firstName: string | null;
+}) {
   return (
     <section className="relative overflow-hidden bg-[#0a0a0a] pt-10 pb-20 sm:pb-36 md:pb-44">
       {/* ambient decoration layer */}
@@ -40,13 +46,12 @@ export default function Hero({ cardPath, firstName }: { cardPath: string | null;
           delay={0.5}
         />
 
- <WavyLine
+        <WavyLine
           color="#2DD9A6"
           className="absolute -left-2.5 top-130 hidden sm:block"
           delay={0.7}
-          
         />
-          {/* Right side */}
+        {/* Right side */}
         <WavyLine
           color="#F2622E"
           className="absolute -right-2.5 top-75 hidden sm:block"
@@ -105,6 +110,13 @@ export default function Hero({ cardPath, firstName }: { cardPath: string | null;
           ) : (
             <>
               <Link
+                href="/tour"
+                className="visible-focus rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+              >
+                Tour
+              </Link>
+
+              <Link
                 href="/auth/signup"
                 className="visible-focus rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
               >
@@ -134,23 +146,25 @@ export default function Hero({ cardPath, firstName }: { cardPath: string | null;
             className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-            Built for  Creators &amp; Professionals
+            Built for Creators &amp; Professionals
           </motion.span>
 
           <motion.h1
             variants={item}
             className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl"
           >
-            Introduce yourself in 
-            <br/>
-            One Tap          
+            Introduce yourself in
+            <br />
+            One Tap
           </motion.h1>
 
           <motion.p
             variants={item}
             className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg"
           >
-            Konneqta is a digital identity card platform that lets creators and professionals build a shareable digital profile with QR codes and WhatsApp-ready links — all in one place
+            Konneqta is a digital identity card platform that lets creators and
+            professionals build a shareable digital profile with QR codes and
+            WhatsApp-ready links — all in one place
           </motion.p>
 
           <motion.div variants={item} className="mt-10">
