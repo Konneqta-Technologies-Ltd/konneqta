@@ -7,14 +7,12 @@ const AUTH_ROUTES = ["/auth/login", "/auth/signup", "/auth/forgot-password", "/a
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 function matchesRoute(pathname: string, routes: string[]): boolean {
-  return routes.some((route) => {
-    if (pathname === route) return true;
-    if (route === "/edit" && pathname.endsWith("/edit")) return true;
-    return false;
-  });
+  // Exact match only. Suffix-style routes (e.g. "/{username}/edit") are
+  // handled explicitly at the call site via pathname.endsWith("/edit").
+  return routes.includes(pathname);
 }
 
-export async function proxy(request: NextRequest) { 
+export async function proxy(request: NextRequest) {
   // 1. Create the singular base response instance
   const response = NextResponse.next({
     request: {
@@ -36,8 +34,8 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          
-          // ✅ FIX: Directly mutate the existing response object. 
+
+          // ✅ FIX: Directly mutate the existing response object.
           // Do NOT assign response = NextResponse.next() here.
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
@@ -57,7 +55,7 @@ export async function proxy(request: NextRequest) {
   // 4. Handle Redirection Logic cleanly without re-running cookie layers
   const isProtectedRoute =
     matchesRoute(pathname, PROTECTED_ROUTES) || pathname.endsWith("/edit");
-    
+
   if (!user && isProtectedRoute) {
     return NextResponse.redirect(new URL("/", request.url));
   }

@@ -11,7 +11,11 @@ export async function GET(request: Request) {
     if (code){
         const supabase = await createClient();
         const { error } = await supabase.auth.exchangeCodeForSession(code)
-        console.log("Exchange error:", error?.message ?? "none");
+        if (error) {
+          // Log exchange failures (expired/reused auth code) for debugging —
+          // no log line on the happy path.
+          console.error("[auth/callback] exchange error:", error.message);
+        }
         if (!error){
             return NextResponse.redirect(new URL(next, siteUrl));
         }

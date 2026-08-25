@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
             })
             .eq("external_subscription_id", String(flwSubscriptionId));
 
-          console.log(
+          console.warn(
             "[webhook] Subscription cancelled:",
             flwSubscriptionId,
             txRefFromPayload ?? "(no tx_ref)"
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
             .update({ status: "failed" })
             .eq("tx_ref", txRefFromPayload);
 
-          console.log(
+          console.warn(
             "[webhook] Charge failed for:",
             txRefFromPayload
           );

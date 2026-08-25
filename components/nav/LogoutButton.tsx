@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTrack } from "@/lib/use-track";
+import { clearOfflineCardSnapshot } from "@/lib/offline/card-snapshot";
 
 /**
  * Logout button — orange bg, white text.
@@ -29,6 +30,10 @@ export default function LogoutButton() {
       toast.error("Failed to log out. Please try again.");
       return;
     }
+
+    // Remove the offline card snapshot — a logged-out device must never be
+    // able to view the owner's saved card offline.
+    clearOfflineCardSnapshot();
 
     track("user_logged_out");
     toast.success("Logged out successfully");

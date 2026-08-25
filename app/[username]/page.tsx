@@ -2,6 +2,7 @@ import { canUseBanners, canUseThemes, isPro } from "@/lib/entitlements";
 import { notFound, redirect } from "next/navigation";
 
 import type { Metadata } from "next";
+import OfflineCardSaver from "@/components/OfflineCardSaver";
 import OwnerBadges from "@/components/OwnerBadges";
 import ProfileCard from "@/components/ProfileCard";
 import type { ThemeCustomization } from "@/lib/themes";
@@ -352,6 +353,15 @@ export default async function UsernamePage({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
         />
+        {/* Owner-only: refresh the offline card snapshot on every view so
+            the installed PWA can render this card (with a fresh QR) even
+            with zero network. Renders nothing. */}
+        {isOwner && (
+          <OfflineCardSaver
+            profile={profile}
+            socialLinks={socialLinks ?? []}
+          />
+        )}
         <ProfileCard
           profile={profile}
           socialLinks={socialLinks ?? []}
