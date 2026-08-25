@@ -5,6 +5,7 @@ import Spinner from "@/components/ui/Spinner";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { clearOfflineCardSnapshot } from "@/lib/offline/card-snapshot";
 
 /**
  * Deactivate Account control — the reversible sibling of DeleteAccountButton.
@@ -37,6 +38,10 @@ export default function DeactivateAccountButton() {
       if (!res.ok) {
         throw new Error(data.error || "Failed to deactivate account");
       }
+
+      // A deactivated profile is hidden from the public — don't leave an
+      // offline copy renderable on this device.
+      clearOfflineCardSnapshot();
 
       toast.success("Your account has been deactivated.");
       setShowModal(false);

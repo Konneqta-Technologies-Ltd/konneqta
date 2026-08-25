@@ -180,28 +180,12 @@ export default function RootLayout({
         </PostHogProvider>
         <CookieConsentBanner />
         {/*
-          Google Analytics — deferred via lazyOnload so the ~159 KiB gtag.js
-          bundle loads AFTER first paint + interactivity. Previously used
-          @next/third-parties <GoogleAnalytics> which defaults to
-          afterInteractive (blocks initial render). Functionally identical
-          tracking — just shifted off the critical path.
+          Google Analytics — the ONLY loader lives in ConsentedGoogleAnalytics:
+          consent-gated ("Accept all") AND lazyOnload (the ~159 KiB gtag.js
+          bundle fetches after first paint + interactivity). Do NOT add a
+          second gtag injection here — it would double-count every pageview
+          and track users who chose "Necessary only".
         */}
-        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
-              strategy="lazyOnload"
-            />
-            <Script id="ga-init" strategy="lazyOnload">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}');
-              `}
-            </Script>
-          </>
-        )}
         <ConsentedGoogleAnalytics />
       </body>
     </html>
