@@ -131,16 +131,13 @@ export default function EditProfileForm({
   ) => {
     // Username is now LOCKED (card #1 slug = username, can't change)
     if (e.target.name === "username") return;
-    
+
     // For all other fields, handle validation if needed
     if (e.target.name === "full_name" || e.target.name === "job_title" || e.target.name === "company" || e.target.name === "bio") {
       // Could add validation here if needed
     }
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-  
-  // Check for invalid username characters (used for error handling)
-  const usernameHasInvalidChars = /^[a-z0-9_]{3,20}$/.test(form.username.trim()) === false;
 
   // Compress in-browser before storing for upload (≤512px JPEG for avatars,
   // ≤256px PNG for logos). Visually lossless for small thumbnails while
@@ -351,7 +348,7 @@ export default function EditProfileForm({
       if (cardError) {
         // Provide user-friendly error messages based on the database error
         let errorMessage = cardError.message;
-        
+
         if (errorMessage.toLowerCase().includes('duplicate') || errorMessage.toLowerCase().includes('unique constraint')) {
           errorMessage = 'This username is already taken. Please choose another.';
         } else if (errorMessage.toLowerCase().includes('violates constraint') || errorMessage.toLowerCase().includes('character')) {
@@ -359,7 +356,7 @@ export default function EditProfileForm({
         } else if (errorMessage.includes('profile_pkey')) {
           errorMessage = 'There\'s an issue with your username. Please ensure it\'s 3-20 characters and contains only a-z, 0-9, or _.';
         }
-        
+
         toast.error(errorMessage);
         return;
       }
@@ -592,8 +589,8 @@ export default function EditProfileForm({
                   </span>
                 )}
               </label>
-              <button type="button" onClick={addSocialLink} 
-              disabled={hasLinkLimit && socialLinks.length >= maxSocialLinks} 
+              <button type="button" onClick={addSocialLink}
+              disabled={hasLinkLimit && socialLinks.length >= maxSocialLinks}
               className="flex cursor-pointer items-center gap-1 border border-(--main-orange) rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                 Add Link

@@ -1,7 +1,7 @@
 /**
  * POST /api/share — record a share and enforce the monthly limit.
  *
- * Body: { username: string, channel?: string, cardId?: string }
+ * Body: { username: string, channel?: string }
  *
  * Flow:
  *   1. Auth-check the caller (must be the owner of the card).
@@ -28,8 +28,6 @@ export async function POST(req: Request) {
     const username = typeof body.username === "string" ? body.username : null;
     const channel =
       typeof body.channel === "string" ? body.channel.toLowerCase() : "native";
-    const cardId =
-      typeof body.cardId === "string" && body.cardId ? body.cardId : null;
 
     if (!username) {
       return NextResponse.json({ error: "Missing username." }, { status: 400 });

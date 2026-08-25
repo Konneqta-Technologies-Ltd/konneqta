@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { clearOfflineCardSnapshot } from "@/lib/offline/card-snapshot";
 
 /**
  * Delete Account control — a button that opens a confirmation modal, and the
@@ -47,6 +48,9 @@ export default function DeleteAccountButton() {
       // Sign out locally to clear the stale JWT from the browser.
       const supabase = createClient();
       await supabase.auth.signOut();
+
+      // The account is gone — drop the offline card snapshot too.
+      clearOfflineCardSnapshot();
 
       toast.success("Your account has been deleted.");
       setShowModal(false);
