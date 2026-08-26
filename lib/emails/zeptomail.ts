@@ -301,3 +301,38 @@ export async function sendFeedbackEmails(
     }
   });
 }
+
+/**
+ * Referral reward email — "N Premium days have been added to your account".
+ *
+ * Sent to the REFERRER when a referred user's first subscription payment
+ * converts (called from the payment verify flow). Sends from info@konneqta.com.
+ * Failures are logged, never thrown — a ZeptoMail hiccup must never affect
+ * the reward or the payment result.
+ */
+export async function sendReferralRewardEmail(data: {
+  referrerName: string;
+  referrerEmail: string;
+  daysAdded: number;
+  referredUsername: string | null;
+  newProExpiresAt: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { renderReferralReward } = await import(
+    "./templates/referral-reward"
+  );
+
+  const html = renderReferralReward({
+    referrerName: data.referrerName,
+    daysAdded: data.daysAdded,
+    referredUsername: data.referredUsername,
+    newProExpiresAt: data.newProExpiresAt,
+  });
+
+  return sendEmail(
+    "info",
+    data.referrerEmail,
+    data.referrerName || "there",
+    `+${data.daysAdded} Premium days added — Konneqta`,
+    html
+  );
+}

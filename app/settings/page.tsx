@@ -4,6 +4,7 @@ import FeedbackSettingsButton from "@/components/feedback/FeedbackSettingsButton
 import GoBackButton from "@/components/GoBackButton";
 import Link from "next/link";
 import type { Metadata } from "next";
+import PromoRedeemCard from "@/components/PromoRedeemCard";
 import ReactivateAccountButton from "@/components/nav/ReactivateAccountButton";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -40,13 +41,32 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, status")
+    .select("username, status, is_exempt")
     .eq("id", user.id)
     .maybeSingle();
 
   const username = profile?.username ?? null;
   // status defaults to 'active' when the column/migration doesn't exist yet.
   const isDeactivated = profile?.status === "deactivated";
+
+  // The user's redeemed promo codes (own rows only, RLS-enforced). Shown
+  // under the redeem input — renders nothing when empty. Wrapped in
+  // maybeSingle-style tolerance: if the promo tables don't exist yet, the
+  // card still renders with an empty list.
+  const { data: redemptionRows } = await supabase
+    .from("promo_redemptions")
+    .select("code_snapshot, days_granted, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const redeemedPromos = (redemptionRows ?? []).map((r) => ({
+    code: r.code_snapshot,
+    days: r.days_granted,
+    redeemedAt: r.created_at,
+  }));
+
+  // Exempt (staff) users are already unlimited — hide the redeem card.
+  const isExempt = profile?.is_exempt ?? false;
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 pt-20 pb-8 dark:bg-black">
@@ -84,6 +104,9 @@ export default async function SettingsPage() {
             </div>
           </dl>
         </section>
+
+        {/* Promo code redemption */}
+        <PromoRedeemCard redeemed={redeemedPromos} disabled={isExempt} />
 
         {/* Feedback */}
         <section className="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
