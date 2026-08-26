@@ -1,5 +1,10 @@
 import { getSubscription, verifyTransaction } from "./flutterwave";
-import { sendAdminNotification, sendPaymentReceipt } from "@/lib/emails/zeptomail";
+import {
+  sendAdminNotification,
+  sendPaymentReceipt,
+  sendReferralRewardEmail,
+} from "@/lib/emails/zeptomail";
+import { grantReferralReward } from "@/lib/referrals/service";
 
 import { PAYMENT_PLANS } from "./plans";
 import type { ServiceResponse } from "./types";
@@ -141,6 +146,54 @@ export async function verifyAndFulfilPayment(
   // 8. Fulfillment — grant Pro + sync subscription if the payment is successful.
   if (isSuccessful) {
     await fulfillPayment(admin, payment, verification);
+
+    // 8b. Referral reward — if the payer signed up with someone's code and
+    //     this is their FIRST successful payment, reward the referrer with
+    //     Premium days (10 monthly / 90 yearly). Race-safe + once-only via
+    //     the signed_up → rewarded compare-and-swap; failures never block
+    //     the payment result. Renewals are no-ops (row already rewarded).
+    try {
+      const reward = await grantReferralReward({
+        admin,
+        referredUserId: payment.user_id,
+        paymentId: payment.id,
+        paymentType: payment.payment_type,
+      });
+      if (reward.granted) {
+        console.log(
+          `[verify-service] Referral reward: +${reward.days}d to referrer of`,
+          payment.user_id
+        );
+
+        // Notify the referrer by email (best-effort — never affects the
+        // payment or the reward). Only when the expiry was actually extended
+        // (exempt referrers / lookup failures have nothing to announce).
+        if (reward.expiryExtended && reward.recipientEmail) {
+          try {
+            const emailResult = await sendReferralRewardEmail({
+              referrerName: reward.recipientName || "there",
+              referrerEmail: reward.recipientEmail,
+              daysAdded: reward.days ?? 0,
+              referredUsername: reward.referredUsername ?? null,
+              newProExpiresAt: reward.newProExpiresAt ?? new Date().toISOString(),
+            });
+            if (!emailResult.success) {
+              console.warn(
+                "[verify-service] Referral reward email may not have sent:",
+                emailResult.error
+              );
+            }
+          } catch (emailErr) {
+            console.warn(
+              "[verify-service] Referral reward email failed:",
+              emailErr
+            );
+          }
+        }
+      }
+    } catch (referralErr) {
+      console.error("[verify-service] Referral reward failed:", referralErr);
+    }
 
     // 9. 📧 Send email notifications (receipt to user + notification to admin).
     try {

@@ -46,6 +46,7 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   "verify-reset",
   "callback",
   "serwist",
+  "referral",
 ]);
 
 /** True when the username is reserved and must not be claimed. */

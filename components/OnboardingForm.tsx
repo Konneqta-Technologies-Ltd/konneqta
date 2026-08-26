@@ -22,6 +22,12 @@ import ProGate from "./ProGate";
 import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
 import Spinner from "./ui/Spinner";
 import { awardMilestone } from "@/lib/feedback/score";
+import {
+  MIN_REFERRAL_CODE_LENGTH,
+  clearStoredReferralCode,
+  normalizeReferralCode,
+  readStoredReferralCode,
+} from "@/lib/referrals/shared";
 import { createClient } from "@/lib/supabase/client";
 import { isReservedUsername } from "@/lib/reserved-usernames";
 import { toast } from "sonner";
@@ -163,6 +169,71 @@ export default function OnboardingForm({
     return () => clearTimeout(debounceTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.username]);
+
+  // ---- Referral code (optional) --------------------------------------------
+  // Pre-filled from the localStorage stash (set when the user arrived via a
+  // ?ref= link on /auth/signup) and fully editable — covers the word-of-mouth
+  // case where a friend shared their code verbally.
+  const [referralCode, setReferralCode] = useState('');
+  const [referralCheck, setReferralCheck] = useState<
+    'idle' | 'checking' | 'valid' | 'invalid'
+  >('idle');
+
+  // Prefill once on mount (setState in the timer callback, not the effect
+  // body — react-hooks/set-state-in-effect; the value is browser-only).
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const stored = readStoredReferralCode();
+      if (stored) setReferralCode(stored);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Debounced existence check — same shape as the username check above
+  // (250ms debounce, HEAD count on the indexed unique column, stale-response
+  // guard). Codes are public by design (they live in share links), so this
+  // reveals nothing sensitive. The real rules (self-referral, one referrer,
+  // before-first-payment) are enforced server-side at attach time.
+  useEffect(() => {
+    const normalized = normalizeReferralCode(referralCode);
+
+    const debounceTimer = setTimeout(async () => {
+      // Empty / too-short codes resolve inside the timer callback so the
+      // effect body itself never calls setState (react-hooks rule).
+      if (!normalized) {
+        setReferralCheck('idle');
+        return;
+      }
+      if (normalized.length < MIN_REFERRAL_CODE_LENGTH) {
+        setReferralCheck('invalid');
+        return;
+      }
+
+      try {
+        setReferralCheck('checking');
+        const supabase = createClient();
+        const { count, error } = await supabase
+          .from('profiles')
+          .select('referral_code', { count: 'exact', head: true })
+          .eq('referral_code', normalized);
+
+        // Stale-response guard: user typed something else in the meantime.
+        if (normalized !== normalizeReferralCode(referralCode)) return;
+
+        if (error) {
+          console.error('referral code check error:', error);
+          setReferralCheck('idle');
+          return;
+        }
+
+        setReferralCheck((count ?? 0) > 0 ? 'valid' : 'invalid');
+      } catch {
+        setReferralCheck('idle');
+      }
+    }, 250); // 250ms debounce
+
+    return () => clearTimeout(debounceTimer);
+  }, [referralCode]);
 
   // Store the selected file locally + show a preview.
   // Upload only happens on submit (see handleSubmit). The image is compressed
@@ -470,6 +541,34 @@ export default function OnboardingForm({
             "Profile created, but we couldn't save your social links. You can add them later.",
           );
         }
+      }
+
+      // 4b. Attach the referral code (if any) — fire-and-forget, exactly like
+      //     the milestone awards above. A referral must NEVER block or fail
+      //     profile creation: worst case the code doesn't attach (invalid,
+      //     self-referral, already used) and the user simply isn't tracked.
+      //     All rules are re-enforced server-side in /api/referrals/attach.
+      const codeToAttach = normalizeReferralCode(referralCode);
+      if (codeToAttach.length >= MIN_REFERRAL_CODE_LENGTH) {
+        void fetch('/api/referrals/attach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: codeToAttach }),
+        })
+          .then(async (res) => {
+            if (res.ok) {
+              clearStoredReferralCode();
+            } else {
+              const data = (await res.json().catch(() => ({}))) as {
+                error?: string;
+              };
+              console.warn('[onboarding] referral attach failed:', data?.error);
+            }
+          })
+          .catch(() => {
+            // Network hiccup — nothing to do, the code stays stashed and the
+            // user can still apply it later from the /referral page.
+          });
       }
 
       // 5. Generate + persist the profile QR code (client-side gen → Storage).
@@ -1021,6 +1120,60 @@ export default function OnboardingForm({
                 );
               })}
             </div>
+          </div>
+
+          {/* Referral code (optional) — pre-filled from a ?ref= link stash,
+              editable for word-of-mouth codes. Attached fire-and-forget on
+              submit; never blocks profile creation. */}
+          <div>
+            <label
+              htmlFor="referralCode"
+              className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
+              Referral code{' '}
+              <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">
+                (optional)
+              </span>
+            </label>
+            <input
+              id="referralCode"
+              type="text"
+              value={referralCode}
+              onChange={(e) =>
+                setReferralCode(e.target.value.toUpperCase().slice(0, 25))
+              }
+              placeholder="e.g. VICTORK2QP9"
+              autoComplete="off"
+              maxLength={25}
+              className={`${inputClassName} uppercase tracking-wide`}
+            />
+            {referralCheck === 'checking' && (
+              <p className="mt-1 text-xs text-zinc-400">Checking code…</p>
+            )}
+            {referralCheck === 'valid' && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                Valid code
+              </p>
+            )}
+            {referralCheck === 'invalid' && (
+              <p className="mt-1 text-xs text-red-500">
+                We couldn&apos;t find that code — check the spelling, or leave
+                it empty.
+              </p>
+            )}
           </div>
 
           {/* Terms & Privacy consent — required before profile creation */}
