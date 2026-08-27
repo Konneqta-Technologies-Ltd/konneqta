@@ -10,7 +10,7 @@ import {
 } from 'next/font/google';
 import type { Metadata, Viewport } from 'next';
 
-import { Analytics } from '@vercel/analytics/next';
+import ConsentedVercelAnalytics from '@/components/ConsentedVercelAnalytics';
 import AppNavbar from '@/components/AppNavbar';
 import ConsentedGoogleAnalytics from '@/components/ConsentedGoogleAnalytics';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
@@ -172,7 +172,7 @@ export default function RootLayout({
         <PostHogProvider>
           {children}
           <Toaster position="top-right" richColors />
-          <Analytics />
+          <ConsentedVercelAnalytics />
           {/* Registers /sw.js in production only (Serwist offline shell). */}
           <SwRegister />
           {/* Auth-gated navbar (hamburger + side drawer) — logged-in users only. */}

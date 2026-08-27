@@ -95,6 +95,34 @@ export default function ProfileCard({
   const track = useTrack();
   const router = useRouter();
 
+  // ── ANALYTICS: social-link clicks ─────────────────────────────────
+  // Fire-and-forget beacon to /api/track/link-click. The server re-checks
+  // owner/bot/cross-origin, so this can't be used to inflate counts; the
+  // owner's own clicks are skipped here to avoid a pointless request.
+  // sendBeacon never blocks the navigation; the keepalive fetch is a
+  // fallback for browsers without sendBeacon.
+  const trackLinkClick = (platform: string) => {
+    if (isOwner) return;
+    try {
+      const payload = JSON.stringify({ username: profile.username, platform });
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        navigator.sendBeacon(
+          "/api/track/link-click",
+          new Blob([payload], { type: "application/json" })
+        );
+      } else if (typeof fetch !== "undefined") {
+        void fetch("/api/track/link-click", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {
+      // Never let analytics interfere with the click.
+    }
+  };
+
   // Refresh/regenerate the card's QR code (owner-only). Generates a fresh
   // PNG, uploads to the qrcodes bucket, and updates qr_code_url — then
   // refreshes the Server Component data without a full page reload.
@@ -259,6 +287,7 @@ export default function ProfileCard({
                       {...(isEmail
                         ? {}
                         : { target: "_blank", rel: "noopener noreferrer" })}
+                      onClick={() => trackLinkClick(link.platform)}
                       aria-label={label}
                       className="group flex w-14 flex-col items-center gap-1"
                     >

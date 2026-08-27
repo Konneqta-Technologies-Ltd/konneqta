@@ -12,7 +12,10 @@ import { getVisitorId } from "@/lib/analytics/visitor";
 import { headers } from "next/headers";
 import { parseGeo } from "@/lib/analytics/geo";
 import { parseSource } from "@/lib/analytics/source";
-import { recordEvent } from "@/lib/analytics/server";
+import { recordProfileViewOnce } from "@/lib/analytics/server";
+import { getSessionId } from "@/lib/analytics/session";
+import { isBotUserAgent } from "@/lib/analytics/bot";
+import { after } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -259,52 +262,42 @@ export default async function UsernamePage({
     theme_custom: ownerIsPro ? themeCustom : null,
   };
 
-  // ── ANALYTICS: profile view (fire-and-forget) ─────────────────────────
-  // Record a view for the owner. We don't await this in a way that blocks the
-  // response — recordEvent swallows all errors. Owner's own views are still
-  // counted (useful for them to see their traffic), but we tag isOwner in a
-  // way the dashboard could later filter. Note: the visitor cookie (`kq_vid`)
-  // is set by the middleware (proxy.ts) — Server Components can only READ
-  // cookies, not modify them. If the cookie is somehow absent (e.g. an edge
-  // that bypassed the middleware), visitor_id is recorded as null, which
-  // recordEvent handles gracefully (the column is nullable).
-  //
-  // Run after the redirect/404 guards so we never count dead-end hits.
-  const visitorId = await getVisitorId();
-  const headersList = await headers();
-  const referer = headersList.get("referer");
-  const geo = parseGeo((name) => headersList.get(name));
-  // Read the ?src= query param so QR-code scans (src=qr, baked into the QR
-  // payload by lib/qr.ts) are attributed correctly. Previously this was
-  // hardcoded to null, so QR scans were always mislabelled "direct".
-  const source = parseSource({ srcParam: srcParam ?? null, referer });
+  // ── ANALYTICS: profile view (after-response, write-time filtered) ─────
+  // v2 counting rules (docs/analytics-plan.md):
+  //   • The OWNER's own views are never recorded.
+  //   • Bots/crawlers (UA heuristic) are never recorded.
+  //   • One view per visitor per 30-min session — refreshes don't inflate.
+  //   • ?src=qr arrivals are profile_views with source='qr' (the dashboard
+  //     derives QR scans from them — no separate duplicate event).
+  // Request-time APIs (cookies/headers) are read during render and passed
+  // into after() by closure — after() must not call them from a Server
+  // Component.
+  if (!isOwner) {
+    const visitorId = await getVisitorId();
+    const sessionId = await getSessionId();
+    const headersList = await headers();
+    const userAgent = headersList.get("user-agent");
+    const referer = headersList.get("referer");
+    const geo = parseGeo((name) => headersList.get(name));
+    // ?src= is baked into QR URLs (qr) and share links (channel), so views
+    // are correctly attributed.
+    const source = parseSource({ srcParam: srcParam ?? null, referer });
 
-  // Fire-and-forget — don't let a slow insert delay the render.
-  void recordEvent({
-    owner_id: card.owner_id,
-    card_id: card.id,
-    event_type: "profile_view",
-    source,
-    visitor_id: visitorId,
-    country: geo.country,
-    city: geo.city,
-  });
-
-  // ── ANALYTICS: dedicated QR-scan event ───────────────────────────────
-  // When a visitor arrives via the printed/saved QR code (?src=qr), record a
-  // distinct `qr_scan` event in addition to the profile_view above. This lets
-  // the analytics dashboard surface "X QR scans" as its own metric, separate
-  // from generic profile views.
-  if (source === "qr") {
-    void recordEvent({
-      owner_id: card.owner_id,
-      card_id: card.id,
-      event_type: "qr_scan",
-      source,
-      visitor_id: visitorId,
-      country: geo.country,
-      city: geo.city,
-    });
+    if (!isBotUserAgent(userAgent)) {
+      // after() keeps the insert off the response path while guaranteeing it
+      // completes — unlike a bare floating promise in serverless.
+      after(async () => {
+        await recordProfileViewOnce({
+          owner_id: card.owner_id,
+          card_id: card.id,
+          source,
+          visitor_id: visitorId,
+          session_id: sessionId,
+          country: geo.country,
+          city: geo.city,
+        });
+      });
+    }
   }
 
   // ── SEO: schema.org Person JSON-LD ────────────────────────────────────

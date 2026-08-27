@@ -147,6 +147,19 @@ export async function verifyAndFulfilPayment(
   if (isSuccessful) {
     await fulfillPayment(admin, payment, verification);
 
+    // Product analytics (PostHog) — best-effort, never blocks fulfilment.
+    // distinctId = Supabase user id, matching the client-side identify().
+    try {
+      const { captureEvent } = await import("@/lib/posthog");
+      void captureEvent(payment.user_id, "payment_completed", {
+        amount: payment.amount,
+        currency: payment.currency,
+        payment_type: payment.payment_type,
+      }).catch(() => {});
+    } catch {
+      // PostHog not configured — ignore.
+    }
+
     // 8b. Referral reward — if the payer signed up with someone's code and
     //     this is their FIRST successful payment, reward the referrer with
     //     Premium days (10 monthly / 90 yearly). Race-safe + once-only via
