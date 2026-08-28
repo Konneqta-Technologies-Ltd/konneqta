@@ -28,6 +28,9 @@
 
 import { KONNEQT_SOURCES, VALID_SOURCES } from "@/lib/konneqts";
 import { getAdminClient, recordEvent } from "@/lib/analytics/server";
+import { getSessionId } from "@/lib/analytics/session";
+import { getVisitorId } from "@/lib/analytics/visitor";
+import { captureEvent } from "@/lib/posthog";
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -152,11 +155,17 @@ export async function POST(req: Request) {
       }
 
       // Analytics: one event scoped to the target owner.
+      const [guestVisitorId, guestSessionId] = await Promise.all([
+        getVisitorId(),
+        getSessionId(),
+      ]);
       void recordEvent({
         owner_id: targetCard.owner_id,
         card_id: targetCard.id,
         event_type: "konneqt",
         source: KONNEQT_SOURCES.GUEST_FORM,
+        visitor_id: guestVisitorId,
+        session_id: guestSessionId,
       });
 
       return NextResponse.json({ status: "guest_submitted" });
@@ -225,18 +234,34 @@ export async function POST(req: Request) {
       .eq("is_primary", true)
       .maybeSingle();
 
+    const [visitorId, sessionId] = await Promise.all([
+      getVisitorId(),
+      getSessionId(),
+    ]);
     void recordEvent({
       owner_id: callerId,
       card_id: callerCard.data?.id ?? null,
       event_type: "konneqt",
       source,
+      visitor_id: visitorId,
+      session_id: sessionId,
     });
     void recordEvent({
       owner_id: targetId,
       card_id: targetCard.id,
       event_type: "konneqt",
       source,
+      visitor_id: visitorId,
+      session_id: sessionId,
     });
+
+    // Product analytics (PostHog) — one funnel event from the ACTOR's
+    // perspective. distinctId = Supabase user id, matching the client-side
+    // identify() call so both merge into one person.
+    void captureEvent(callerId, "konneqt_created", {
+      target: targetProfile.username,
+      source,
+    }).catch(() => {});
 
     return NextResponse.json({ status: "konneqted" });
   } catch (err) {

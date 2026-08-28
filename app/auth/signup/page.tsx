@@ -6,9 +6,16 @@ import Joi from "joi";
 import Link from "next/link";
 import SignInWithGoogle from "@/components/SignInWithGoogle";
 import { createClient } from "@/lib/supabase/client";
+import {
+    MIN_REFERRAL_CODE_LENGTH,
+    REFERRAL_STORAGE_KEY,
+    normalizeReferralCode,
+    readStoredReferralCode,
+    storeReferralCode,
+} from "@/lib/referrals/shared";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const signupSchema = Joi.object({
     firstName: Joi.string()
@@ -57,6 +64,35 @@ export default function SignUpPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    // Referral code from ?ref= (or a previously stashed one). Stashed in
+    // localStorage so it survives: signup → email confirmation / Google
+    // OAuth → /auth/callback → onboarding, where it's attached to the
+    // account. See lib/referrals/shared.ts.
+    const [referralCode, setReferralCode] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Sync browser-only state (URL + localStorage) after mount — setState
+        // runs inside the timer callback, not the effect body (lint rule:
+        // react-hooks/set-state-in-effect). The value is unknowable during SSR.
+        const timer = setTimeout(() => {
+            try {
+                const raw = new URLSearchParams(window.location.search).get("ref");
+                if (raw) {
+                    const code = normalizeReferralCode(raw);
+                    if (code.length >= MIN_REFERRAL_CODE_LENGTH) {
+                        storeReferralCode(code);
+                    } else {
+                        // Garbage/short ?ref= — drop it rather than stash noise.
+                        window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
+                    }
+                }
+            } catch {
+                // URLSearchParams/localStorage can throw in odd embeds — ignore.
+            }
+            setReferralCode(readStoredReferralCode());
+        }, 0);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -113,6 +149,14 @@ export default function SignUpPage() {
                 <div className="text-center pt-3 pb-12 mx-auto">
                     <h1 className="text-3xl font-extrabold ">Create your account</h1>
                     <p className="dark:text-[#737373]">Connect Smarter</p>
+                    {referralCode && (
+                        <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-(--main-orange)/40 bg-(--main-orange)/5 px-3 py-1.5 text-xs font-medium text-(--main-orange)">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                            Invited with code {referralCode}
+                        </div>
+                    )}
                 </div>
                 <form onSubmit={handleSignUp} className="max-w-full px-6 mx-auto flex flex-col justify-between h-88">
                     <div>

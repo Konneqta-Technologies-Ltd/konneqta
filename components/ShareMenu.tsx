@@ -55,11 +55,13 @@ export default function ShareMenu({
   const [sharing, setSharing] = useState(false);
   const { refresh, resetLimitDismissed } = useShareCount();
 
-  // Build the full URL only when the user actually interacts
-  const getUrl = () =>
+  // Build the full URL only when the user actually interacts. Every shared
+  // URL carries ?src=<channel> so the resulting profile view is attributed
+  // back to this share channel — real conversion, not referrer guessing.
+  const getUrl = (channel: string) =>
     typeof window !== "undefined"
-      ? `${window.location.origin}/${username}`
-      : `/${username}`;
+      ? `${window.location.origin}/${username}?src=${encodeURIComponent(channel)}`
+      : `/${username}?src=${channel}`;
 
   const shareText = `Connect with ${title} on Konneqta:`;
 
@@ -107,7 +109,7 @@ export default function ShareMenu({
           await navigator.share({
             title: `${title} · Konneqta`,
             text: shareText,
-            url: getUrl(),
+            url: getUrl("native"),
           });
           // The promise resolved → the user chose a target and shared.
           void recordShare("native");
@@ -130,7 +132,7 @@ export default function ShareMenu({
     const result = await recordShare("copy");
     if ("blocked" in result && result.blocked) return;
 
-    const url = getUrl();
+    const url = getUrl("copy");
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -149,33 +151,34 @@ export default function ShareMenu({
 
   // Fallback share targets — URLs are built lazily (client-only)
   const buildTargets = () => {
-    const url = getUrl();
+    // Per-channel URLs so every shared link is self-attributing (?src=…).
+    const url = (channel: string) => getUrl(channel);
     return [
       {
         label: "WhatsApp",
         icon: FaWhatsapp,
-        href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${url}`)}`,
+        href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${url("whatsapp")}`)}`,
         color: "text-green-500",
         channel: "whatsapp",
       },
       {
         label: "Telegram",
         icon: FaTelegram,
-        href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`,
+        href: `https://t.me/share/url?url=${encodeURIComponent(url("telegram"))}&text=${encodeURIComponent(shareText)}`,
         color: "text-sky-500",
         channel: "telegram",
       },
       {
         label: "Messages",
         icon: LuMessageCircle,
-        href: `sms:?&body=${encodeURIComponent(`${shareText} ${url}`)}`,
+        href: `sms:?&body=${encodeURIComponent(`${shareText} ${url("sms")}`)}`,
         color: "text-blue-500",
         channel: "sms",
       },
       {
         label: "Email",
         icon: FaEnvelope,
-        href: `mailto:?subject=${encodeURIComponent(`${title} · Konneqta`)}&body=${encodeURIComponent(`${shareText}\n\n${url}`)}`,
+        href: `mailto:?subject=${encodeURIComponent(`${title} · Konneqta`)}&body=${encodeURIComponent(`${shareText}\n\n${url("email")}`)}`,
         color: "text-zinc-500",
         channel: "email",
       },

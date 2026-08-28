@@ -22,6 +22,8 @@ export default function robots(): MetadataRoute.Robots {
           "/onboarding/",
           // Post-login redirect helper.
           "/post-login/",
+          // Referral page (authenticated, per-user).
+          "/referral/",
           // Payment callback / Flutterwave redirect handling.
           "/payment/",
           // PWA offline fallback shell (no standalone content).

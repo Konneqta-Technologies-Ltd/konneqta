@@ -8,6 +8,8 @@ import Image from "next/image";
 import { KONNEQT_SOURCES } from "@/lib/konneqts";
 import { PLATFORM_MAP } from "@/lib/social-platforms";
 import ShareMenu from "./ShareMenu";
+import ShowcaseViewerModal from "./showcase/ShowcaseViewerModal";
+import type { ShowcaseItem } from "@/lib/showcase";
 import Spinner from "./ui/Spinner";
 import Tooltip from "./Tooltip";
 import { createClient } from "@/lib/supabase/client";
@@ -78,12 +80,16 @@ function IconButton({
 export default function ProfileCard({
   profile,
   socialLinks,
+  showcaseItems = [],
   isOwner = false,
   canUseThemes = false,
   canUseBanners = false,
 }: {
   profile: Profile;
   socialLinks: SocialLink[];
+  /** Owner's showcase items — visitors get a trigger under the copy-link
+   *  row that opens them in a view-only modal. Empty = no trigger. */
+  showcaseItems?: ShowcaseItem[];
   isOwner?: boolean;
   canUseThemes?: boolean;
   canUseBanners?: boolean;
@@ -91,9 +97,38 @@ export default function ProfileCard({
   const [flipped, setFlipped] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
+  const [showShowcase, setShowShowcase] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const track = useTrack();
   const router = useRouter();
+
+  // ── ANALYTICS: social-link clicks ─────────────────────────────────
+  // Fire-and-forget beacon to /api/track/link-click. The server re-checks
+  // owner/bot/cross-origin, so this can't be used to inflate counts; the
+  // owner's own clicks are skipped here to avoid a pointless request.
+  // sendBeacon never blocks the navigation; the keepalive fetch is a
+  // fallback for browsers without sendBeacon.
+  const trackLinkClick = (platform: string) => {
+    if (isOwner) return;
+    try {
+      const payload = JSON.stringify({ username: profile.username, platform });
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        navigator.sendBeacon(
+          "/api/track/link-click",
+          new Blob([payload], { type: "application/json" })
+        );
+      } else if (typeof fetch !== "undefined") {
+        void fetch("/api/track/link-click", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {
+      // Never let analytics interfere with the click.
+    }
+  };
 
   // Refresh/regenerate the card's QR code (owner-only). Generates a fresh
   // PNG, uploads to the qrcodes bucket, and updates qr_code_url — then
@@ -259,6 +294,7 @@ export default function ProfileCard({
                       {...(isEmail
                         ? {}
                         : { target: "_blank", rel: "noopener noreferrer" })}
+                      onClick={() => trackLinkClick(link.platform)}
                       aria-label={label}
                       className="group flex w-14 flex-col items-center gap-1"
                     >
@@ -509,7 +545,50 @@ export default function ProfileCard({
             www.konneqta.com/@{profile.username}
           </button>
         </Tooltip>
+
+        {/* Showcase trigger — VISITORS ONLY (the owner manages their
+            showcase from the sidenav page at /[username]/showcase). Placed
+            on the page under the copy-link row, not on the flip card.
+            Renders only when the owner has at least one item; the count
+            badge sets visitor expectations and lifts taps. */}
+        {!isOwner && showcaseItems.length > 0 && (
+          <div className="mt-4 flex w-full justify-center">
+            <button
+              type="button"
+              onClick={() => setShowShowcase(true)}
+              className="flex cursor-pointer items-center gap-2 rounded-full bg-(--main-orange) px-4 py-2 text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              Showcase · {showcaseItems.length}{" "}
+              {showcaseItems.length === 1 ? "item" : "items"}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* ---- Showcase viewer modal (visitors only) ---- */}
+      {!isOwner && showcaseItems.length > 0 && (
+        <ShowcaseViewerModal
+          open={showShowcase}
+          onClose={() => setShowShowcase(false)}
+          items={showcaseItems}
+          ownerName={displayName}
+        />
+      )}
 
       {/* ---- Appearance modal (owner only) ---- */}
       {isOwner && (
