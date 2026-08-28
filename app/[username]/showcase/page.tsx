@@ -80,7 +80,7 @@ export default async function ShowcasePage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:py-10">
+    <main className="mx-auto w-full max-w-2xl px-2 py-4 sm:py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">

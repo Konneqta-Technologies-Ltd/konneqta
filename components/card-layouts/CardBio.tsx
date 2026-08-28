@@ -68,7 +68,7 @@ export default function CardBio({
   if (bio.length <= BIO_PREVIEW_CHARS) {
     return (
       <p
-        className={`${className} line-clamp-2`}
+        className={`${className} line-clamp-2 h-4`}
         style={color ? { color } : undefined}
       >
         {bio}

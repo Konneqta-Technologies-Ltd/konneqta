@@ -196,7 +196,9 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
             <p className="text-sm text-left font-light" style={{ color: c.subtext }}>
               {profile.job_title}
             </p>
-            <span className="w-1 h-1 bg-white rounded-full"> </span>
+            {profile.job_title && profile.company && (
+              <span className="w-1 h-1 bg-white rounded-full"> </span>
+            )}
             <p className="text-sm text-left font-medium" style={{ color: c.subtext }}>
               {profile.company}
             </p>
