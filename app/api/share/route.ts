@@ -21,6 +21,9 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { getMonthlyShareCountWithLimit } from "@/lib/analytics/queries";
 import { recordEvent } from "@/lib/analytics/server";
+import { getSessionId } from "@/lib/analytics/session";
+import { getVisitorId } from "@/lib/analytics/visitor";
+import { captureEvent } from "@/lib/posthog";
 
 export async function POST(req: Request) {
   try {
@@ -108,12 +111,24 @@ export async function POST(req: Request) {
     }
 
     // --- Record the share -------------------------------------------------
+    const [visitorId, sessionId] = await Promise.all([
+      getVisitorId(),
+      getSessionId(),
+    ]);
     await recordEvent({
       owner_id: card.owner_id,
       card_id: card.id,
       event_type: "share",
       channel,
+      visitor_id: visitorId,
+      session_id: sessionId,
     });
+
+    // Product analytics (PostHog) — fire-and-forget, never blocks the share.
+    void captureEvent(card.owner_id, "card_shared", {
+      channel,
+      username: card.slug,
+    }).catch(() => {});
 
     // --- Award FIRST_SHARE feedback milestone (one-time, atomic) ----------
     // Fire-and-forget — errors won't block the share. The RPC is idempotent.

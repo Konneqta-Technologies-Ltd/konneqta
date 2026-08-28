@@ -8,6 +8,23 @@ import { useSyncExternalStore } from 'react';
 const CONSENT_KEY = 'konneqta_cookie_consent';
 const CONSENT_EVENT = 'konneqta-consent-changed';
 
+/**
+ * The consent choice is ALSO mirrored into a cookie (kq_consent) so the proxy
+ * (middleware) can read it server-side — localStorage is invisible to
+ * middleware. The cookie holds no PII, just 'accepted' | 'declined'.
+ */
+const CONSENT_COOKIE = 'kq_consent';
+
+function writeConsentCookie(value: ConsentValue) {
+  const secure = window.location.protocol === 'https:' ? '; secure' : '';
+  document.cookie =
+    CONSENT_COOKIE + '=' + value + '; max-age=31536000; path=/; samesite=lax' + secure;
+}
+
+function expireConsentCookie() {
+  document.cookie = CONSENT_COOKIE + '=; max-age=0; path=/';
+}
+
 export type ConsentValue = 'accepted' | 'declined';
 
 function subscribe(callback: () => void) {
@@ -35,11 +52,13 @@ export function useCookieConsent() {
 
 export function setCookieConsent(value: ConsentValue) {
   localStorage.setItem(CONSENT_KEY, value);
+  writeConsentCookie(value);
   window.dispatchEvent(new Event(CONSENT_EVENT));
 }
 
 export function clearCookieConsent() {
   localStorage.removeItem(CONSENT_KEY);
+  expireConsentCookie();
   window.dispatchEvent(new Event(CONSENT_EVENT));
 }
 

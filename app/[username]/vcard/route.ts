@@ -1,8 +1,11 @@
 import { getAdminClient, recordEvent } from "@/lib/analytics/server";
+import { isBotUserAgent } from "@/lib/analytics/bot";
+import { getSessionId } from "@/lib/analytics/session";
 
 import { buildVCard } from "@/lib/vcard";
 import { createClient } from "@/lib/supabase/server";
 import { getVisitorId } from "@/lib/analytics/visitor";
+import { after } from "next/server";
 
 /**
  * vCard (.vcf) download route.
@@ -15,13 +18,19 @@ import { getVisitorId } from "@/lib/analytics/visitor";
  * - Phone + show_phone are PER-CARD (each card has its own number). Phone is
  *   included in the output only when show_phone is TRUE and non-empty.
  * - Email is never selected, never included.
+ *
+ * Analytics:
+ * - The download is recorded UNLESS the viewer is the card OWNER (saving
+ *   your own card isn't a lead) or a bot.
+ * - Wrapped in after() so the insert never delays the .vcf response but is
+ *   still guaranteed to complete (unlike a bare floating promise).
  */
 
 // Always dynamic — every request must hit the DB for fresh card data.
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ username: string }> }
 ) {
   const { username } = await ctx.params;
@@ -50,24 +59,25 @@ export async function GET(
     return new Response("Not Found", { status: 404 });
   }
 
-  // Build the canonical profile URL from the production site URL (set via
-  // NEXT_PUBLIC_SITE_URL). Using the request Host header is unreliable behind
-  // reverse proxies / load balancers and previously baked `localhost` into the
-  // vCard URL field. This mirrors the pattern used in lib/qr.ts and
-  // app/[username]/page.tsx.
-  const origin = (
-    process.env.NEXT_PUBLIC_SITE_URL || "https://www.konneqta.com"
-  ).replace(/\/$/, "");
-  const profileUrl = `${origin}/${card.slug}`;
+  // ── ANALYTICS: vCard download (after-response; bots + owner excluded) ──
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isOwnerDownload = Boolean(user && user.id === card.owner_id);
 
-  // ── ANALYTICS: vCard download (fire-and-forget) ──────────────────────
-  const visitorId = await getVisitorId();
-  void recordEvent({
-    owner_id: card.owner_id,
-    card_id: card.id,
-    event_type: "vcard_download",
-    visitor_id: visitorId,
-  });
+  if (!isOwnerDownload && !isBotUserAgent(req.headers.get("user-agent"))) {
+    const visitorId = await getVisitorId();
+    const sessionId = await getSessionId();
+    after(async () => {
+      await recordEvent({
+        owner_id: card.owner_id,
+        card_id: card.id,
+        event_type: "vcard_download",
+        visitor_id: visitorId,
+        session_id: sessionId,
+      });
+    });
+  }
 
   // Award FIRST_VCARD_DOWNLOAD feedback milestone (one-time, atomic) to the
   // card OWNER (not the visitor). Uses the service-role client since this is
@@ -89,6 +99,16 @@ export async function GET(
       console.warn("[vcard] feedback milestone error (non-fatal):", err);
     }
   })();
+
+  // Build the canonical profile URL from the production site URL (set via
+  // NEXT_PUBLIC_SITE_URL). Using the request Host header is unreliable behind
+  // reverse proxies / load balancers and previously baked `localhost` into the
+  // vCard URL field. This mirrors the pattern used in lib/qr.ts and
+  // app/[username]/page.tsx.
+  const origin = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.konneqta.com"
+  ).replace(/\/$/, "");
+  const profileUrl = `${origin}/${card.slug}`;
 
   const vcf = buildVCard({
     fullName: card.full_name,

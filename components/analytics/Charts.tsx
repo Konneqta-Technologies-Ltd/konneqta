@@ -19,6 +19,7 @@ import type {
   ChannelPoint,
   DayPoint,
   GeoPoint,
+  LinkPoint,
   SourcePoint,
   Totals,
   VisitorStats,
@@ -42,11 +43,13 @@ export function StatCard({
   label,
   value,
   hint,
+  footer,
   accent = "text-zinc-900 dark:text-zinc-50",
 }: {
   label: string;
   value: string | number;
   hint?: string;
+  footer?: React.ReactNode;
   accent?: string;
 }) {
   return (
@@ -55,9 +58,9 @@ export function StatCard({
         {label}
       </p>
       <p className={`mt-2 text-3xl font-bold ${accent}`}>{value}</p>
-      {hint && (
+      {footer ?? (hint ? (
         <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">{hint}</p>
-      )}
+      ) : null)}
     </div>
   );
 }
@@ -331,6 +334,93 @@ export function GeoChart({
 }
 
 // ---------------------------------------------------------------------------
+// Top clicked links (horizontal bar) — link_click events by platform
+// ---------------------------------------------------------------------------
+
+export function TopLinksChart({ data }: { data: LinkPoint[] }) {
+  if (data.length === 0) {
+    return <EmptyChart label="Top links" />;
+  }
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 className="mb-4 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+        Top links clicked
+      </h3>
+      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 32)}>
+        <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            tick={{ fontSize: 11, fill: "#a1a1aa" }}
+            stroke="#e4e4e7"
+          />
+          <YAxis
+            type="category"
+            dataKey="link"
+            width={100}
+            tick={{ fontSize: 11, fill: "#a1a1aa" }}
+            stroke="#e4e4e7"
+          />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Bar dataKey="count" name="Clicks" radius={[0, 4, 4, 0]}>
+            {data.map((_, i) => (
+              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Conversion funnel: views → vCard saves → Konneqts (pure CSS, no chart lib)
+// ---------------------------------------------------------------------------
+
+export type FunnelStep = { label: string; count: number };
+
+export function FunnelChart({ data }: { data: FunnelStep[] }) {
+  const max = Math.max(1, ...data.map((d) => d.count));
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 className="mb-4 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+        Conversion funnel
+      </h3>
+      <div className="flex flex-col gap-3">
+        {data.map((step, i) => {
+          const pctOfTop = Math.round((step.count / max) * 100);
+          const prev = i > 0 ? data[i - 1].count : null;
+          const stepRate = prev && prev > 0 ? Math.round((step.count / prev) * 100) : null;
+          return (
+            <div key={step.label}>
+              <div className="mb-1 flex items-baseline justify-between text-xs">
+                <span className="font-medium text-zinc-600 dark:text-zinc-300">{step.label}</span>
+                <span className="text-zinc-400">
+                  {step.count}
+                  {stepRate !== null && " · " + stepRate + "% of previous step"}
+                </span>
+              </div>
+              <div className="h-6 w-full overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
+                <div
+                  className="h-full rounded-md"
+                  style={{
+                    width: Math.max(step.count > 0 ? 2 : 0, pctOfTop) + "%",
+                    backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">
+        Views → contact saves → connections made.
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
@@ -358,14 +448,98 @@ function EmptyChart({ label }: { label: string }) {
 // ---------------------------------------------------------------------------
 // Totals row (all stat cards at once)
 // ---------------------------------------------------------------------------
+// Period-over-period delta badge (rendered inside stat cards)
+// ---------------------------------------------------------------------------
 
-export function TotalsRow({ totals }: { totals: Totals }) {
+function DeltaBadge({ current, previous }: { current: number; previous: number }) {
+  if (previous <= 0) {
+    return (
+      <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+        {current > 0 ? "new this period" : "no data"}
+      </p>
+    );
+  }
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) {
+    return (
+      <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+        same as previous period
+      </p>
+    );
+  }
+  const up = pct > 0;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StatCard label="Views" value={totals.views} accent="text-(--main-orange)" />
-      <StatCard label="Shares" value={totals.shares} accent="text-blue-500" />
-      <StatCard label="QR scans" value={totals.qrScans} accent="text-emerald-500" />
-      <StatCard label="vCard downloads" value={totals.vcardDownloads} accent="text-violet-500" />
+    <p className={"mt-1 text-xs font-medium " + (up ? "text-emerald-500" : "text-red-500")}>
+      {(up ? "▲ " : "▼ ") + Math.abs(pct) + "% vs previous period"}
+    </p>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Totals row (all stat cards at once) + optional prev-period deltas
+// ---------------------------------------------------------------------------
+
+export function TotalsRow({
+  totals,
+  prevTotals,
+}: {
+  totals: Totals;
+  prevTotals?: Totals;
+}) {
+  const cards: { label: string; value: number; prev?: number; accent: string }[] = [
+    {
+      label: "Views",
+      value: totals.views,
+      prev: prevTotals?.views,
+      accent: "text-(--main-orange)",
+    },
+    {
+      label: "QR scans",
+      value: totals.qrScans,
+      prev: prevTotals?.qrScans,
+      accent: "text-emerald-500",
+    },
+    {
+      label: "Shares",
+      value: totals.shares,
+      prev: prevTotals?.shares,
+      accent: "text-blue-500",
+    },
+    {
+      label: "vCard saves",
+      value: totals.vcardDownloads,
+      prev: prevTotals?.vcardDownloads,
+      accent: "text-violet-500",
+    },
+    {
+      label: "Link clicks",
+      value: totals.linkClicks,
+      prev: prevTotals?.linkClicks,
+      accent: "text-pink-500",
+    },
+    {
+      label: "Konneqts",
+      value: totals.konneqts,
+      prev: prevTotals?.konneqts,
+      accent: "text-teal-500",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {cards.map((c) => (
+        <StatCard
+          key={c.label}
+          label={c.label}
+          value={c.value}
+          accent={c.accent}
+          footer={
+            c.prev !== undefined ? (
+              <DeltaBadge current={c.value} previous={c.prev} />
+            ) : undefined
+          }
+        />
+      ))}
     </div>
   );
 }
