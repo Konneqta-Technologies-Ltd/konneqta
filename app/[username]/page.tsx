@@ -2,6 +2,7 @@ import { canUseBanners, canUseThemes, isPro } from "@/lib/entitlements";
 import { notFound, redirect } from "next/navigation";
 
 import type { Metadata } from "next";
+import type { ShowcaseItem } from "@/lib/showcase";
 import OfflineCardSaver from "@/components/OfflineCardSaver";
 import OwnerBadges from "@/components/OwnerBadges";
 import ProfileCard from "@/components/ProfileCard";
@@ -262,6 +263,18 @@ export default async function UsernamePage({
     theme_custom: ownerIsPro ? themeCustom : null,
   };
 
+  // ── SHOWCASE: the owner's product/service catalogue ───────────────────
+  // View-only for visitors — the "Showcase · N items" trigger under the
+  // copy-link row opens the viewer modal (ProfileCard). Non-fatal fetch:
+  // if the table doesn't exist yet (supabase/showcase-setup.sql not run),
+  // data is null and the card renders exactly as before.
+  const { data: showcaseItems } = await supabase
+    .from("showcase_items")
+    .select("id, name, description, price, image_url, position")
+    .eq("card_id", card.id)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
   // ── ANALYTICS: profile view (after-response, write-time filtered) ─────
   // v2 counting rules (docs/analytics-plan.md):
   //   • The OWNER's own views are never recorded.
@@ -358,6 +371,7 @@ export default async function UsernamePage({
         <ProfileCard
           profile={profile}
           socialLinks={socialLinks ?? []}
+          showcaseItems={(showcaseItems ?? []) as ShowcaseItem[]}
           isOwner={isOwner}
           canUseThemes={canUseThemes(owner)}
           canUseBanners={canUseBanners(owner)}

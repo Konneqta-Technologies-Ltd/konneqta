@@ -52,6 +52,16 @@ export type PlanLimits = {
    */
   maxSocialLinks: number;
   /**
+   * How many showcase items (products/services) a user may add to a card.
+   * Free = 2, Pro = 10.
+   *
+   * COUNT-based like maxSocialLinks. Enforced for real by the
+   * `_kq_enforce_showcase_item_limit` DB trigger
+   * (supabase/showcase-setup.sql) — this table is the read side the UI uses
+   * to swap the add affordances for a padlocked upgrade slot at the cap.
+   */
+  maxShowcaseItems: number;
+  /**
    * How many Konneqts (connections) are VISIBLE on the Konneqts page.
    * Free = 10, Pro = unlimited.
    *
@@ -75,6 +85,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     canUseSignature: false,
     // Free users can add up to 3 social links (any mix of platforms).
     maxSocialLinks: 3,
+    // Free users can showcase up to 2 items. Upgrade to Pro for 10.
+    maxShowcaseItems: 2,
     // Free users see their 10 most recent Konneqts (the rest are stored +
     // surfaced via an upgrade prompt). Connections are never blocked.
     maxVisibleKonneqts: 10,
@@ -89,6 +101,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     canUseSignature: true,
     // Pro users can add up to 7 social links (any mix of platforms).
     maxSocialLinks: 7,
+    // Pro users can showcase up to 10 items.
+    maxShowcaseItems: 10,
     // Pro users see all their Konneqts.
     maxVisibleKonneqts: Infinity,
   },
@@ -244,6 +258,20 @@ export function getMaxShares(profile: EntitlementProfile | null | undefined): nu
 export function getMaxSocialLinks(profile: EntitlementProfile | null | undefined): number {
   if (isExempt(profile)) return Infinity;
   return getFeatureFlags(profile).maxSocialLinks;
+}
+
+/**
+ * How many showcase items can a user add to a single card?
+ * Exempt users are unlimited → Infinity. Pro = 10. Free = 2.
+ *
+ * This is the READ side only — the real enforcement happens at the DB
+ * (supabase/showcase-setup.sql, trigger `_kq_enforce_showcase_item_limit`).
+ * The UI uses this to swap the "Add" affordances for a padlocked upgrade
+ * slot when the cap is reached.
+ */
+export function getMaxShowcaseItems(profile: EntitlementProfile | null | undefined): number {
+  if (isExempt(profile)) return Infinity;
+  return getFeatureFlags(profile).maxShowcaseItems;
 }
 
 /**

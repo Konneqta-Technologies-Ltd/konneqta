@@ -48,6 +48,21 @@ export const LOGO_OPTIONS = {
   outputExtension: "png",
 } as const;
 
+/**
+ * Compression options for showcase item images.
+ * Product images render much larger than an avatar thumbnail (owner grid +
+ * visitor modal), so the cap is 1024px — still small payloads (~100–300KB)
+ * while staying crisp at display size. Same pipeline as avatars: re-encoding
+ * through the canvas also strips EXIF metadata (incl. GPS location) from
+ * phone photos before they're stored.
+ */
+export const SHOWCASE_OPTIONS = {
+  maxSize: 1024,
+  quality: 0.92,
+  outputType: "image/jpeg",
+  outputExtension: "jpg",
+} as const;
+
 export type CompressOptions = {
   /** Maximum width/height of the output, in pixels. Default 512. */
   maxSize?: number;
