@@ -8,17 +8,17 @@ import {
   TotalsRow,
   ViewsChart,
   VisitorsChart,
-} from "@/components/analytics/Charts";
-import { getDashboardData } from "@/lib/analytics/queries";
-import { notFound, redirect } from "next/navigation";
+} from '@/components/analytics/Charts';
+import { getDashboardData } from '@/lib/analytics/queries';
+import { notFound, redirect } from 'next/navigation';
 
-import GoBackButton from "@/components/GoBackButton";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { getAdminClient } from "@/lib/analytics/server";
-import { isPro } from "@/lib/entitlements";
+import GoBackButton from '@/components/GoBackButton';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/analytics/server';
+import { isPro } from '@/lib/entitlements';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 const ALLOWED_RANGES = [7, 30, 90] as const;
 const DEFAULT_RANGE = 30;
@@ -61,14 +61,14 @@ export default async function AnalyticsPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login");
+    redirect('/auth/login');
   }
 
   // Resolve the owner's primary card by slug (must be owned by the caller).
   const { data: card } = await supabase
-    .from("cards")
-    .select("id, owner_id, slug")
-    .eq("slug", username)
+    .from('cards')
+    .select('id, owner_id, slug')
+    .eq('slug', username)
     .maybeSingle();
 
   if (!card || card.owner_id !== user.id) {
@@ -77,9 +77,9 @@ export default async function AnalyticsPage({
 
   // --- Entitlements gate (Pro-only) -------------------------------------
   const { data: owner } = await supabase
-    .from("profiles")
-    .select("id, username, plan, is_exempt, pro_expires_at")
-    .eq("id", card.owner_id)
+    .from('profiles')
+    .select('id, username, plan, is_exempt, pro_expires_at')
+    .eq('id', card.owner_id)
     .maybeSingle();
 
   const ownerIsPro = isPro(owner);
@@ -128,18 +128,20 @@ export default async function AnalyticsPage({
   }
 
   // --- Range + card filter (URL-driven) ----------------------------------
-  const parsedRange = Number.parseInt(rangeParam ?? "", 10);
-  const days: number = (ALLOWED_RANGES as readonly number[]).includes(parsedRange)
+  const parsedRange = Number.parseInt(rangeParam ?? '', 10);
+  const days: number = (ALLOWED_RANGES as readonly number[]).includes(
+    parsedRange,
+  )
     ? parsedRange
     : DEFAULT_RANGE;
 
   // The owner's cards — powers the per-card filter chips (Pro has up to 3).
   const { data: ownerCards } = await supabase
-    .from("cards")
-    .select("id, slug, is_primary")
-    .eq("owner_id", card.owner_id)
-    .order("is_primary", { ascending: false })
-    .order("created_at", { ascending: true });
+    .from('cards')
+    .select('id, slug, is_primary')
+    .eq('owner_id', card.owner_id)
+    .order('is_primary', { ascending: false })
+    .order('created_at', { ascending: true });
 
   const cards = ownerCards ?? [];
   const selectedCardId =
@@ -153,20 +155,23 @@ export default async function AnalyticsPage({
   // Build filter links that keep the other filter intact.
   const filterHref = (over: { range?: number; card?: string | null }) => {
     const params = new URLSearchParams();
-    params.set("range", String(over.range ?? days));
-    const c = "card" in over ? over.card : selectedCardId;
-    if (c) params.set("card", c);
+    params.set('range', String(over.range ?? days));
+    const c = 'card' in over ? over.card : selectedCardId;
+    if (c) params.set('card', c);
     const qs = params.toString();
-    return `/${username}/analytics${qs ? "?" + qs : ""}`;
+    return `/${username}/analytics${qs ? '?' + qs : ''}`;
   };
 
   const tabActive =
-    "rounded-lg bg-(--main-orange) px-3 py-1.5 text-xs font-semibold text-white";
+    'rounded-lg bg-(--main-orange) px-3 py-1.5 text-xs font-semibold text-white';
   const tabIdle =
-    "rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700";
+    'rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700';
 
   return (
-    <main className="min-h-screen pt-20 bg-zinc-50 px-4 py-8 dark:bg-black">
+    <main
+      className="min-h-screen pt-20 bg-zinc-50 px-4 py-8 dark:bg-black"
+      data-tour="analytics"
+    >
       <div className="mx-auto max-w-5xl">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -223,9 +228,9 @@ export default async function AnalyticsPage({
         <div className="mb-6">
           <FunnelChart
             data={[
-              { label: "Profile views", count: data.totals.views },
-              { label: "vCard saves", count: data.totals.vcardDownloads },
-              { label: "Konneqts", count: data.totals.konneqts },
+              { label: 'Profile views', count: data.totals.views },
+              { label: 'vCard saves', count: data.totals.vcardDownloads },
+              { label: 'Konneqts', count: data.totals.konneqts },
             ]}
           />
         </div>

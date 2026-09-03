@@ -18,6 +18,7 @@ import PostHogProvider from '@/components/PostHogProvider';
 import Script from 'next/script';
 import SwRegister from '@/components/SwRegister';
 import { Toaster } from 'sonner';
+import OnboardingWidget from '@/components/onboarding/OnboardingWidget';
 
 const outfit = Outfit({
   display: 'swap',
@@ -168,10 +169,14 @@ export default function RootLayout({
       </head>
       {/* bg-black prevents a white flash on PWA launch / splash before CSS
           hydrates; matches the manifest background_color (#000000). */}
-      <body className="min-h-full flex flex-col bg-black" suppressHydrationWarning>
+      <body
+        className="min-h-full flex flex-col bg-black"
+        suppressHydrationWarning
+      >
         <PostHogProvider>
           {children}
           <Toaster position="top-right" richColors />
+          <OnboardingWidget />
           <ConsentedVercelAnalytics />
           {/* Registers /sw.js in production only (Serwist offline shell). */}
           <SwRegister />

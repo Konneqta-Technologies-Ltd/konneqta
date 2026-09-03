@@ -1,25 +1,25 @@
-"use client";
+'use client';
 
-import { ThemeCustomization, resolveTheme } from "@/lib/themes";
+import { ThemeCustomization, resolveTheme } from '@/lib/themes';
 
-import AppearanceModal from "./AppearanceModal";
-import ConnectButton from "./connect/ConnectButton";
-import Image from "next/image";
-import { KONNEQT_SOURCES } from "@/lib/konneqts";
-import { PLATFORM_MAP } from "@/lib/social-platforms";
-import ShareMenu from "./ShareMenu";
-import ShowcaseViewerModal from "./showcase/ShowcaseViewerModal";
-import type { ShowcaseItem } from "@/lib/showcase";
-import Spinner from "./ui/Spinner";
-import Tooltip from "./Tooltip";
-import { createClient } from "@/lib/supabase/client";
-import { regenerateQrCode } from "@/lib/qr";
-import { renderCardFront } from "./card-layouts";
-import { safeHref } from "@/lib/url-validation";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useTrack } from "@/lib/use-track";
+import AppearanceModal from './AppearanceModal';
+import ConnectButton from './connect/ConnectButton';
+import Image from 'next/image';
+import { KONNEQT_SOURCES } from '@/lib/konneqts';
+import { PLATFORM_MAP } from '@/lib/social-platforms';
+import ShareMenu from './ShareMenu';
+import ShowcaseViewerModal from './showcase/ShowcaseViewerModal';
+import type { ShowcaseItem } from '@/lib/showcase';
+import Spinner from './ui/Spinner';
+import Tooltip from './Tooltip';
+import { createClient } from '@/lib/supabase/client';
+import { regenerateQrCode } from '@/lib/qr';
+import { renderCardFront } from './card-layouts';
+import { safeHref } from '@/lib/url-validation';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useTrack } from '@/lib/use-track';
 
 type SocialLink = {
   platform: string;
@@ -50,22 +50,35 @@ function IconButton({
   href,
   onClick,
   label,
+  tourTarget,
   children,
 }: {
   href?: string;
   onClick?: () => void;
   label: string;
+  tourTarget?: string;
   children: React.ReactNode;
 }) {
   const className =
-    "flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800";
+    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800';
 
   const content = href ? (
-    <a href={href} aria-label={label} className={className}>
+    <a
+      href={href}
+      aria-label={label}
+      className={className}
+      data-tour={tourTarget}
+    >
       {children}
     </a>
   ) : (
-    <button type="button" onClick={onClick} aria-label={label} className={className}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={className}
+      data-tour={tourTarget}
+    >
       {children}
     </button>
   );
@@ -112,15 +125,15 @@ export default function ProfileCard({
     if (isOwner) return;
     try {
       const payload = JSON.stringify({ username: profile.username, platform });
-      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
         navigator.sendBeacon(
-          "/api/track/link-click",
-          new Blob([payload], { type: "application/json" })
+          '/api/track/link-click',
+          new Blob([payload], { type: 'application/json' }),
         );
-      } else if (typeof fetch !== "undefined") {
-        void fetch("/api/track/link-click", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+      } else if (typeof fetch !== 'undefined') {
+        void fetch('/api/track/link-click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: payload,
           keepalive: true,
         }).catch(() => {});
@@ -142,7 +155,7 @@ export default function ProfileCard({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("You must be logged in to refresh your card.");
+        toast.error('You must be logged in to refresh your card.');
         return;
       }
       if (!profile.cardId) {
@@ -156,10 +169,10 @@ export default function ProfileCard({
         cardSlug: profile.username,
         logoUrl: profile.logo_url,
       });
-      toast.success("QR code refreshed");
+      toast.success('QR code refreshed');
       router.refresh();
     } catch (err) {
-      console.error("QR refresh failed:", err);
+      console.error('QR refresh failed:', err);
       toast.error("Couldn't refresh the QR code. Please try again.");
     } finally {
       setRefreshing(false);
@@ -172,7 +185,7 @@ export default function ProfileCard({
 
   // Compute the absolute profile URL lazily at click-time (client-only).
   const getProfileUrl = () =>
-    typeof window !== "undefined"
+    typeof window !== 'undefined'
       ? `${window.location.origin}/${profile.username}`
       : `/${profile.username}`;
 
@@ -181,30 +194,33 @@ export default function ProfileCard({
     try {
       await navigator.clipboard.writeText(profileUrl);
     } catch {
-      const textarea = document.createElement("textarea");
+      const textarea = document.createElement('textarea');
       textarea.value = profileUrl;
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand("copy");
+      document.execCommand('copy');
       document.body.removeChild(textarea);
     }
     setCopied(true);
-    track("profile_link_copied", { username: profile.username });
+    track('profile_link_copied', { username: profile.username });
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="w-full max-w-sm">
+    <div
+      className="w-full max-w-sm"
+      data-tour={isOwner ? 'owner-card' : undefined}
+    >
       {/* ---- Flip card ---- */}
-      <div style={{ height: 500, perspective: "1200px" }}>
+      <div style={{ height: 500, perspective: '1200px' }}>
         <div
           style={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            transformStyle: "preserve-3d",
-            transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            transformStyle: 'preserve-3d',
+            transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+            transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
           }}
         >
           {/* ---------- FRONT ---------- */}
@@ -220,13 +236,13 @@ export default function ProfileCard({
           <div
             className="flex flex-col items-center justify-center overflow-hidden rounded-3xl border p-8 text-center shadow-sm"
             style={{
-              position: "absolute",
+              position: 'absolute',
               inset: 0,
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
               background: c.bg,
-              transform: "rotateY(0deg)",
-              pointerEvents: flipped ? "none" : "auto",
+              transform: 'rotateY(0deg)',
+              pointerEvents: flipped ? 'none' : 'auto',
               zIndex: flipped ? 0 : 1,
             }}
           >
@@ -259,11 +275,11 @@ export default function ProfileCard({
             // dark app modes; only the surrounding app chrome changes.
             className="flex flex-col rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-sm"
             style={{
-              position: "absolute",
+              position: 'absolute',
               inset: 0,
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              transform: "rotateY(180deg)",
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
             }}
           >
             <div className="scrollable-links flex min-h-0 flex-1 flex-wrap content-start justify-center gap-3 overflow-y-auto pr-1">
@@ -279,10 +295,10 @@ export default function ProfileCard({
                   // Caption under the icon: user's custom name (Custom Link)
                   // → compact platform name → full label.
                   const shortLabel =
-                    (link.platform === "other" && link.label?.trim()) ||
+                    (link.platform === 'other' && link.label?.trim()) ||
                     platform?.shortLabel ||
                     label;
-                  const isEmail = link.platform === "email";
+                  const isEmail = link.platform === 'email';
                   const href = safeHref(link.url, isEmail);
                   if (!href) return null;
                   return (
@@ -293,7 +309,7 @@ export default function ProfileCard({
                       // left sitting empty, so only web links get _blank.
                       {...(isEmail
                         ? {}
-                        : { target: "_blank", rel: "noopener noreferrer" })}
+                        : { target: '_blank', rel: 'noopener noreferrer' })}
                       onClick={() => trackLinkClick(link.platform)}
                       aria-label={label}
                       className="group flex w-14 flex-col items-center gap-1"
@@ -361,7 +377,11 @@ export default function ProfileCard({
       <div className="mt-4 flex flex-col items-center gap-3">
         <div className="flex items-center gap-3">
           {isOwner && (
-            <IconButton href={`/${profile.username}/edit`} label="Edit Profile">
+            <IconButton
+              href={`/${profile.username}/edit`}
+              label="Edit Profile"
+              tourTarget="edit-card"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width={16}
@@ -405,6 +425,7 @@ export default function ProfileCard({
             <IconButton
               label="Customize card"
               onClick={() => setShowAppearance(true)}
+              tourTarget="customize-card"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -436,6 +457,7 @@ export default function ProfileCard({
                 onClick={handleRefreshQr}
                 disabled={refreshing}
                 aria-label="Refresh QR code"
+                data-tour="refresh-qr"
                 className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-zinc-300 text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >
                 {refreshing ? (
@@ -467,7 +489,9 @@ export default function ProfileCard({
             <IconButton
               href={`/${profile.username}/vcard`}
               label="Save Contact"
-              onClick={() => track("contact_saved", { username: profile.username })}
+              onClick={() =>
+                track('contact_saved', { username: profile.username })
+              }
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -499,19 +523,22 @@ export default function ProfileCard({
           )}
 
           <Tooltip label="Share" side="top">
-            <ShareMenu
-              username={profile.username}
-              title={displayName}
-              cardId={profile.cardId}
-              isOwner={isOwner}
-            />
+            <span data-tour="share-card">
+              <ShareMenu
+                username={profile.username}
+                title={displayName}
+                cardId={profile.cardId}
+                isOwner={isOwner}
+              />
+            </span>
           </Tooltip>
         </div>
 
-        <Tooltip label={copied ? "Copied!" : "Copy link"} side="top">
+        <Tooltip label={copied ? 'Copied!' : 'Copy link'} side="top">
           <button
             type="button"
             onClick={handleCopy}
+            data-tour="copy-link"
             className="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-400"
           >
             {copied ? (
@@ -573,8 +600,8 @@ export default function ProfileCard({
                 <path d="M3 6h18" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              Showcase · {showcaseItems.length}{" "}
-              {showcaseItems.length === 1 ? "item" : "items"}
+              Showcase · {showcaseItems.length}{' '}
+              {showcaseItems.length === 1 ? 'item' : 'items'}
             </button>
           </div>
         )}
@@ -608,7 +635,7 @@ export default function ProfileCard({
             avatar_url: profile.avatar_url,
             logo_url: profile.logo_url,
           }}
-          currentThemeId={profile.theme ?? "classic"}
+          currentThemeId={profile.theme ?? 'classic'}
           currentBannerUrl={profile.banner_url}
           canUseThemes={canUseThemes}
           canUseBanners={canUseBanners}
