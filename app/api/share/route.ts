@@ -21,6 +21,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { getMonthlyShareCountWithLimit } from "@/lib/analytics/queries";
 import { recordEvent } from "@/lib/analytics/server";
+import { createNotification } from "@/lib/notifications/server";
 import { getSessionId } from "@/lib/analytics/session";
 import { getVisitorId } from "@/lib/analytics/visitor";
 import { captureEvent } from "@/lib/posthog";
@@ -149,6 +150,18 @@ export async function POST(req: Request) {
       unlimited ? Infinity : limit,
       unlimited
     );
+
+    // Free-plan budget nudge — fires once, exactly when 3 shares remain
+    // (single crossing point, so it can't repeat on every share).
+    if (!unlimited && after.remaining === 3) {
+      void createNotification({
+        userId: card.owner_id,
+        type: "share_limit",
+        title: "Share limit running low",
+        body: `${after.remaining} of ${limit} monthly shares left. Upgrade to Pro for unlimited sharing.`,
+        link: `/${username}`,
+      });
+    }
 
     return NextResponse.json({
       ok: true,

@@ -9,6 +9,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // Lazy-load the scanner only when the user opens it.
 // html5-qrcode (~30KB) stays out of the main bundle.
@@ -68,6 +69,16 @@ export default function AppNavbar() {
   const [open, setOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
+  // Notification feed state — ONE instance here feeds both the hamburger's
+  // unread dot (drawer closed) and the sidenav bell (drawer open).
+  const {
+    unreadCount,
+    items: notificationItems,
+    loading: notificationsLoading,
+    markRead,
+    markAllRead,
+  } = useNotifications(user?.id);
+
   useEffect(() => {
     const supabase = createClient();
 
@@ -109,7 +120,8 @@ export default function AppNavbar() {
               type="button"
               onClick={() => setOpen(true)}
               aria-label="Open menu"
-              className="cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              data-tour="app-menu"
+              className="relative cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -126,6 +138,14 @@ export default function AppNavbar() {
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
+              {/* Unread dot — visible only while the drawer is CLOSED (when
+                  open, the unread indicator lives on the bell instead). */}
+              {!open && unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-black"
+                />
+              )}
             </button>
           )}
 
@@ -182,6 +202,17 @@ export default function AppNavbar() {
         open={open}
         onClose={() => setOpen(false)}
         isAuthenticated={!!user}
+        notifications={
+          user
+            ? {
+                unreadCount,
+                items: notificationItems,
+                loading: notificationsLoading,
+                onMarkRead: markRead,
+                onMarkAllRead: markAllRead,
+              }
+            : undefined
+        }
       />
 
       {/* QR Scanner — lazy-loaded, available to all visitors */}

@@ -24,7 +24,12 @@ const revision =
 
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   createSerwistRoute({
-    additionalPrecacheEntries: [{ url: "/offline", revision }],
+    additionalPrecacheEntries: [
+      { url: "/offline", revision },
+      // PWA launch page (manifest start_url) — must open instantly with zero
+      // network, so it's precached exactly like the offline fallback.
+      { url: "/launch", revision },
+    ],
     swSrc: "app/sw.ts",
     // Use the native esbuild binary (faster than the WASM fallback).
     useNativeEsbuild: true,

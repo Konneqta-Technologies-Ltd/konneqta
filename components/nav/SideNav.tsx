@@ -8,6 +8,9 @@ import Link from 'next/link';
 import LogoutButton from './LogoutButton';
 import { createClient } from '@/lib/supabase/client';
 import { OPEN_PRODUCT_TOUR_EVENT } from '@/lib/onboarding';
+import NotificationBell, {
+  type NotificationBellProps,
+} from '@/components/notifications/NotificationBell';
 
 /**
  * Slide-out side navigation drawer.
@@ -26,10 +29,13 @@ export default function SideNav({
   open,
   onClose,
   isAuthenticated,
+  notifications,
 }: {
   open: boolean;
   onClose: () => void;
   isAuthenticated: boolean;
+  /** Feed data from AppNavbar's useNotifications — omit to hide the bell. */
+  notifications?: NotificationBellProps;
 }) {
   // Resolve the signed-in user's primary card slug so we can link to their
   // profile + analytics. Fetched once when the drawer is first opened by an
@@ -115,6 +121,15 @@ export default function SideNav({
                 Menu
               </span>
               <div className="flex items-center gap-1">
+                {/* Notification bell — red dot while unread items exist.
+                Clicking opens the dropdown (10 latest, scrollable) with a
+                "See more" link to the /notifications page. */}
+                {isAuthenticated && notifications && (
+                  <NotificationBell
+                    {...notifications}
+                    onNavigate={onClose}
+                  />
+                )}
                 {/* Dark/Light toggle — gives every authenticated page
                 (profile, konneqts, settings, analytics, edit) theme control
                 right from the drawer. */}

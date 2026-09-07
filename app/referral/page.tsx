@@ -107,7 +107,10 @@ export default async function ReferralPage() {
   const origin = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 pt-20 pb-8 dark:bg-black">
+    <main
+      data-tour="referral"
+      className="min-h-screen bg-zinc-50 px-4 pt-20 pb-8 dark:bg-black"
+    >
       <div className="mx-auto max-w-2xl">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">

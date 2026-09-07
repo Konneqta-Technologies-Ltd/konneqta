@@ -25,6 +25,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PAYMENT_PLANS } from "@/lib/payments/plans";
+import { createNotification } from "@/lib/notifications/server";
 import { MIN_REFERRAL_CODE_LENGTH, normalizeReferralCode } from "./shared";
 
 /** Premium days granted to the referrer, by the referred user's plan cycle. */
@@ -252,6 +253,18 @@ export async function grantReferralReward(input: {
   const referredUsername = Array.isArray(referredJoin)
     ? referredJoin[0]?.username
     : referredJoin?.username;
+
+  // In-app + push notification for the referrer (preference-aware and
+  // non-fatal by design — a notification failure never blocks fulfilment).
+  void createNotification({
+    userId: referral.referrer_id,
+    type: "referral",
+    title: `You earned ${rewardDays} days of Pro`,
+    body: referredUsername
+      ? `@${referredUsername} subscribed — your Premium was extended.`
+      : "A friend you referred subscribed — your Premium was extended.",
+    link: "/referral",
+  });
 
   return {
     granted: true,
