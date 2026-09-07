@@ -5,33 +5,33 @@ import {
   isSafeEmailValue,
   isSafeHttpUrl,
   safeFileExtension,
-} from "@/lib/url-validation";
+} from '@/lib/url-validation';
+import { AVATAR_OPTIONS, LOGO_OPTIONS, compressImage } from '@/lib/image';
 import {
-  AVATAR_OPTIONS,
-  LOGO_OPTIONS,
-  compressImage,
-} from "@/lib/image";
-import { dataUrlToBlob, generateQrDataUrl, getCanonicalProfileUrl } from "@/lib/qr";
-import { useEffect, useRef, useState } from "react";
+  dataUrlToBlob,
+  generateQrDataUrl,
+  getCanonicalProfileUrl,
+} from '@/lib/qr';
+import { useEffect, useRef, useState } from 'react';
 
-import { BIO_MAX_CHARS } from "@/components/card-layouts/CardBio";
-import InfoTip from "./InfoTip";
-import Link from "next/link";
-import { PLAN_LIMITS } from "@/lib/entitlements";
-import ProGate from "./ProGate";
-import { SOCIAL_PLATFORMS } from "@/lib/social-platforms";
-import Spinner from "./ui/Spinner";
-import { awardMilestone } from "@/lib/feedback/score";
+import { BIO_MAX_CHARS } from '@/components/card-layouts/CardBio';
+import InfoTip from './InfoTip';
+import Link from 'next/link';
+import { PLAN_LIMITS } from '@/lib/entitlements';
+import ProGate from './ProGate';
+import { SOCIAL_PLATFORMS } from '@/lib/social-platforms';
+import Spinner from './ui/Spinner';
+import { awardMilestone } from '@/lib/feedback/score';
 import {
   MIN_REFERRAL_CODE_LENGTH,
   clearStoredReferralCode,
   normalizeReferralCode,
   readStoredReferralCode,
-} from "@/lib/referrals/shared";
-import { createClient } from "@/lib/supabase/client";
-import { isReservedUsername } from "@/lib/reserved-usernames";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+} from '@/lib/referrals/shared';
+import { createClient } from '@/lib/supabase/client';
+import { isReservedUsername } from '@/lib/reserved-usernames';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface OnboardingFormProps {
   fullName: string;
@@ -417,31 +417,43 @@ export default function OnboardingForm({
         logoUrl = publicUrl;
       }
 
-      // 2. Insert the profile row.
+      // 2. Create or repair the profile row. Upsert is intentional: a prior
+      // interrupted attempt may have left the profile without its card.
       //    show_phone is forced to false when the phone field is empty, so
       //    the owner can never accidentally expose a number they left blank.
       const phoneIsEmpty = !form.phone.trim();
-      const { error: profileError } = await supabase.from('profiles').insert({
-        ...form,
-        show_phone: phoneIsEmpty ? false : form.show_phone,
-        avatar_url: avatarUrl,
-        logo_url: logoUrl,
-        id: user.id,
-      });
+      const { error: profileError } = await supabase.from('profiles').upsert(
+        {
+          ...form,
+          show_phone: phoneIsEmpty ? false : form.show_phone,
+          avatar_url: avatarUrl,
+          logo_url: logoUrl,
+          id: user.id,
+        },
+        { onConflict: 'id' },
+      );
 
       if (profileError) {
         // Provide user-friendly error messages based on the database error
         let errorMessage = profileError.message;
-        
-        if (errorMessage.toLowerCase().includes('duplicate') || errorMessage.toLowerCase().includes('unique constraint')) {
-          errorMessage = 'This username is already taken. Please choose another.';
-        } else if (errorMessage.toLowerCase().includes('violates constraint') || errorMessage.toLowerCase().includes('character')) {
-          errorMessage = 'Username contains invalid characters. Please use only lowercase letters, numbers, and underscores.';
+
+        if (
+          errorMessage.toLowerCase().includes('duplicate') ||
+          errorMessage.toLowerCase().includes('unique constraint')
+        ) {
+          errorMessage =
+            'This username is already taken. Please choose another.';
+        } else if (
+          errorMessage.toLowerCase().includes('violates constraint') ||
+          errorMessage.toLowerCase().includes('character')
+        ) {
+          errorMessage =
+            'Username contains invalid characters. Please use only lowercase letters, numbers, and underscores.';
         } else if (errorMessage.includes('profile_pkey')) {
           errorMessage =
             "We couldn't create your profile. Double-check your username (3–20 letters, numbers, underscores) and try again.";
         }
-        
+
         toast.error(errorMessage);
         return;
       }
@@ -486,10 +498,10 @@ export default function OnboardingForm({
       const cardId = cardRow.id;
 
       // Award CREATED_CARD feedback milestone (one-time, fire-and-forget).
-      void awardMilestone(user.id, "CREATED_CARD");
+      void awardMilestone(user.id, 'CREATED_CARD');
       // Award UPLOADED_AVATAR milestone if the user uploaded a photo.
       if (avatarFile) {
-        void awardMilestone(user.id, "UPLOADED_AVATAR");
+        void awardMilestone(user.id, 'UPLOADED_AVATAR');
       }
 
       // 3b. Point active_card_id at the new card so /post-login can
@@ -645,7 +657,10 @@ export default function OnboardingForm({
     'w-full rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-500 cursor-not-allowed dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400';
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 dark:bg-black">
+    <main
+      className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 dark:bg-black"
+      data-tour="owner-card"
+    >
       <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
           Create your ID Card
@@ -720,7 +735,10 @@ export default function OnboardingForm({
               onChange={handleChange}
               required
               className={
-                usernameStatus === 'taken' || usernameStatus === 'invalid' || usernameStatus === 'reserved' || usernameStatus === 'trailing-underscore'
+                usernameStatus === 'taken' ||
+                usernameStatus === 'invalid' ||
+                usernameStatus === 'reserved' ||
+                usernameStatus === 'trailing-underscore'
                   ? inputClassName +
                     ' border-red-500 focus:border-(--main-orange) focus:ring-red-500'
                   : usernameStatus === 'available'
@@ -730,7 +748,8 @@ export default function OnboardingForm({
               }
             />
             {/* Username availability feedback */}
-            {(usernameStatus === 'invalid' || usernameStatus === 'trailing-underscore') && (
+            {(usernameStatus === 'invalid' ||
+              usernameStatus === 'trailing-underscore') && (
               <p className="mt-1 text-xs text-red-500">
                 {usernameStatus === 'trailing-underscore'
                   ? "Usernames can't end with an underscore — remove the last _"
@@ -1011,7 +1030,7 @@ export default function OnboardingForm({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                <path d="M12 5v14M5 12h14" />
+                  <path d="M12 5v14M5 12h14" />
                 </svg>
                 Add Link
               </button>
@@ -1021,8 +1040,8 @@ export default function OnboardingForm({
             {socialLinks.length >= maxLinks && (
               <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-(--main-orange)/30 bg-(--main-orange)/5 px-3 py-2 text-xs">
                 <span className="text-zinc-600 dark:text-zinc-400">
-                  Free limit reached ({maxLinks} links). Upgrade to Pro for up to{' '}
-                  {PLAN_LIMITS.pro.maxSocialLinks} links.
+                  Free limit reached ({maxLinks} links). Upgrade to Pro for up
+                  to {PLAN_LIMITS.pro.maxSocialLinks} links.
                 </span>
                 <Link
                   href="/payment"
@@ -1216,7 +1235,9 @@ export default function OnboardingForm({
             }
             className="mt-4 flex w-full items-center justify-center gap-2 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            {loading && <Spinner size="sm" className="text-white dark:text-zinc-900" />}
+            {loading && (
+              <Spinner size="sm" className="text-white dark:text-zinc-900" />
+            )}
             {loading
               ? 'Creating profile...'
               : usernameStatus === 'idle'
@@ -1225,7 +1246,8 @@ export default function OnboardingForm({
                   ? 'Checking username...'
                   : usernameStatus === 'taken'
                     ? 'Username taken — pick another'
-                    : usernameStatus === 'invalid' || usernameStatus === 'trailing-underscore'
+                    : usernameStatus === 'invalid' ||
+                        usernameStatus === 'trailing-underscore'
                       ? 'Fix username to continue'
                       : usernameStatus === 'reserved'
                         ? 'That name is reserved'

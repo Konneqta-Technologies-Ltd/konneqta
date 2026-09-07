@@ -28,6 +28,7 @@
 
 import { KONNEQT_SOURCES, VALID_SOURCES } from "@/lib/konneqts";
 import { getAdminClient, recordEvent } from "@/lib/analytics/server";
+import { createNotification } from "@/lib/notifications/server";
 import { getSessionId } from "@/lib/analytics/session";
 import { getVisitorId } from "@/lib/analytics/visitor";
 import { captureEvent } from "@/lib/posthog";
@@ -168,6 +169,15 @@ export async function POST(req: Request) {
         session_id: guestSessionId,
       });
 
+      // Notify the card owner (in-app + push, preference-aware, non-fatal).
+      void createNotification({
+        userId: targetCard.owner_id,
+        type: "guest_konneqt",
+        title: `${guestName} shared their details with you`,
+        body: "Open your Konneqts to see their contact info.",
+        link: `/${targetUsername}/konneqts`,
+      });
+
       return NextResponse.json({ status: "guest_submitted" });
     }
 
@@ -234,6 +244,13 @@ export async function POST(req: Request) {
       .eq("is_primary", true)
       .maybeSingle();
 
+    // Display name for the target's notification (falls back to @username).
+    const { data: callerProfile } = await admin
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", callerId)
+      .maybeSingle();
+
     const [visitorId, sessionId] = await Promise.all([
       getVisitorId(),
       getSessionId(),
@@ -253,6 +270,18 @@ export async function POST(req: Request) {
       source,
       visitor_id: visitorId,
       session_id: sessionId,
+    });
+
+    // Notify the target user (in-app + push, preference-aware, non-fatal).
+    const callerName =
+      callerProfile?.full_name?.trim() ||
+      (callerProfile?.username ? `@${callerProfile.username}` : "Someone new");
+    void createNotification({
+      userId: targetId,
+      type: "konneqt",
+      title: `${callerName} Konneqted with you`,
+      body: "You're now connected — find them in your Konneqts.",
+      link: `/${targetProfile.username}/konneqts`,
     });
 
     // Product analytics (PostHog) — one funnel event from the ACTOR's

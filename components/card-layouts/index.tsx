@@ -148,6 +148,7 @@ function FlipButton({
       style={{ background: accent }}
       className={`${sharedClass} cursor-pointer`}
       aria-label="Flip card"
+      data-tour="flip-card"
     >
       {inner}
     </button>

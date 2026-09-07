@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import PaymentOptionsModal from "./PaymentOptionsModal";
-import { useState } from "react";
+import PaymentOptionsModal from './PaymentOptionsModal';
+import { useState } from 'react';
 
 /**
  * Upgrade Button — inline "Upgrade" pill.
@@ -26,9 +26,10 @@ export default function UpgradeButton({ show }: { show: boolean }) {
       <button
         type="button"
         onClick={() => setModalOpen(true)}
+        data-tour="upgrade"
         className="flex items-center gap-1.5 rounded-full px-4 py-1.5 cursor-pointer text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
         style={{
-          background: "linear-gradient(135deg, #FF6B2C, #8B5CF6)",
+          background: 'linear-gradient(135deg, #FF6B2C, #8B5CF6)',
         }}
       >
         <svg

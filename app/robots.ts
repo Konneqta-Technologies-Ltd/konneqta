@@ -22,6 +22,8 @@ export default function robots(): MetadataRoute.Robots {
           "/onboarding/",
           // Post-login redirect helper.
           "/post-login/",
+          // PWA launch shell (manifest start_url) — no standalone content.
+          "/launch/",
           // Referral page (authenticated, per-user).
           "/referral/",
           // Payment callback / Flutterwave redirect handling.

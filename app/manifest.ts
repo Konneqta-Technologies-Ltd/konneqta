@@ -20,11 +20,14 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Konneqta",
     short_name: "Konneqta",
     description: "Connect Smarter, Beyond The Internet",
-    // Launch into the post-login router, which sends each user straight to
-    // their active card. The root ("/") now always renders the landing page
-    // (even for signed-in users), so it can no longer double as the PWA
-    // launch target.
-    start_url: "/post-login",
+    // Launch into the static, service-worker-precached /launch page, which
+    // opens instantly with zero network and routes itself:
+    //   online  → /post-login → the user's active card (server-side).
+    //   offline → the owner's saved card straight from the localStorage
+    //             snapshot (components/LaunchExperience.tsx).
+    // The old start_url ("/post-login") is server-side-only and dead-ends
+    // offline, so it can no longer be the launch target.
+    start_url: "/launch",
     scope: "/",
     // standalone = opens in its own window, no browser chrome.
     display: "standalone",

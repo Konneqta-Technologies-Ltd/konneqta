@@ -25,6 +25,14 @@ export default function SwRegister() {
       return;
     }
 
+    // Ask the browser for PERSISTENT storage so the offline card snapshot
+    // (localStorage) and the SW caches are never evicted under storage
+    // pressure. Idempotent; installed PWAs are typically granted. Failure is
+    // non-fatal — best-effort durability only.
+    if (navigator.storage?.persist) {
+      void navigator.storage.persist().catch(() => {});
+    }
+
     // Register after load so it never competes with first paint.
     const register = () => {
       navigator.serviceWorker

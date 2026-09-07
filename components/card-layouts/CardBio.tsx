@@ -16,7 +16,7 @@ import { useState } from "react";
  *   third line.
  */
 export const BIO_MAX_CHARS = 1500;
-export const BIO_PREVIEW_CHARS = 64;
+export const BIO_PREVIEW_CHARS = 45;
 
 /**
  * CardBio — theme-aware bio block for the card front layouts.
@@ -68,7 +68,7 @@ export default function CardBio({
   if (bio.length <= BIO_PREVIEW_CHARS) {
     return (
       <p
-        className={`${className} line-clamp-2`}
+        className={`${className} line-clamp-3 `}
         style={color ? { color } : undefined}
       >
         {bio}
@@ -81,7 +81,7 @@ export default function CardBio({
     const preview = `${bio.slice(0, BIO_PREVIEW_CHARS).trimEnd()}.`;
     return (
       <p
-        className={`${className} line-clamp-2`}
+        className={`${className} line-clamp-3`}
         style={color ? { color } : undefined}
       >
         {preview}

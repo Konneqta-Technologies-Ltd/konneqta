@@ -58,10 +58,21 @@ export default function OfflineExperience() {
     };
   }, []);
 
-  // Blank black placeholder until we know which experience to show — avoids
-  // flashing the generic screen before the card swaps in.
+  // Blank-wordmark placeholder until we know which experience to show —
+  // never a bare black void (matches the /launch splash).
   if (mode === "checking") {
-    return <main className="flex min-h-screen flex-col bg-black" />;
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-black">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/icons/icon-512.png"
+          alt="Konneqta"
+          width={96}
+          height={96}
+          className="animate-pulse opacity-90"
+        />
+      </main>
+    );
   }
 
   if (mode === "card" && snapshot) {

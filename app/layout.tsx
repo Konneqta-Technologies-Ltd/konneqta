@@ -10,10 +10,12 @@ import {
 } from 'next/font/google';
 import type { Metadata, Viewport } from 'next';
 
-import ConsentedVercelAnalytics from '@/components/ConsentedVercelAnalytics';
 import AppNavbar from '@/components/AppNavbar';
 import ConsentedGoogleAnalytics from '@/components/ConsentedGoogleAnalytics';
+import ConsentedVercelAnalytics from '@/components/ConsentedVercelAnalytics';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
+import OfflineToast from '@/components/OfflineToast';
+import OnboardingWidget from '@/components/onboarding/OnboardingWidget';
 import PostHogProvider from '@/components/PostHogProvider';
 import Script from 'next/script';
 import SwRegister from '@/components/SwRegister';
@@ -62,7 +64,7 @@ export const metadata: Metadata = {
   // to absolute URLs, which crawlers require.
   metadataBase: new URL('https://www.konneqta.com'),
   title: 'Konneqta',
-  description: 'Connect Smarter, Beyond The Internet',
+  description: 'Introduce yourself in one tap, Create your digital business card ',
   // NOTE: no root-level canonical here. A layout-level canonical is inherited
   // by every page that doesn't override it — which previously made unrelated
   // pages (e.g. /waitlist, /konneqts) declare the homepage as their canonical.
@@ -82,7 +84,7 @@ export const metadata: Metadata = {
   // Profile pages override these via generateMetadata in app/[username]/page.tsx.
   openGraph: {
     title: 'Konneqta',
-    description: 'Connect Smarter, Beyond The Internet',
+    description: 'Introduce yourself in one tap, Create your digital business card ',
     siteName: 'Konneqta',
     type: 'website',
     images: [
@@ -97,7 +99,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Konneqta',
-    description: 'Connect Smarter, Beyond The Internet',
+    description: 'Introduce yourself in one tap, Create your digital business card ',
     images: ['/banner.png'],
   },
   icons: {
@@ -168,10 +170,17 @@ export default function RootLayout({
       </head>
       {/* bg-black prevents a white flash on PWA launch / splash before CSS
           hydrates; matches the manifest background_color (#000000). */}
-      <body className="min-h-full flex flex-col bg-black" suppressHydrationWarning>
+      <body
+        className="min-h-full flex flex-col bg-black"
+        suppressHydrationWarning
+      >
         <PostHogProvider>
           {children}
           <Toaster position="top-right" richColors />
+          {/* Global offline indicator — slim top toast on every page (never a
+              full-page offline screen). See components/OfflineToast.tsx. */}
+          <OfflineToast />
+          <OnboardingWidget />
           <ConsentedVercelAnalytics />
           {/* Registers /sw.js in production only (Serwist offline shell). */}
           <SwRegister />

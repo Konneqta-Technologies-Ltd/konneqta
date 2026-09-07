@@ -111,3 +111,156 @@ body {
 .dark .scrollable-links::-webkit-scrollbar-thumb:hover {
   background-color: #71717a;
 }
+
+/* ---- Product tour (driver.js) — styled like the Konneqta tour card --------
+   driver.js provides the spotlight/positioning; these classes restyle its
+   popover to match the previous hand-rolled card: white rounded-2xl surface
+   (dark: neutral-900), orange Next button, dot indicators.
+   The shell selector is doubled (.x.x) so it beats driver.css's own
+   .driver-popover rules regardless of CSS bundle order. */
+.konneqta-tour-popover.konneqta-tour-popover {
+  max-width: min(28rem, calc(100vw - 2rem));
+  border-radius: 1rem;
+  background-color: #fff;
+  color: #171717;
+  padding: 0.75rem;
+  border: 1px solid rgba(23, 23, 23, 0.06);
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1);
+  font-family: var(--font-outfit);
+}
+@media (min-width: 640px) {
+  .konneqta-tour-popover.konneqta-tour-popover {
+    padding: 1.5rem;
+  }
+}
+.dark .konneqta-tour-popover.konneqta-tour-popover {
+  background-color: #171717; /* neutral-900 */
+  color: #f5f5f5;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+/* The previous tour design had no popover arrow. */
+.konneqta-tour-popover .driver-popover-arrow {
+  display: none;
+}
+
+.konneqta-tour-title {
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 600;
+  color: #171717;
+  margin: 0;
+}
+.dark .konneqta-tour-title {
+  color: #fff;
+}
+@media (min-width: 640px) {
+  .konneqta-tour-title {
+    font-size: 1.25rem; /* sm:text-xl */
+  }
+}
+
+.konneqta-tour-desc {
+  margin-top: 0.5rem;
+  font-size: 0.75rem; /* 12px mobile floor (was 10px) */
+  line-height: 1.5;
+  color: #52525b; /* neutral-600 */
+}
+.dark .konneqta-tour-desc {
+  color: #d4d4d4; /* neutral-300 */
+}
+@media (min-width: 640px) {
+  .konneqta-tour-desc {
+    font-size: 0.875rem; /* sm:text-sm */
+  }
+}
+
+.konneqta-tour-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.konneqta-tour-dots {
+  display: flex;
+  gap: 0.375rem;
+}
+.konneqta-tour-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: #d4d4d4;
+}
+.dark .konneqta-tour-dot {
+  background: #3f3f46;
+}
+.konneqta-tour-dot.is-active {
+  background: var(--main-orange);
+}
+.konneqta-tour-counter {
+  font-size: 0.6875rem;
+  color: #a3a3a3;
+}
+.dark .konneqta-tour-counter {
+  color: #737373;
+}
+
+.konneqta-tour-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+.konneqta-tour-footer-right {
+  display: flex;
+  gap: 0.5rem;
+}
+.konneqta-tour-btn-skip,
+.konneqta-tour-btn-prev,
+.konneqta-tour-btn-next {
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+}
+@media (min-width: 640px) {
+  .konneqta-tour-btn-skip,
+  .konneqta-tour-btn-prev,
+  .konneqta-tour-btn-next {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+}
+.konneqta-tour-btn-skip {
+  border: none;
+  background: none;
+  color: #737373;
+}
+.konneqta-tour-btn-skip:hover {
+  text-decoration: underline;
+}
+.konneqta-tour-btn-prev {
+  border: 1px solid #d4d4d4;
+  background: transparent;
+  color: #404040;
+}
+.dark .konneqta-tour-btn-prev {
+  border-color: #3f3f46;
+  color: #e5e5e5;
+}
+.konneqta-tour-btn-next {
+  border: none;
+  background: var(--main-orange);
+  color: #fff;
+}
+.konneqta-tour-btn-next:hover {
+  opacity: 0.9;
+}
+
+/* Orange spotlight ring on the highlighted element — same look as the
+   previous tour's box-shadow (follows the element's own border-radius). */
+.konneqta-tour-ring {
+  box-shadow: 0 0 0 4px var(--main-orange) !important;
+}
