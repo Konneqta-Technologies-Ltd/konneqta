@@ -129,3 +129,94 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// ─── Web Push (notification system) ─────────────────────────────────────────
+// These handlers coexist with Serwist's fetch/activate listeners above.
+// Payload shape is set by lib/push/server.ts: { title, body, url, tag,
+// notificationId }.
+
+self.addEventListener("push", (event: PushEvent) => {
+  let data: {
+    title?: string;
+    body?: string;
+    url?: string | null;
+    tag?: string;
+  };
+
+  try {
+    data = event.data?.json() ?? {};
+  } catch {
+    data = {};
+  }
+
+  // `showNotification` must survive the event — wrap in waitUntil.
+  event.waitUntil(
+    self.registration.showNotification(data.title ?? "Konneqta", {
+      body: data.body ?? "",
+      // Same tag per notification type → a burst of Konneqts replaces
+      // instead of stacking a wall of toasts.
+      tag: data.tag ?? "general",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url ?? "/notifications" },
+    }),
+  );
+});
+
+self.addEventListener(
+  "notificationclick",
+  (event: NotificationEvent) => {
+    event.notification.close();
+
+    const url = (event.notification.data as { url?: string } | undefined)
+      ?.url ?? "/notifications";
+
+    // Focus an already-open window and navigate it; only open a new one when
+    // the app isn't running (cold start from the notification).
+    event.waitUntil(
+      (async () => {
+        const clientList = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true,
+        });
+        for (const client of clientList) {
+          if ("focus" in client) {
+            await client.focus();
+            if ("navigate" in client && url !== "/") {
+              await client.navigate(url);
+            }
+            return;
+          }
+        }
+        await self.clients.openWindow(url);
+      })(),
+    );
+  },
+);
+
+// The push service rotated keys or the subscription expired — resubscribe
+// silently so notifications keep flowing without the user re-enabling them.
+// Per the Push API spec, calling subscribe() from this event WITHOUT options
+// reuses the previous subscription's applicationServerKey (env vars aren't
+// reachable inside the service worker).
+self.addEventListener("pushsubscriptionchange", (event: ExtendableEvent) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const registration =
+          await self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+          });
+        await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(registration.toJSON()),
+          credentials: "include",
+        });
+      } catch {
+        // Permission revoked or offline — the user can re-enable from
+        // Settings.
+      }
+    })(),
+  );
+});

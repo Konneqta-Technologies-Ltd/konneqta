@@ -163,8 +163,7 @@ export default function Hero({
             className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg"
           >
             Konneqta is a digital identity card platform that lets creators and
-            professionals build a shareable digital profile with QR codes and
-            WhatsApp-ready links — all in one place
+            professionals build a shareable digital business profile with QR codes links — all in one place
           </motion.p>
 
           <motion.div variants={item} className="mt-10">

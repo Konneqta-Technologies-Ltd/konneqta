@@ -18,8 +18,9 @@ import { renderCardFront } from './card-layouts';
 import { safeHref } from '@/lib/url-validation';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTrack } from '@/lib/use-track';
+import { FLIP_CARD_EVENT, OPEN_VISITOR_TOUR_EVENT } from '@/lib/onboarding';
 
 type SocialLink = {
   platform: string;
@@ -110,6 +111,18 @@ export default function ProfileCard({
   const [flipped, setFlipped] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
+
+  // Product tour: let the tour flip/unflip the card programmatically (e.g.
+  // before spotlighting the QR code on the back for visitors and owners).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setFlipped(
+        Boolean((e as CustomEvent<{ flipped: boolean }>).detail?.flipped),
+      );
+    };
+    window.addEventListener(FLIP_CARD_EVENT, handler);
+    return () => window.removeEventListener(FLIP_CARD_EVENT, handler);
+  }, []);
   const [showShowcase, setShowShowcase] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const track = useTrack();
@@ -273,6 +286,7 @@ export default function ProfileCard({
             // The card back is intentionally theme-mode independent. It
             // keeps the same dark surface and white icons in both light and
             // dark app modes; only the surrounding app chrome changes.
+            data-tour="card-back"
             className="flex flex-col rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-sm"
             style={{
               position: 'absolute',
@@ -401,7 +415,11 @@ export default function ProfileCard({
 
           {/* New Card (owner only) — quick access to create another identity */}
           {isOwner && (
-            <IconButton href={`/${profile.username}/edit`} label="Add new card">
+            <IconButton
+              href={`/${profile.username}/edit`}
+              label="Add new card"
+              tourTarget="add-card"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width={16}
@@ -489,6 +507,7 @@ export default function ProfileCard({
             <IconButton
               href={`/${profile.username}/vcard`}
               label="Save Contact"
+              tourTarget="save-contact"
               onClick={() =>
                 track('contact_saved', { username: profile.username })
               }
@@ -515,11 +534,13 @@ export default function ProfileCard({
           {/* Connect — visitors only. Creates a Konneqt (logged-in) or opens
               the guest form (anonymous). Sits between Save Contact and Share. */}
           {!isOwner && (
-            <ConnectButton
-              targetUsername={profile.username}
-              targetDisplayName={displayName}
-              source={KONNEQT_SOURCES.PROFILE_PAGE}
-            />
+            <span data-tour="connect">
+              <ConnectButton
+                targetUsername={profile.username}
+                targetDisplayName={displayName}
+                source={KONNEQT_SOURCES.PROFILE_PAGE}
+              />
+            </span>
           )}
 
           <Tooltip label="Share" side="top">
@@ -532,6 +553,21 @@ export default function ProfileCard({
               />
             </span>
           </Tooltip>
+
+          {/* Card help — visitors only. Replays the visitor product tour
+              (styled like the other circular icon buttons in this row). */}
+          {!isOwner && (
+            <IconButton
+              label="How to use this card"
+              onClick={() =>
+                window.dispatchEvent(new Event(OPEN_VISITOR_TOUR_EVENT))
+              }
+            >
+              <span aria-hidden="true" className="text-sm font-bold">
+                ?
+              </span>
+            </IconButton>
+          )}
         </div>
 
         <Tooltip label={copied ? 'Copied!' : 'Copy link'} side="top">
@@ -583,6 +619,7 @@ export default function ProfileCard({
             <button
               type="button"
               onClick={() => setShowShowcase(true)}
+              data-tour="showcase-trigger"
               className="flex cursor-pointer items-center gap-2 rounded-full bg-(--main-orange) px-4 py-2 text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
             >
               <svg

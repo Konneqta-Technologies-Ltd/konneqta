@@ -88,7 +88,10 @@ export default async function AnalyticsPage({
     // Free users get an upgrade screen, not a hard 404 — they should know the
     // feature exists once they upgrade.
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black">
+      <main
+        data-tour="analytics"
+        className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black"
+      >
         <div className="max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-(--main-orange)/10">
             <svg

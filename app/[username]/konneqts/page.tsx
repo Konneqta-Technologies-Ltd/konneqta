@@ -200,7 +200,10 @@ export default async function KonneqtsPage({
   const hiddenCount = Math.max(0, totalCount - visibleItems.length);
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 pt-20 pb-8 dark:bg-black">
+    <main
+      data-tour="konneqts"
+      className="min-h-screen bg-zinc-50 px-4 pt-20 pb-8 dark:bg-black"
+    >
       <div className="mx-auto max-w-5xl">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">

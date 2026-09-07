@@ -20,17 +20,21 @@ const freeFeatures = [
   
   'Offline sharing',
   'One card per person',
-  '25 shares monthly',
+  '30 free shares monthly',
   'QR code sharing',
+  '3 free links per card',
+  '2 showcase items',
 ];
 
 const proFeatures = [
   'Everything in Free',
-  'Custom themes & banners',
+  'Customizable Cards',
   'Branded QR code',
   'Unlimited sharing',
   '1–3 cards per person or email',
   'Analytics dashboard',
+  '7 links per card',
+  '10 showcase items',
 ];
 
 const pricing = {
