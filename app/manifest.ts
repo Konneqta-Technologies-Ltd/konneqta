@@ -19,7 +19,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Konneqta",
     short_name: "Konneqta",
-    description: "Connect Smarter, Beyond The Internet",
+    description: "Introduce your business with one tap",
     // Launch into the static, service-worker-precached /launch page, which
     // opens instantly with zero network and routes itself:
     //   online  → /post-login → the user's active card (server-side).
@@ -36,7 +36,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     background_color: "#000000",
     theme_color: "#000000",
-    categories: ["social", "business", "productivity"],
+    categories: ["social", "business", "productivity", "networking"],
     icons: [
       {
         src: "/icons/icon-192.png",

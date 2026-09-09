@@ -146,14 +146,14 @@ export default function Hero({
             className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-            Built for Creators &amp; Professionals
+            Built for Creators, Entrepreneurs &amp; Professionals
           </motion.span>
 
           <motion.h1
             variants={item}
             className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl"
           >
-            Introduce yourself in
+            Introduce Your Business in
             <br />
             One Tap
           </motion.h1>
@@ -162,8 +162,8 @@ export default function Hero({
             variants={item}
             className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg"
           >
-            Konneqta is a digital identity card platform that lets creators and
-            professionals build a shareable digital business profile with QR codes links — all in one place
+            Konneqta is a digital business card platform that lets creators, business owners and
+            professionals build a shareable digital business profile using QR code and links — all in one place
           </motion.p>
 
           <motion.div variants={item} className="mt-10">

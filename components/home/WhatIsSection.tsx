@@ -23,7 +23,7 @@ const steps = [
   {
     number: 2,
     title: 'Build your card',
-    description: 'Add your name, role, links, and pick your look.',
+    description: 'Add your name, role, links, showcase items and pick your look.',
     bg: 'bg-[#34D3A6]',
     badge: 'bg-[#0A2A20] text-[#34D3A6]',
     text: 'text-[#0A2A20]',
@@ -73,7 +73,7 @@ export default function WhatIsSection() {
         >
           Konneqta isn&apos;t a link-in-bio.
           <br />
-          It&apos;s who you are,{' '}
+          It&apos;s who you are and what you do,
           <span className="text-[#FF6B2C]">made shareable.</span>
         </motion.h2>
 
