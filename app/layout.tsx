@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   // to absolute URLs, which crawlers require.
   metadataBase: new URL('https://www.konneqta.com'),
   title: 'Konneqta',
-  description: 'Introduce yourself in one tap, Create your digital business card ',
+  description: 'Introduce your business in one tap, Create your digital business card ',
   // NOTE: no root-level canonical here. A layout-level canonical is inherited
   // by every page that doesn't override it — which previously made unrelated
   // pages (e.g. /waitlist, /konneqts) declare the homepage as their canonical.
@@ -84,7 +84,7 @@ export const metadata: Metadata = {
   // Profile pages override these via generateMetadata in app/[username]/page.tsx.
   openGraph: {
     title: 'Konneqta',
-    description: 'Introduce yourself in one tap, Create your digital business card ',
+    description: 'Introduce your business in one tap, Create your digital business card ',
     siteName: 'Konneqta',
     type: 'website',
     images: [
@@ -99,7 +99,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Konneqta',
-    description: 'Introduce yourself in one tap, Create your digital business card ',
+    description: 'Introduce your business in one tap, Create your digital business card ',
     images: ['/banner.png'],
   },
   icons: {
