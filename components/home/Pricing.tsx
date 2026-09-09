@@ -20,7 +20,7 @@ const freeFeatures = [
   
   'Offline sharing',
   'One card per person',
-  '30 free shares monthly',
+  '25 free shares monthly',
   'QR code sharing',
   '3 free links per card',
   '2 showcase items',
