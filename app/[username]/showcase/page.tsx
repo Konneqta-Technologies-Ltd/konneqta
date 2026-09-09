@@ -1,10 +1,11 @@
-import GoBackButton from "@/components/GoBackButton";
-import ShowcaseManager from "@/components/showcase/ShowcaseManager";
-import { getMaxShowcaseItems } from "@/lib/entitlements";
-import type { ShowcaseItem } from "@/lib/showcase";
-import { createClient } from "@/lib/supabase/server";
-import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+
+import GoBackButton from "@/components/GoBackButton";
+import type { Metadata } from "next";
+import type { ShowcaseItem } from "@/lib/showcase";
+import ShowcaseManager from "@/components/showcase/ShowcaseManager";
+import { createClient } from "@/lib/supabase/server";
+import { getMaxShowcaseItems } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function ShowcasePage({
   return (
     <main
       data-tour="showcase"
-      className="mx-auto w-full max-w-4xl px-4 py-8 sm:py-10"
+      className="mx-auto w-full max-w-4xl px-4 py-8 sm:py-10 mt-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

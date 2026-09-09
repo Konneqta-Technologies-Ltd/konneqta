@@ -119,7 +119,7 @@ export default function ShowcaseManager({
             aria-label="Add an item to your showcase"
             className="group flex cursor-pointer flex-col items-center"
           >
-            <span className="flex h-24 w-24 items-center justify-center rounded-2xl bg-(--main-orange) text-white shadow-lg transition-transform group-hover:scale-105 group-active:scale-95">
+            <span className="flex h-18 w-18 items-center justify-center rounded-2xl bg-(--main-orange) text-white shadow-lg transition-transform group-hover:scale-105 group-active:scale-95">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="36"
