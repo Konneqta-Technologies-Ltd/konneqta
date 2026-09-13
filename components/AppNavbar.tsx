@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import FeedbackTrigger from "./feedback/FeedbackTrigger";
 import Link from "next/link";
 import SideNav from "./nav/SideNav";
+import ProfileSearch from "./nav/ProfileSearch";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import dynamic from "next/dynamic";
@@ -52,6 +53,11 @@ const SIGNUP_HIDDEN_ROUTES = [
 // Routes where the floating QR scan button is hidden (the landing page's
 // Hero CTA is the primary action there).
 const QR_HIDDEN_ROUTES = ["/"];
+
+// Routes where the profile search button is hidden — the landing page is a
+// standalone marketing surface for users AND visitors, same rule as the
+// hamburger + QR buttons.
+const SEARCH_HIDDEN_ROUTES = ["/"];
 
 /**
  * App Navbar — floating action buttons with an auth-aware drawer.
@@ -105,6 +111,7 @@ export default function AppNavbar() {
   const showHamburger = !!user && !HAMBURGER_HIDDEN_ROUTES.includes(pathname);
   const showSignUp = !user && !SIGNUP_HIDDEN_ROUTES.includes(pathname);
   const showQrButton = !QR_HIDDEN_ROUTES.includes(pathname);
+  const showSearch = !!user && !SEARCH_HIDDEN_ROUTES.includes(pathname);
 
   return (
     <>
@@ -183,6 +190,12 @@ export default function AppNavbar() {
               </svg>
             </button>
           )}
+
+          {/* Profile search — signed-in users only, placed to the RIGHT of
+              the QR scanner, and hidden on the landing page (visitors AND
+              users) like the other cluster buttons. The icon expands into a
+              live-results dropdown (components/nav/ProfileSearch.tsx). */}
+          {showSearch && <ProfileSearch />}
         </div>
       )}
 
