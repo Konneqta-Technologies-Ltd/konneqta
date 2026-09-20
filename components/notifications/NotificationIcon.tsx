@@ -6,6 +6,7 @@ import type { NotificationType } from '@/lib/notifications/types';
  * rounded caps/joins). NO emojis by design.
  *
  * konneqt        user-plus  (matches the sidenav "Konneqts" entry)
+ * konneqt_request user-check (an incoming request awaiting a decision)
  * guest_konneqt  mail
  * referral       gift       (matches the sidenav "Refer & Earn" entry)
  * pro_expiry     clock
@@ -20,6 +21,13 @@ const ICON_PATHS: Record<NotificationType, React.ReactNode> = {
       <circle cx="9" cy="7" r="4" />
       <line x1="19" x2="19" y1="8" y2="14" />
       <line x1="22" x2="16" y1="11" y2="11" />
+    </>
+  ),
+  konneqt_request: (
+    <>
+      <path d="M2 21a8 8 0 0 1 13.292-6" />
+      <circle cx="10" cy="8" r="5" />
+      <path d="m16 19 2 2 4-4" />
     </>
   ),
   guest_konneqt: (

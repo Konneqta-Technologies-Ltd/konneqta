@@ -3,9 +3,14 @@
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import type { AppNotification } from '@/lib/notifications/types';
+import {
+  getKonneqtRequestInfo,
+  type AppNotification,
+  type KonneqtRequestStatus,
+} from '@/lib/notifications/types';
 import { formatRelativeTime } from '@/hooks/useNotifications';
 import NotificationIcon, { BellIcon } from './NotificationIcon';
+import RequestActionButtons from './RequestActionButtons';
 
 const PAGE_SIZE = 30;
 
@@ -50,6 +55,21 @@ export default function NotificationList({
     }).catch(() => {});
   }, []);
 
+  /** A Konneqt request row was answered — settle it + mark it read. */
+  const resolveRequest = useCallback(
+    (n: AppNotification, status: KonneqtRequestStatus) => {
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === n.id
+            ? { ...it, data: { ...(it.data ?? {}), requestStatus: status } }
+            : it,
+        ),
+      );
+      if (!n.read_at) markRead(n.id);
+    },
+    [markRead],
+  );
+
   const loadMore = useCallback(async () => {
     setLoadingMore(true);
     try {
@@ -60,7 +80,7 @@ export default function NotificationList({
       if (!user) return;
       const { data } = await supabase
         .from('notifications')
-        .select('id, type, title, body, link, read_at, created_at')
+        .select('id, type, title, body, link, read_at, created_at, data')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .range(items.length, items.length + PAGE_SIZE);
@@ -134,6 +154,12 @@ export default function NotificationList({
                   <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
                     {n.body}
                   </span>
+                  {getKonneqtRequestInfo(n) && (
+                    <RequestActionButtons
+                      notification={n}
+                      onResolved={resolveRequest}
+                    />
+                  )}
                 </span>
                 {unread && (
                   <span

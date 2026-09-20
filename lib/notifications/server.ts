@@ -22,6 +22,11 @@ export interface CreateNotificationInput {
   body: string;
   /** App-relative deep link (e.g. /ada/konneqts). */
   link?: string | null;
+  /**
+   * Extra context persisted to the row's jsonb column (e.g. requestId +
+   * requestStatus for konneqt_request rows so the panel can render actions).
+   */
+  data?: Record<string, unknown> | null;
 }
 
 export async function createNotification(
@@ -47,6 +52,7 @@ export async function createNotification(
         title: input.title,
         body: input.body,
         link: input.link ?? null,
+        data: input.data ?? {},
       })
       .select('id')
       .single();

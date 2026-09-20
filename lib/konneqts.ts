@@ -32,3 +32,35 @@ export type KonneqtSource = (typeof KONNEQT_SOURCES)[keyof typeof KONNEQT_SOURCE
 
 /** The set of valid sources — used by the API for validation. */
 export const VALID_SOURCES = new Set<string>(Object.values(KONNEQT_SOURCES));
+
+/**
+ * Respond to a Konneqt request from the client (notification panel buttons).
+ *
+ * Returns the resolved status on success ("accepted" | "rejected"), or a
+ * stale state ("accepted"/"rejected" via 409 alreadyResolved) so the UI can
+ * settle the row instead of showing a hard error. Throws only on
+ * network-level failures — HTTP errors come back as Error with the server's
+ * message.
+ */
+export async function respondToKonneqtRequest(
+  requestId: string,
+  action: "accept" | "reject",
+): Promise<"accepted" | "rejected"> {
+  const res = await fetch("/api/konneqts/requests/respond", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requestId, action }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    // 409 = already answered elsewhere — settle with the server's status.
+    if (
+      res.status === 409 &&
+      (data?.status === "accepted" || data?.status === "rejected")
+    ) {
+      return data.status;
+    }
+    throw new Error(data?.error || "Something went wrong. Please try again.");
+  }
+  return action === "accept" ? "accepted" : "rejected";
+}

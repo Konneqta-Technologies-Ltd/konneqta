@@ -1,8 +1,10 @@
 'use client';
 
 import NotificationIcon, { BellIcon } from './NotificationIcon';
+import RequestActionButtons from './RequestActionButtons';
 import { useEffect, useRef, useState } from 'react';
 
+import { getKonneqtRequestInfo } from '@/lib/notifications/types';
 import type { AppNotification } from '@/lib/notifications/types';
 import Link from 'next/link';
 import { formatRelativeTime } from '@/hooks/useNotifications';
@@ -147,6 +149,15 @@ export default function NotificationBell({
                       <span className="mt-0.5 block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
                         {n.body}
                       </span>
+                      {getKonneqtRequestInfo(n) && (
+                        <RequestActionButtons
+                          compact
+                          notification={n}
+                          onResolved={(item) => {
+                            if (!item.read_at) onMarkRead(item.id);
+                          }}
+                        />
+                      )}
                     </span>
                     {unread && (
                       <span
