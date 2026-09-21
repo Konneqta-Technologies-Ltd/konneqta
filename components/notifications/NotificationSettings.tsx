@@ -53,6 +53,7 @@ export default function NotificationSettings() {
   const [iosHint, setIosHint] = useState(false);
   const [prefs, setPrefs] = useState<Record<NotificationType, boolean>>({
     konneqt: true,
+    konneqt_request: true,
     guest_konneqt: true,
     referral: true,
     pro_expiry: true,
@@ -106,6 +107,7 @@ export default function NotificationSettings() {
           if (data) {
             setPrefs({
               konneqt: data.konneqt,
+              konneqt_request: data.konneqt_request ?? true,
               guest_konneqt: data.guest_konneqt,
               referral: data.referral,
               pro_expiry: data.pro_expiry,
