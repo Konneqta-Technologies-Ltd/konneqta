@@ -53,7 +53,7 @@ export default async function NotificationsPage() {
   // First page + hasMore flag (fetch one extra row).
   const { data: rows } = await supabase
     .from("notifications")
-    .select("id, type, title, body, link, read_at, created_at")
+    .select("id, type, title, body, link, read_at, created_at, data")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(PAGE_SIZE + 1);

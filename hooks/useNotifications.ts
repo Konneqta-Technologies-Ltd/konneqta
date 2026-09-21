@@ -40,7 +40,7 @@ export function useNotifications(userId: string | null | undefined) {
       supabase
         .from('notifications')
         .select(
-          'id, type, title, body, link, read_at, created_at',
+          'id, type, title, body, link, read_at, created_at, data',
         )
         .eq('user_id', userId)
         .order('created_at', { ascending: false })

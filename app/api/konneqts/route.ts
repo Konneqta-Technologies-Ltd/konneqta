@@ -1,20 +1,30 @@
 /**
- * POST /api/konneqts — create a Konneqt (connection) or a guest submission.
+ * POST /api/konneqts — send a Konneqt (exchange-contact) REQUEST or a guest
+ * submission.
  *
  * This single RESTful resource handles two cases based on whether the caller
  * is authenticated:
  *
- * 1. LOGGED-IN → user-to-user connection.
+ * 1. LOGGED-IN → user-to-user connection REQUEST (consent flow).
  *    Body: { targetUsername: string, source: string }
  *    - Resolves the target user's primary card by slug.
- *    - Guards: self-connect, deactivated target, already-connected (dedupe).
- *    - Inserts ONE row into `konneqts` (user_a = caller, user_b = target).
- *      One row per relationship — NOT two. The unique least()/greatest()
- *      index guarantees no duplicates regardless of direction.
- *    - Records an analytics event for BOTH users (owner-scoped pattern).
- *    Returns: { status: "konneqted" }
+ *    - Guards: self-connect, deactivated target, already-connected (one
+ *      exchange per pair — settles as "konneqted").
+ *    - Pending request handling (one pending request per pair, either
+ *      direction — the partial unique index is the hard guarantee):
+ *        · Caller already has an outgoing pending request → 200
+ *          { status: "request_pending" } (no repeat requests).
+ *        · The TARGET had already requested the CALLER → mutual intent →
+ *          their pending request is ACCEPTED instantly and the pair is
+ *          connected ({ status: "konneqted", viaAutoAccept: true }).
+ *    - Otherwise inserts a pending `konneqt_requests` row and notifies the
+ *      recipient with an actionable konneqt_request notification (Accept /
+ *      Reject in the notification panel). The connection itself is only
+ *      created when they accept (see /api/konneqts/requests/respond and
+ *      lib/konneqts/server.ts for the accept side effects).
+ *    Returns: { status: "requested" }
  *
- * 2. ANONYMOUS → guest submission to the target's Konneqts list.
+ * 2. ANONYMOUS → guest submission to the target's Konneqts list (unchanged).
  *    Body: { targetUsername: string, source: "GUEST_FORM",
  *            guestName: string, phone?: string, note?: string }
  *    - Inserts into `guest_konneqts` (separate entity).
@@ -27,6 +37,7 @@
  */
 
 import { KONNEQT_SOURCES, VALID_SOURCES } from "@/lib/konneqts";
+import { acceptKonneqtRequest } from "@/lib/konneqts/server";
 import { getAdminClient, recordEvent } from "@/lib/analytics/server";
 import { createNotification } from "@/lib/notifications/server";
 import { getSessionId } from "@/lib/analytics/session";
@@ -195,8 +206,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Already connected? (The unique index is the hard guarantee, but we
-    // pre-check so we can return a clean 409 instead of a DB error.)
+    // Already connected? One exchange per pair — settled forever. (The
+    // unique index is the hard guarantee; this pre-check returns cleanly.)
     const { data: existing } = await admin
       .from("konneqts")
       .select("id")
@@ -212,87 +223,109 @@ export async function POST(req: Request) {
       );
     }
 
-    // Insert ONE relationship row.
-    const { error: insertError } = await admin.from("konneqts").insert({
-      user_a: callerId,
-      user_b: targetId,
-      source,
-    });
+    // Pending request between the pair (either direction)? The partial
+    // unique index enforces "one pending per pair" — we pre-check to give
+    // each direction its own clean response.
+    const { data: pendingReq } = await admin
+      .from("konneqt_requests")
+      .select("id, requester_id, recipient_id, source")
+      .eq("status", "pending")
+      .or(
+        `and(requester_id.eq.${callerId},recipient_id.eq.${targetId}),and(requester_id.eq.${targetId},recipient_id.eq.${callerId})`
+      )
+      .maybeSingle();
 
-    if (insertError) {
-      // 23505 = unique_violation (race condition hit the dedupe index).
-      if (insertError.code === "23505") {
+    if (pendingReq) {
+      if (pendingReq.requester_id === targetId) {
+        // The TARGET already requested the CALLER → mutual intent: accept
+        // their pending request instead of duplicating it in reverse.
+        const result = await acceptKonneqtRequest(pendingReq);
+        if (!result.ok) {
+          return NextResponse.json(
+            { error: result.error },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json({
+          status: "konneqted",
+          viaAutoAccept: true,
+        });
+      }
+      // The caller already has an outgoing pending request → no repeats.
+      return NextResponse.json(
+        { status: "request_pending", alreadyRequested: true },
+        { status: 200 }
+      );
+    }
+
+    // Insert the pending request (the recipient decides).
+    const { data: newRequest, error: requestError } = await admin
+      .from("konneqt_requests")
+      .insert({
+        requester_id: callerId,
+        recipient_id: targetId,
+        source,
+      })
+      .select("id")
+      .single();
+
+    if (requestError) {
+      // 23505 = unique_violation (race hit the one-pending-per-pair index).
+      if (requestError.code === "23505") {
         return NextResponse.json(
-          { status: "konneqted", alreadyConnected: true },
+          { status: "request_pending", alreadyRequested: true },
           { status: 200 }
         );
       }
-      console.error("[api/konneqts] insert failed:", insertError.message);
+      console.error("[api/konneqts] request insert failed:", requestError.message);
       return NextResponse.json(
-        { error: "Could not create the connection. Please try again." },
+        { error: "Could not send the request. Please try again." },
         { status: 500 }
       );
     }
 
-    // Analytics: one owner-scoped event for EACH participant, so both
-    // dashboards later surface "Konneqts" as a metric. Follows the existing
-    // recordEvent pattern (one row per owner's event).
-    const callerCard = await admin
-      .from("cards")
-      .select("id")
-      .eq("owner_id", callerId)
-      .eq("is_primary", true)
-      .maybeSingle();
-
-    // Display name for the target's notification (falls back to @username).
+    // Display name for the recipient's notification (falls back to @username).
     const { data: callerProfile } = await admin
       .from("profiles")
       .select("full_name, username")
       .eq("id", callerId)
       .maybeSingle();
 
-    const [visitorId, sessionId] = await Promise.all([
-      getVisitorId(),
-      getSessionId(),
-    ]);
-    void recordEvent({
-      owner_id: callerId,
-      card_id: callerCard.data?.id ?? null,
-      event_type: "konneqt",
-      source,
-      visitor_id: visitorId,
-      session_id: sessionId,
-    });
-    void recordEvent({
-      owner_id: targetId,
-      card_id: targetCard.id,
-      event_type: "konneqt",
-      source,
-      visitor_id: visitorId,
-      session_id: sessionId,
-    });
-
-    // Notify the target user (in-app + push, preference-aware, non-fatal).
     const callerName =
       callerProfile?.full_name?.trim() ||
       (callerProfile?.username ? `@${callerProfile.username}` : "Someone new");
+
+    // Notify the recipient: an actionable konneqt_request notification that
+    // renders Accept / Reject buttons in the notification panel. Tapping the
+    // row itself deep-links to the requester's profile so they can decide.
+    // (In-app + push, preference-aware, non-fatal.)
     void createNotification({
       userId: targetId,
-      type: "konneqt",
-      title: `${callerName} Konneqted with you`,
-      body: "You're now connected — find them in your Konneqts.",
-      link: `/${targetProfile.username}/konneqts`,
+      type: "konneqt_request",
+      title: `${callerName} wants to Konneqt with you`,
+      body: "Accept to exchange contacts — you'll both appear in each other's Konneqts.",
+      link: callerProfile?.username ? `/${callerProfile.username}` : null,
+      data: {
+        requestId: newRequest.id,
+        requestStatus: "pending",
+        requesterUsername: callerProfile?.username ?? null,
+      },
     });
 
-    // Product analytics (PostHog) — one funnel event from the ACTOR's
+    // Product analytics (PostHog) — request sent from the ACTOR's
     // perspective. distinctId = Supabase user id, matching the client-side
-    // identify() call so both merge into one person.
-    void captureEvent(callerId, "konneqt_created", {
+    // identify() call so both merge into one person. The konneqt_created /
+    // `konneqt` analytics events fire at ACCEPT time (lib/konneqts/server.ts),
+    // when the connection actually forms.
+    void captureEvent(callerId, "konneqt_request_sent", {
       target: targetProfile.username,
       source,
     }).catch(() => {});
 
-    return NextResponse.json({ status: "konneqted" });
+    return NextResponse.json({
+      status: "requested",
+      requestId: newRequest.id,
+    });
   } catch (err) {
     console.error("[api/konneqts] error:", err);
     return NextResponse.json(

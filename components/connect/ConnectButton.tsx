@@ -10,23 +10,28 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-type Phase = "idle" | "connecting" | "done";
+type Phase = "idle" | "connecting" | "requested" | "done";
 
 /**
  * ConnectButton — rendered on every profile the visitor doesn't own.
  *
  * Behaviour branches on auth state:
- *   - LOGGED-IN:  Click → confirm dialog → animated
- *                 "Connect" → "Connecting…" → "✓ Konneqted" → toast with a
- *                 [View Konneqts] action linking to /konneqts.
+ *   - LOGGED-IN:  Click → confirm dialog → animated "Connect" →
+ *                 "Sending…" → sends a Konneqt REQUEST (consent flow).
+ *                 The other person Accepts/Rejects from their notification
+ *                 panel; only an accept creates the connection.
+ *                 States: "Requested" (amber clock — awaiting response),
+ *                 "✓ Konneqted" (accepted / already connected).
  *   - ANONYMOUS:  Click → opens ConnectGuestDialog (name/phone/note form).
  *
  * The button is a circular icon button matching the existing Save Contact /
- * Share row styling, with a tooltip. Once connected, it shows a static ✓.
+ * Share row styling, with a tooltip.
  *
- * NOTE: We do NOT pre-check "already connected" on the client (it would
- * require a per-view DB hit). The API returns `{ alreadyConnected: true }`
- * gracefully, and the button just settles into the "done" state.
+ * On mount (logged-in) it GETs /api/konneqts/status so returning visitors
+ * see the right state: ✓ Konneqted (permanent — one exchange per pair),
+ * Requested (pending), or Connect. If the OTHER person already requested
+ * the viewer, the button shows Connect and clicking it auto-accepts their
+ * request server-side (mutual intent).
  */
 export default function ConnectButton({
   targetUsername,
@@ -53,7 +58,7 @@ export default function ConnectButton({
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!active) return;
       setIsAuthed(!!user);
-      
+
       if (user) {
         // Fetch the user's profile to get their username
         const { data: profile } = await supabase
@@ -64,15 +69,35 @@ export default function ConnectButton({
         if (active) {
           setCurrentUser({ username: profile?.username || null });
         }
+
+        // Pre-check the connection state so the button renders the right
+        // state for returning visitors (✓ Konneqted / Requested / Connect).
+        // Cosmetic only — failures leave the idle state, which the API
+        // corrects on click.
+        try {
+          const res = await fetch(
+            `/api/konneqts/status?targetUsername=${encodeURIComponent(targetUsername)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (active) {
+              if (data.connected) setPhase("done");
+              else if (data.requested) setPhase("requested");
+            }
+          }
+        } catch {
+          // ignore — see above.
+        }
       }
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [targetUsername]);
 
   const handleClick = () => {
-    if (phase === "done" || phase === "connecting") return;
+    if (phase === "done" || phase === "requested" || phase === "connecting")
+      return;
     if (isAuthed) {
       setShowConfirm(true);
     } else {
@@ -95,20 +120,34 @@ export default function ConnectButton({
         setPhase("idle");
         return;
       }
-      setPhase("done");
-      // Use a unique toast id so the action button stays clickable.
-      // Redirect to current user's own konneqts page, not the target's
-      toast.success("You're now Konneqted.", {
-        id: "konneqt-success",
-        duration: 6000,
-        action: {
-          label: "View Konneqts",
-          onClick: () => 
-            currentUser?.username 
-              ? router.push(`/${currentUser.username}/konneqts`) 
-              : router.push("/login"),
-        },
-      });
+      if (data.status === "konneqted") {
+        // Accepted instantly (mutual intent) or already connected — the
+        // exchange is complete and can never be repeated.
+        setPhase("done");
+        // Use a unique toast id so the action button stays clickable.
+        // Redirect to current user's own konneqts page, not the target's
+        toast.success("You're now Konneqted.", {
+          id: "konneqt-success",
+          duration: 6000,
+          action: {
+            label: "View Konneqts",
+            onClick: () =>
+              currentUser?.username
+                ? router.push(`/${currentUser.username}/konneqts`)
+                : router.push("/login"),
+          },
+        });
+        return;
+      }
+      // "requested" | "request_pending" — a request now awaits their
+      // decision in the notification panel.
+      setPhase("requested");
+      toast.success(
+        data.status === "request_pending"
+          ? "You already have a pending request with this person."
+          : "Request sent — we'll let you know when they accept.",
+        { id: "konneqt-request", duration: 6000 }
+      );
     } catch {
       toast.error("Network error. Please try again.");
       setPhase("idle");
@@ -159,6 +198,25 @@ export default function ConnectButton({
         </svg>
       );
     }
+    if (phase === "requested") {
+      // Awaiting their decision — a clock.
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={16}
+          height={16}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      );
+    }
     // idle — a "link/connect" icon (people / handshake style)
     return (
       <svg
@@ -183,9 +241,11 @@ export default function ConnectButton({
   const label =
     phase === "done"
       ? "Konneqted"
-      : phase === "connecting"
-        ? "Connecting…"
-        : "Connect";
+      : phase === "requested"
+        ? "Requested"
+        : phase === "connecting"
+          ? "Connecting…"
+          : "Connect";
 
   return (
     <>
@@ -198,7 +258,9 @@ export default function ConnectButton({
           className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
             phase === "done"
               ? "border-green-500 text-green-600 dark:border-green-600 dark:text-green-400"
-              : "border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              : phase === "requested"
+                ? "border-amber-400 text-amber-600 dark:border-amber-600 dark:text-amber-400"
+                : "border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           }`}
         >
           {renderInner()}
@@ -232,10 +294,12 @@ export default function ConnectButton({
             </svg>
           </div>
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-            Connect with {targetDisplayName}?
+            Send a Konneqt request to {targetDisplayName}?
           </h3>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {"You'll be able to find their profile from your Konneqts page."}
+            {
+              "They can accept or reject it from their notifications. Once accepted, you'll each appear in the other's Konneqts."
+            }
           </p>
           <div className="mt-5 flex items-center gap-2">
             <button
@@ -250,7 +314,7 @@ export default function ConnectButton({
               onClick={doConnect}
               className="flex-1 cursor-pointer rounded-lg bg-(--main-orange) px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
-              Connect
+              Send request
             </button>
           </div>
         </div>
