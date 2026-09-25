@@ -10,7 +10,7 @@ import { getMaxShowcaseItems } from "@/lib/entitlements";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Showcase · Konneqta",
+  title: "Showcase",
 };
 
 /**

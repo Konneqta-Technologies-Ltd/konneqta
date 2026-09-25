@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Refer & Earn · Konneqta",
+  title: "Refer & Earn",
   description: "Share your referral code and earn free Premium days.",
   robots: { index: false, follow: false },
 };

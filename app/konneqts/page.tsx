@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 // This is a private, auth-gated router (never renders content) — keep it out
 // of search indexes entirely rather than self-canonicalizing.
 export const metadata: Metadata = {
-  title: "Konneqts · Konneqta",
+  title: "Konneqts",
   robots: { index: false, follow: false },
 };
 

@@ -4,8 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Sitemap — enumerates every indexable URL on konneqta.com.
  *
- * Static routes (landing, waitlist) are hardcoded. Public profile pages
- * (`/{username}`) are built dynamically from the `cards` table.
+ * Static routes (landing, contact, legal) are hardcoded. Public profile
+ * pages (`/{username}`) are built dynamically from the `cards` table.
+ *
+ * NOTE: /tour and /waitlist were removed and 308-redirect to "/" — they are
+ * intentionally NOT listed here (a sitemap URL must be indexable, not a
+ * redirect).
  *
  * Only primary, searchable cards are included:
  * - Non-primary (Pro-only) cards redirect to the owner's primary card for
@@ -42,10 +46,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: `${baseUrl}/waitlist`,
+      url: `${baseUrl}/contact`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.3,
+    },
+    // Legal pages — indexable (self-canonical) but low value; keep them listed
+    // so Google discovers them without relying on internal links alone.
+    {
+      url: `${baseUrl}/privacy`,
       lastModified: new Date(),
       changeFrequency: "yearly",
-      priority: 0.1,
+      priority: 0.2,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
+    {
+      url: `${baseUrl}/refund`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.2,
     },
   ];
 

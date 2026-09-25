@@ -2,11 +2,19 @@
  * schema.org Person JSON-LD builder for Konneqta profile pages.
  *
  * Generates structured data that tells search engines: "this page represents a
- * Person." This is the single strongest SEO signal for profile pages.
+ * Person." 
  *
  * Usage (in a Server Component):
  *   const schema = buildPersonSchema({ ... });
  *   <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+ */
+
+/**
+ * Builds schema.org Person structured data for a Konneqta profile.
+ *
+ * This helps search engines understand that the page represents a specific
+ * person and connect that person with their professional identity and
+ * external profiles.
  */
 
 /** Social platforms that represent "same person" identity (schema.org `sameAs`). */
@@ -73,8 +81,19 @@ export function buildPersonSchema({
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Person",
+    // Stable entity id: lets Google reconcile this Person entity across
+    // recrawls and connect it to the same person's social profiles (sameAs).
+    "@id": profileUrl,
     name,
     url: profileUrl,
+    // The "@handle" — matches handle-based searches without polluting name.
+    alternateName: `@${username}`,
+    // Declares that this page is *about* this Person — the strongest
+    // page ↔ entity association signal for a profile URL.
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": profileUrl,
+    },
   };
 
   if (jobTitle?.trim()) {

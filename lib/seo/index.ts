@@ -12,3 +12,4 @@ export {
 } from "./person-schema";
 export { buildOrganizationSchema, type OrganizationSchemaInput } from "./organization-schema";
 export { buildWebsiteSchema, type WebsiteSchemaInput } from "./website-schema";
+export { buildFaqSchema, type FaqSchemaItem } from "./faq-schema";

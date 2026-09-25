@@ -14,7 +14,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Search — Konneqta",
+  title: "Search",
   // Private, authenticated utility page — keep it out of search engines.
   robots: { index: false, follow: false },
 };

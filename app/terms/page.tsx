@@ -2,7 +2,7 @@ import DarkModeToggle from '@/components/DarkModeToggle';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Terms of Use — Konneqta',
+  title: 'Terms of Use',
   description: 'The terms governing your access to and use of Konneqta.',
   alternates: { canonical: '/terms' },
 };

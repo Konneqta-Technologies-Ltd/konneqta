@@ -45,10 +45,24 @@ const nextConfig: NextConfig = {
   // 2. /home → / : the landing page now lives at the domain root ("/"). A
   //    permanent (308) redirect consolidates all links, bookmarks, and search
   //    equity that pointed at the old /home URL onto the canonical root.
+  // 3. /tour and /waitlist → / : both pages were removed. A permanent (308)
+  //    redirect (NOT a 404) consolidates any inbound links and indexed equity
+  //    onto the landing page. Both are intentionally absent from
+  //    app/sitemap.ts — a sitemap URL must be indexable, not a redirect.
   async redirects() {
     return [
       {
         source: "/home",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/tour",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/waitlist",
         destination: "/",
         permanent: true,
       },

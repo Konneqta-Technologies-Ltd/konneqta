@@ -3,6 +3,15 @@ import { canUploadLogo, getMaxCards, getMaxSocialLinks } from "@/lib/entitlement
 import EditProfileForm from "@/components/EditProfileForm";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+
+// Private, authenticated editor — keep it out of search indexes. Belt-and-
+// braces with the "/*/edit" disallow in robots.ts (Google can still index a
+// disallowed URL if it's linked elsewhere; noindex closes that gap).
+export const metadata: Metadata = {
+  title: "Edit Card",
+  robots: { index: false, follow: false },
+};
 
 export default async function EditProfilePage({
   params,

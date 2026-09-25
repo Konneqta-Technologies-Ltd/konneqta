@@ -48,12 +48,10 @@ const fadeVariants: Variants = {
 const NON_PROFILE_SEGMENTS = new Set([
   'settings',
   'referral',
-  'tour',
   'contact',
   'privacy',
   'terms',
   'refund',
-  'waitlist',
   'onboarding',
   'post-login',
   'auth',
@@ -99,7 +97,6 @@ export default function OnboardingWidget() {
     pathname === '/privacy' ||
     pathname === '/terms' ||
     pathname === '/refund' ||
-    pathname === '/waitlist' ||
     pathname === '/';
   const isOwnProfileRoute =
     Boolean(username) &&

@@ -421,6 +421,10 @@ export default function OnboardingForm({
       // interrupted attempt may have left the profile without its card.
       //    show_phone is forced to false when the phone field is empty, so
       //    the owner can never accidentally expose a number they left blank.
+      //    terms_accepted_at persists the consent audit trail (NDPA 2023):
+      //    timestamped proof the user ticked the Privacy/Terms checkbox.
+      //    ⚠ Requires supabase/add-terms-acceptance.sql to have been run —
+      //    an unknown column would fail this upsert (PGRST204).
       const phoneIsEmpty = !form.phone.trim();
       const { error: profileError } = await supabase.from('profiles').upsert(
         {
@@ -428,6 +432,7 @@ export default function OnboardingForm({
           show_phone: phoneIsEmpty ? false : form.show_phone,
           avatar_url: avatarUrl,
           logo_url: logoUrl,
+          terms_accepted_at: new Date().toISOString(),
           id: user.id,
         },
         { onConflict: 'id' },
