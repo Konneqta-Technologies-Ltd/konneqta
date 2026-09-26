@@ -77,33 +77,44 @@ export default function CardBio({
   }
 
   // Collapsed — 60-char preview + "... See more" inline, clamped to 2 lines.
+  //
+  // SEO + a11y: the FULL bio also ships in the initial HTML as a
+  // visually-hidden (sr-only) paragraph. Crawlers cannot click "See more",
+  // so without this, bios longer than BIO_PREVIEW_CHARS would contribute
+  // almost nothing to the page's visible text. Screen readers get the
+  // complete bio without interaction too. It mirrors exactly what expanding
+  // reveals (progressive disclosure) — never different content.
   if (!expanded) {
     const preview = `${bio.slice(0, BIO_PREVIEW_CHARS).trimEnd()}.`;
     return (
-      <p
-        className={`${className} line-clamp-3`}
-        style={color ? { color } : undefined}
-      >
-        {preview}
-        {interactive ? (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className={linkClass}
-            style={linkStyle}
-          >
-            See more
-          </button>
-        ) : (
-          <span
-            className={`${linkClass} pointer-events-none`}
-            style={linkStyle}
-            aria-hidden="true"
-          >
-            See more
-          </span>
-        )}
-      </p>
+      <>
+        <p
+          className={`${className} line-clamp-3`}
+          style={color ? { color } : undefined}
+        >
+          {preview}
+          {interactive ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className={linkClass}
+              style={linkStyle}
+            >
+              See more
+            </button>
+          ) : (
+            <span
+              className={`${linkClass} pointer-events-none`}
+              style={linkStyle}
+              aria-hidden="true"
+            >
+              See more
+            </span>
+          )}
+        </p>
+        {/* Full bio — visually hidden, present for crawlers + screen readers. */}
+        <p className="sr-only">{bio}</p>
+      </>
     );
   }
 

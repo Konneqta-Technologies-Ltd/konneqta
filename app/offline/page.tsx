@@ -2,7 +2,7 @@ import OfflineExperience from "@/components/OfflineExperience";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Offline · Konneqta",
+  title: "Offline",
   description: "You are offline.",
   robots: { index: false, follow: false },
 };

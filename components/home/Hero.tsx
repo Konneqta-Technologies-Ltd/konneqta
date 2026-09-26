@@ -110,13 +110,6 @@ export default function Hero({
           ) : (
             <>
               <Link
-                href="/tour"
-                className="visible-focus rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-              >
-                Tour
-              </Link>
-
-              <Link
                 href="/auth/signup"
                 className="visible-focus rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
               >

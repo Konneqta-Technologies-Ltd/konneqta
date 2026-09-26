@@ -167,7 +167,7 @@ export function StandardLayout({ profile, theme, onFlip }: CardLayoutProps) {
       <div className="avatar relative overflow-hidden">
         <Image
           src={avatarSrc(profile.avatar_url)}
-          alt={profile.username}
+          alt={`${name}'s profile photo`}
           width={290}
           height={290}
           priority
@@ -246,7 +246,7 @@ export function CenteredLayout({ profile, theme, onFlip }: CardLayoutProps) {
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 px-6">
       <Image
         src={avatarSrc(profile.avatar_url)}
-        alt={profile.username}
+        alt={`${name}'s profile photo`}
         width={140}
         height={140}
         priority
@@ -319,7 +319,7 @@ export function SplitLayout({ profile, theme, onFlip }: CardLayoutProps) {
       <div className="flex  w-full h-45 justify-center">
         <Image
           src={avatarSrc(profile.avatar_url)}
-          alt={profile.username}
+          alt={`${name}'s profile photo`}
           width={140}
           height={140}
           priority
@@ -409,7 +409,7 @@ export function MinimalLayout({ profile, theme, onFlip }: CardLayoutProps) {
       {/* Avatar tiny, top-left */}
       <Image
         src={avatarSrc(profile.avatar_url)}
-        alt={profile.username}
+        alt={`${name}'s profile photo`}
         width={48}
         height={48}
         priority
@@ -488,7 +488,7 @@ export function BannerHeroLayout({ profile, theme, bannerUrl, onFlip }: CardLayo
         {/* Avatar overlapping */}
         <Image
           src={avatarSrc(profile.avatar_url)}
-          alt={profile.username}
+          alt={`${name}'s profile photo`}
           width={100}
           height={100}
           priority

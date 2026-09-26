@@ -11,6 +11,7 @@ import {
 } from '@/components/analytics/Charts';
 import { getDashboardData } from '@/lib/analytics/queries';
 import { notFound, redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 
 import GoBackButton from '@/components/GoBackButton';
 import Link from 'next/link';
@@ -19,6 +20,15 @@ import { getAdminClient } from '@/lib/analytics/server';
 import { isPro } from '@/lib/entitlements';
 
 export const dynamic = 'force-dynamic';
+
+// Private, Pro-only dashboard — keep it out of search indexes (same pattern as
+// other authenticated pages, e.g. app/settings/page.tsx). Note: "/*/analytics"
+// has no matching disallow in robots.ts, so this meta robots tag is the ONLY
+// guard keeping these per-user URLs out of Google.
+export const metadata: Metadata = {
+  title: 'Analytics',
+  robots: { index: false, follow: false },
+};
 
 const ALLOWED_RANGES = [7, 30, 90] as const;
 const DEFAULT_RANGE = 30;

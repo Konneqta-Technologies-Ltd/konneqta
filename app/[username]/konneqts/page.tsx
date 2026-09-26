@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Konneqts · Konneqta",
+  title: "Konneqts",
   description: "Your connections on Konneqta.",
   robots: { index: false, follow: false },
 };

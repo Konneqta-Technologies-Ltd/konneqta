@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Notifications · Konneqta",
+  title: "Notifications",
   description: "Your Konneqta notifications.",
   robots: { index: false, follow: false },
 };

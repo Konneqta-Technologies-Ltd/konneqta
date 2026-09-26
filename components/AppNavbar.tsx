@@ -21,7 +21,6 @@ const QrScanner = dynamic(() => import("./QrScanner"), { ssr: false });
 // Hide the global navbar (hamburger + SideNav + QR scanner) on routes that
 // are fully standalone (no app chrome).
 const HIDDEN_ROUTES = [
-  "/waitlist",
   "/home",
   "/auth/login",
   "/auth/signup",
@@ -235,7 +234,7 @@ export default function AppNavbar() {
 
       {/*
         Feedback auto-trigger — only renders for authenticated users on app
-        pages (this component returns null on legal/auth/waitlist routes via
+        pages (this component returns null on legal/auth routes via
         the HIDDEN_ROUTES check above, and the trigger self-gates on auth).
       */}
       {user && <FeedbackTrigger />}

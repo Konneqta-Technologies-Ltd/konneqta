@@ -2,7 +2,7 @@ import DarkModeToggle from '@/components/DarkModeToggle';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Refund Policy — Konneqta',
+  title: 'Refund Policy',
   description:
     'How refunds, cancellations, and renewals work for Konneqta Pro subscriptions.',
   alternates: { canonical: '/refund' },

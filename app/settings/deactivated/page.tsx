@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Account Deactivated · Konneqta",
+  title: "Account Deactivated",
   description: "Your account has been deactivated.",
   robots: { index: false, follow: false },
 };

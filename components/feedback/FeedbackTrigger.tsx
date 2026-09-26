@@ -12,7 +12,7 @@ const INITIAL_DELAY_MS = 8000;
 /**
  * Auto-triggers the feedback modal for eligible, authenticated users.
  *
- * Mounted inside AppNavbar (which already hides itself on legal/auth/waitlist
+ * Mounted inside AppNavbar (which already hides itself on legal/auth
  * routes), so this only runs on authenticated app pages.
  *
  * Checks:

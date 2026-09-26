@@ -28,32 +28,44 @@ const outfit = Outfit({
 });
 
 // Card customization fonts. Exposed as CSS variables so the card layouts can
-// apply them via inline styles / Tailwind. These load on every page (small
-// subset cost) so a user's chosen font renders even on first paint.
+// apply them via inline styles / Tailwind. They must stay in the ROOT layout:
+// the offline PWA shell (app/offline) renders themed cards outside /[username],
+// so these CSS variables have to exist on every route.
+//
+// preload:false — without this, next/font emits <link rel="preload"> for all
+// six fonts on EVERY page, and the five below compete with the LCP request on
+// the landing page (which uses none of them). Browsers still download each
+// font file lazily when a card actually uses that family (display:'swap'
+// covers the swap-in). Only Outfit (the body font) stays preloaded.
 const inter = Inter({
   display: 'swap',
+  preload: false,
   subsets: ['latin'],
   variable: '--font-inter',
 });
 const playfair = Playfair_Display({
   display: 'swap',
+  preload: false,
   subsets: ['latin'],
   variable: '--font-playfair',
 });
 const passero = Passero_One({
   display: 'swap',
+  preload: false,
   weight: '400',
   subsets: ['latin'],
   variable: '--font-passero',
 });
 const metamorphous = Metamorphous({
   display: 'swap',
+  preload: false,
   weight: '400',
   subsets: ['latin'],
   variable: '--font-metamorphous',
 });
 const birthstone = Birthstone({
   display: 'swap',
+  preload: false,
   weight: '400',
   subsets: ['latin'],
   variable: '--font-birthstone',
@@ -63,11 +75,19 @@ export const metadata: Metadata = {
   // metadataBase resolves relative OG/Twitter image URLs (e.g. "/banner.png")
   // to absolute URLs, which crawlers require.
   metadataBase: new URL('https://www.konneqta.com'),
-  title: 'Konneqta',
-  description: 'Introduce your business in one tap, Create your digital business card ',
+  // title.template: every child page that sets a plain `title` string gets the
+  // "· Konneqta" suffix automatically (hand-rolled suffixes were removed from
+  // page-level metadata). Pages needing full control (home, profiles, /launch)
+  // use `title: { absolute: '...' }` to opt out of the template.
+  title: {
+    default: 'Konneqta — Digital Business Cards',
+    template: '%s · Konneqta',
+  },
+  description:
+    'Create a digital business card — share all your links, socials, and contact details with a QR code in one tap. Works online and offline.',
   // NOTE: no root-level canonical here. A layout-level canonical is inherited
   // by every page that doesn't override it — which previously made unrelated
-  // pages (e.g. /waitlist, /konneqts) declare the homepage as their canonical.
+  // pages (e.g. /konneqts) declare the homepage as their canonical.
   // That mismatch is what triggered Google's "Duplicate, Google chose
   // different canonical than user" Search Console warning. Each indexable
   // page now sets its own self-canonical; private pages set noindex instead.
@@ -84,7 +104,8 @@ export const metadata: Metadata = {
   // Profile pages override these via generateMetadata in app/[username]/page.tsx.
   openGraph: {
     title: 'Konneqta',
-    description: 'Introduce your business in one tap, Create your digital business card ',
+    description:
+      'Create a digital business card — share all your links, socials, and contact details with a QR code in one tap.',
     siteName: 'Konneqta',
     type: 'website',
     images: [
@@ -99,7 +120,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Konneqta',
-    description: 'Introduce your business in one tap, Create your digital business card ',
+    description:
+      'Create a digital business card — share all your links, socials, and contact details with a QR code in one tap.',
     images: ['/banner.png'],
   },
   icons: {
