@@ -13,7 +13,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Settings · Konneqta",
+  title: "Settings",
   description: "Manage your Konneqta account settings.",
   robots: { index: false, follow: false },
 };

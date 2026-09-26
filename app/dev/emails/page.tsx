@@ -22,7 +22,7 @@ import { renderFeedbackConfirmation } from "@/lib/emails/templates/feedback-conf
  */
 
 export const metadata: Metadata = {
-  title: "Email Templates · Konneqta (dev)",
+  title: "Email Templates (dev)",
   robots: { index: false, follow: false },
 };
 

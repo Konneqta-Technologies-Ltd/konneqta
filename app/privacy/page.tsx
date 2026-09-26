@@ -2,7 +2,7 @@ import DarkModeToggle from '@/components/DarkModeToggle';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Privacy Policy — Konneqta',
+  title: 'Privacy Policy',
   description: 'How Konneqta collects, uses, and protects your information.',
   alternates: { canonical: '/privacy' },
 };

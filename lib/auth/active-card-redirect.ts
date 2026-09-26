@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
  * so both PWA launches and browser visits behave identically.
  *
  * Decision cascade:
- *   1. No session          → "anonymous"  (caller redirects to /waitlist)
+ *   1. No session          → "anonymous"  (caller renders the public landing page)
  *   2. No profile row yet   → "onboard"    (caller redirects to /onboarding)
  *   3. status = 'deactivated' → "deactivated" (caller redirects to /settings/deactivated)
  *   4. profiles.active_card_id set  → that card's slug

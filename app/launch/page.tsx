@@ -2,7 +2,9 @@ import LaunchExperience from "@/components/LaunchExperience";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Konneqta",
+  // absolute: opt out of the root layout's "%s · Konneqta" template — a bare
+  // brand title must not become "Konneqta · Konneqta".
+  title: { absolute: "Konneqta" },
   description: "Open your Konneqta card.",
   robots: { index: false, follow: false },
 };

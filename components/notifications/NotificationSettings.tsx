@@ -273,7 +273,7 @@ export default function NotificationSettings() {
               >
                 <span
                   className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                    prefs[type] ? 'translate-x-4' : 'translate-x-0.5'
+                    prefs[type] ? 'translate-x-0' : '-translate-x-4'
                   }`}
                 />
               </button>

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import GoBackButton from "@/components/GoBackButton";
 
 export const metadata: Metadata = {
-  title: "Page Not Found · Konneqta",
+  title: "Page Not Found",
   description: "The page you're looking for doesn't exist.",
   robots: { index: false, follow: false },
 };

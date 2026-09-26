@@ -38,9 +38,15 @@ export async function generateMetadata({
     .maybeSingle();
 
   if (!card) {
+    // Bogus/deleted slug. Never echo the raw slug back into the title —
+    // Google would happily index typo'd usernames — and hard-block the URL.
+    // (The page body calls notFound() right after this, which returns a true
+    // HTTP 404 now that this route no longer streams a loading shell first.)
     return {
-      title: `${username} · Konneqta`,
-      description: `Connect with @${username} on Konneqta`,
+      title: "Profile Not Found",
+      description:
+        "This Konneqta profile does not exist or is no longer available.",
+      robots: { index: false, follow: false },
     };
   }
 
@@ -65,15 +71,41 @@ export async function generateMetadata({
       : `Connect with ${fullName}${role ? ` (${role})` : ""} on Konneqta — their digital business card with all social links in one place.`
   ).slice(0, 155);
 
-  const imageUrl = `https://www.konneqta.com/${username}/opengraph-image`;
+  // Per-user keywords built from the actual profile data (name, @handle,
+  // role, company). Google ignores the keywords tag for ranking, but
+  // Bing/Yandex and some aggregators still read it — free signal.
+  const keywords = Array.from(
+    new Set(
+      [
+        fullName,
+        username,
+        `@${username}`,
+        jobTitle,
+        company,
+        "digital business card",
+        "Konneqta",
+      ]
+        .map((k) => k?.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  // Same production-origin pattern as app/sitemap.ts / app/robots.ts — a
+  // single env-driven origin instead of a hardcoded www URL that could drift.
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.konneqta.com";
+  const imageUrl = `${baseUrl}/${username}/opengraph-image`;
 
   // og:image is generated dynamically by app/[username]/opengraph-image.tsx
   // (Next.js file convention) AND declared explicitly here so we control the
   // exact width/height/alt. Strict crawlers (WhatsApp, LinkedIn) require the
   // declared dimensions to match the actual served image.
   return {
-    title,
+    // absolute: this composed title already ends with "| Konneqta" — the root
+    // layout's "%s · Konneqta" template must not append the brand again.
+    title: { absolute: title },
     description,
+    keywords,
     // PWA name override: iOS Safari derives the "Add to Home Screen" app name
     // from <title> by default. Since profile <title> includes the user's name
     // for SEO, we explicitly pin the apple-mobile-web-app-title to "Konneqta"
@@ -86,17 +118,33 @@ export async function generateMetadata({
     // Relative self-canonical — Next.js resolves it against metadataBase
     // (https://www.konneqta.com) set in the root layout.
     alternates: { canonical: `/${username}` },
-    // Per-card opt-out from search engines (is_searchable column).
+    // Robots, per card (is_searchable column):
+    //  - Opted out  → noindex, nofollow.
+    //  - Searchable → explicit index/follow + googleBot directives so Google
+    //    shows the largest image preview (avatar / OG card image) and full
+    //    snippet length in results — direct visibility for name searches.
     ...(card.is_searchable === false
       ? { robots: { index: false, follow: false } }
-      : {}),
+      : {
+          robots: {
+            index: true,
+            follow: true,
+            googleBot: {
+              index: true,
+              follow: true,
+              "max-video-preview": -1,
+              "max-image-preview": "large",
+              "max-snippet": -1,
+            },
+          },
+        }),
     authors: [{ name: fullName }],
     creator: fullName,
     publisher: "Konneqta",
     openGraph: {
       title,
       description,
-      url: `https://www.konneqta.com/${username}`,
+      url: `${baseUrl}/${username}`,
       siteName: "Konneqta",
       // og:locale helps platforms localize the audience targeting.
       locale: "en_US",
@@ -355,6 +403,12 @@ export default async function UsernamePage({
         />
       )}
       <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black">
+        {/* og:type=profile structured field (Facebook/LinkedIn/WhatsApp
+            crawlers): ties this page's preview card to the person's handle.
+            Next 16's OpenGraphProfile metadata type has no slot for custom
+            og: properties, so emit it directly — React 19 hoists <meta>
+            tags into <head>. */}
+        <meta property="profile:username" content={username} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
