@@ -30,6 +30,12 @@ function randomId(): string {
 }
 
 export async function proxy(request: NextRequest) {
+
+   const nextAction = request.headers.get("next-action");
+  if (nextAction === "x" || nextAction === "test" || (nextAction && nextAction.length < 5)) {
+    return new NextResponse("Unauthorized Access Attempt", { status: 400 });
+  }
+
   // 1. Create the singular base response instance
   const response = NextResponse.next({
     request: {

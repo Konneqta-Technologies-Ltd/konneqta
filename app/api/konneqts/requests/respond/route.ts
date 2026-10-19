@@ -18,7 +18,6 @@
  * notifications, analytics, PostHog.
  */
 
-import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/analytics/server";
 import {
   acceptKonneqtRequest,
@@ -27,12 +26,13 @@ import {
 
 import { NextResponse } from "next/server";
 
+import { getUserFromRequest } from "@/lib/supabase/request-auth";
+
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Auth: Bearer token (mobile) or SSR cookies (web). Only the recipient
+    // of the request may respond (enforced below).
+    const { user } = await getUserFromRequest(req);
     if (!user) {
       return NextResponse.json({ error: "Not signed in." }, { status: 401 });
     }

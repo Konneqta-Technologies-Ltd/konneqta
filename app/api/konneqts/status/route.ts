@@ -15,14 +15,25 @@
  * Used by ConnectButton on mount so returning visitors see the right state.
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { getAdminClient } from "@/lib/analytics/server";
 
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
+    // MOBILE: authenticate with the caller's access token (no cookie jar).
+    const authHeader = req.headers.get("authorization") ?? "";
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    const supabase = bearerToken
+      ? createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          { global: { headers: { Authorization: `Bearer ${bearerToken}` } } }
+        )
+      : await createServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
