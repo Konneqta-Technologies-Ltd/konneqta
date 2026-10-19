@@ -20,8 +20,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
 import { getTotals } from "@/lib/analytics/queries";
 import { computeScore } from "@/lib/feedback/score";
 import { sendFeedbackEmails } from "@/lib/emails/zeptomail";
@@ -32,28 +30,14 @@ import {
 } from "@/lib/feedback/google-sheets";
 import { isPro } from "@/lib/entitlements";
 
+import { getUserFromRequest } from "@/lib/supabase/request-auth";
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // --- Auth --------------------------------------------------------------
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll() {},
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // --- Auth: Bearer token (mobile) or SSR cookies (web) -------------------
+    const { supabase, user } = await getUserFromRequest(req);
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

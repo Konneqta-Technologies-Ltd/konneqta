@@ -17,8 +17,8 @@ import { normalizePromoCode } from "@/lib/promos/shared";
 
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+
+import { getUserFromRequest } from "@/lib/supabase/request-auth";
 
 /** RPC result shape (see redeem_promo in supabase/promo-codes-setup.sql). */
 type RedeemPromoResult = {
@@ -79,24 +79,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // --- Auth: verify the caller's session via cookie ----------------------
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll() {},
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // --- Auth: Bearer token (mobile) or SSR cookies (web) -------------------
+    const { user } = await getUserFromRequest(req);
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

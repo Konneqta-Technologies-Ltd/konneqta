@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { captureEvent } from "@/lib/posthog";
-import { cookies } from "next/headers";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { createServerClient } from "@supabase/ssr";
+
+import { getUserFromRequest } from "@/lib/supabase/request-auth";
 
 /**
  * Account deactivation route handler.
@@ -18,30 +18,12 @@ import { createServerClient } from "@supabase/ssr";
  * Reactivation lives at /api/reactivate-account.
  */
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
+    // 1. Verify the caller — Bearer token (mobile) or SSR cookies (web).
+    const { user } = await getUserFromRequest(request);
 
-    // 1. Verify the caller is authenticated via cookie-bearer JWT.
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll() {},
-        },
-      }
-    );
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized — no valid session." },
         { status: 401 }

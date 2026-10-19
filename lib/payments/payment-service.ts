@@ -3,18 +3,26 @@ import { PaymentSession, ServiceResponse } from "./types";
 import { getDaysUntilExpiry, isPro } from "@/lib/entitlements";
 
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateTransactionReference } from "./references";
 
 export async function createPaymentSession(
     paymentType: PaymentType,
-    recurring: boolean = false
+    recurring: boolean = false,
+    // Optional pre-authenticated client — lets the MOBILE app create a
+    // session with its Supabase access token (route resolves it via
+    // getUserFromRequest: Bearer or cookies). When omitted, the original
+    // cookie-scoped client is created here, so the web behaviour is
+    // byte-for-byte unchanged. RLS scopes the profile select + payment
+    // insert to the authenticated owner either way.
+    supabase?: SupabaseClient,
 ): Promise<ServiceResponse<PaymentSession>> {
-    const supabase = await createClient();
+    const db = supabase ?? (await createClient());
 
     // Get logged-in user
     const {
         data: { user },
-    } = await supabase.auth.getUser();
+    } = await db.auth.getUser();
 
     if (!user) {
         return {
@@ -24,7 +32,7 @@ export async function createPaymentSession(
     }
 
     // Fetch profile
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await db
         .from("profiles")
         .select("*")
         .eq("id", user.id)
@@ -81,7 +89,7 @@ export async function createPaymentSession(
     const txRef = generateTransactionReference(paymentType);
 
     // Save pending payment
-    const { error: paymentError } = await supabase
+    const { error: paymentError } = await db
         .from("payments")
         .insert({
             user_id: user.id,
