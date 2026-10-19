@@ -46,6 +46,7 @@ import { captureEvent } from "@/lib/posthog";
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 
 // Sanity caps on guest-submitted text (prevents abuse).
@@ -75,19 +76,33 @@ export async function POST(req: Request) {
     }
 
     // ── Resolve the caller's session (cookie-based) ───────────────────────
-    const cookieStore = await cookies();
-    const userSupabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
+    // MOBILE: callers authenticate with their Supabase access token
+    // (Authorization: Bearer) — native apps have no cookie jar.
+    const authHeader = req.headers.get("authorization") ?? "";
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    let userSupabase: SupabaseClient;
+    if (bearerToken) {
+      userSupabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${bearerToken}` } } }
+      );
+    } else {
+      const cookieStore = await cookies();
+      userSupabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll() {},
           },
-          setAll() {},
-        },
-      }
-    );
+        }
+      );
+    }
 
     const {
       data: { user },
