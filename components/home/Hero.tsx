@@ -13,6 +13,7 @@ import FloatingDot from './FloatingDot';
 import Image from 'next/image';
 import SignInWithGoogle from '@/components/SignInWithGoogle';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
+import { getTeamsSignupUrl } from '@/lib/teams-url';
 
 const heroSlides = [
   {
@@ -143,6 +144,12 @@ export default function Hero({
         />
 
         <nav className="flex items-center gap-6">
+          <Link
+            href={getTeamsSignupUrl()}
+            className="visible-focus text-sm font-semibold text-white/80 transition-colors hover:text-white"
+          >
+            For teams
+          </Link>
           {cardPath ? (
             <Link
               href={cardPath}
