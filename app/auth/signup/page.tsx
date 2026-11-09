@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getTeamsSignupUrl } from "@/lib/teams-url";
 
 const signupSchema = Joi.object({
     firstName: Joi.string()
@@ -259,6 +260,12 @@ export default function SignUpPage() {
                     </div>
 
                     <p className="text-center mb-10 pt-2 text-sm text-zinc-500 dark:text-zinc-400">{"Already have an account?"}<Link href="/auth/login" className="cursor-pointer hover:text-(--main-orange)"> Login</Link> </p>
+                    <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
+                        Setting up a team?{" "}
+                        <Link href={getTeamsSignupUrl()} className="font-semibold text-(--main-orange) hover:underline">
+                            Create a team workspace
+                        </Link>
+                    </p>
                     </div>
                 </form>
             </div>
