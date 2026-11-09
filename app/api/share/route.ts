@@ -24,7 +24,6 @@ import { recordEvent } from "@/lib/analytics/server";
 import { createNotification } from "@/lib/notifications/server";
 import { getSessionId } from "@/lib/analytics/session";
 import { getVisitorId } from "@/lib/analytics/visitor";
-import { captureEvent } from "@/lib/posthog";
 
 export async function POST(req: Request) {
   try {
@@ -124,12 +123,6 @@ export async function POST(req: Request) {
       visitor_id: visitorId,
       session_id: sessionId,
     });
-
-    // Product analytics (PostHog) — fire-and-forget, never blocks the share.
-    void captureEvent(card.owner_id, "card_shared", {
-      channel,
-      username: card.slug,
-    }).catch(() => {});
 
     // --- Award FIRST_SHARE feedback milestone (one-time, atomic) ----------
     // Fire-and-forget — errors won't block the share. The RPC is idempotent.

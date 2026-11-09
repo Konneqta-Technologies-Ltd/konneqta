@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { captureEvent } from "@/lib/posthog";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 import { getUserFromRequest } from "@/lib/supabase/request-auth";
@@ -163,9 +162,6 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
-    // 6. Track the deletion event (server-side).
-    await captureEvent(userId, "account_deleted");
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -59,8 +59,8 @@ export default function InstallAppButton() {
   useEffect(() => {
     if (!deferredPrompt) return;
     deferredPrompt.userChoice.then((choice) => {
-      import("posthog-js").then(({ default: posthog }) => {
-        posthog.capture("install_prompt_resolved", {
+      import("@/lib/track").then(({ track }) => {
+        track("install_prompt_resolved", {
           outcome: choice.outcome,
         });
       });

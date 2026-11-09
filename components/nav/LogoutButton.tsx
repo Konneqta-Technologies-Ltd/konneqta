@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useTrack } from "@/lib/use-track";
+import { track } from "@/lib/track";
 import { clearOfflineCardSnapshot } from "@/lib/offline/card-snapshot";
 
 /**
@@ -18,7 +18,6 @@ import { clearOfflineCardSnapshot } from "@/lib/offline/card-snapshot";
 export default function LogoutButton() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const track = useTrack();
 
   async function handleLogout() {
     setLoading(true);

@@ -3,7 +3,7 @@
 import { extractKonneqtaPath, isKonneqtaUrl } from "@/lib/url-validation";
 import { useEffect, useRef, useState } from "react";
 
-import { useTrack } from "@/lib/use-track";
+import { track } from "@/lib/track";
 
 /**
  * Minimal type for the html5-qrcode scanner instance (avoids importing the
@@ -31,7 +31,6 @@ type ScannerInstance = {
  * phishing launcher.
  */
 export default function QrScanner({ onClose }: { onClose: () => void }) {
-  const track = useTrack();
   const scannerRef = useRef<HTMLDivElement | null>(null);
   const scannerInstanceRef = useRef<ScannerInstance | null>(null);
   const lastScanTimeRef = useRef<number>(0);

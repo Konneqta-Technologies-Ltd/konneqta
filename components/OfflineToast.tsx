@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 /**
@@ -50,15 +49,10 @@ export default function OfflineToast() {
       aria-live="polite"
       className="pointer-events-none fixed inset-x-0 top-3 z-[70] flex justify-center px-4"
     >
-      <AnimatePresence>
-        {offline && (
-          <motion.div
+      {offline && (
+          <div
             key="offline"
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="flex items-center gap-2 rounded-full border border-amber-400/30 bg-zinc-900/95 px-4 py-2 text-xs font-medium text-amber-300 shadow-lg backdrop-blur"
+            className="kq-toast-in flex items-center gap-2 rounded-full border border-amber-400/30 bg-zinc-900/95 px-4 py-2 text-xs font-medium text-amber-300 shadow-lg backdrop-blur"
           >
             {/* wifi-off icon (lucide style — consistent with app icons) */}
             <svg
@@ -79,17 +73,13 @@ export default function OfflineToast() {
               <path d="M5 12.859a10 10 0 0 1 14 0" />
             </svg>
             You&rsquo;re offline — showing saved content
-          </motion.div>
+          </div>
         )}
 
         {!offline && backOnlinePulse && (
-          <motion.div
+          <div
             key="back-online"
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="flex items-center gap-2 rounded-full border border-emerald-400/30 bg-zinc-900/95 px-4 py-2 text-xs font-medium text-emerald-300 shadow-lg backdrop-blur"
+            className="kq-toast-in flex items-center gap-2 rounded-full border border-emerald-400/30 bg-zinc-900/95 px-4 py-2 text-xs font-medium text-emerald-300 shadow-lg backdrop-blur"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -109,9 +99,8 @@ export default function OfflineToast() {
               <line x1="12" x2="12.01" y1="20" y2="20" />
             </svg>
             Back online
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

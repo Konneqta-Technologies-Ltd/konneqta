@@ -1,24 +1,21 @@
-'use client';
-
-import { motion, type Variants } from 'framer-motion';
-import Link from 'next/link';
-import WavyLine from './WavyLine';
-import FloatingDot from './FloatingDot';
 import Image from 'next/image';
+import Link from 'next/link';
+
 import SignInWithGoogle from '@/components/SignInWithGoogle';
+import FloatingDot from './FloatingDot';
+import WavyLine from './WavyLine';
 
-const container: Variants = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
-  },
-};
-
-const item: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
-};
-
+/**
+ * Landing hero — a SERVER component (was a framer-motion client component).
+ *
+ * LCP RULE: the headline is the page's LCP element, so it is plain static
+ * HTML and fully visible on first paint — NO entrance animation on it (JS
+ * or CSS). The previous hidden-until-hydrated hero (variants starting at
+ * opacity: 0) was the #1 cause of the 4.8s LCP in PageSpeed Insights:
+ * the HTML was there but the content waited for 350+ KiB of JS to hydrate
+ * before becoming visible. Only the decorative wavy lines and floating
+ * dots animate (pure CSS — see app/globals.css).
+ */
 export default function Hero({
   cardPath,
   firstName,
@@ -60,7 +57,7 @@ export default function Hero({
         />
         <WavyLine
           color="#2DD9A6"
-          className="absolute -right-2.5 top-102   hidden sm:block"
+          className="absolute -right-2.5 top-102 hidden sm:block"
           delay={0.5}
           flip
         />
@@ -84,7 +81,7 @@ export default function Hero({
         <FloatingDot
           color="#F3C23A"
           size={8}
-          className="right-8.75 sm:right-41.25 top-86.25 sm:top-136.25 sm:block"
+          className="right-8.75 sm:right-41.25 top-86.25 sm:block"
           duration={3}
         />
       </div>
@@ -128,38 +125,24 @@ export default function Hero({
       </div>
 
       <div className="relative mx-auto max-w-3xl px-6 pt-8 sm:pt-16 text-center">
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="flex flex-col items-center"
-        >
-          <motion.span
-            variants={item}
-            className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90"
-          >
+        <div className="flex flex-col items-center">
+          <span className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90">
             <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
             Built for Creators, Entrepreneurs &amp; Professionals
-          </motion.span>
+          </span>
 
-          <motion.h1
-            variants={item}
-            className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl"
-          >
+          <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl">
             Introduce Your Business in
             <br />
             One Tap
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            variants={item}
-            className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg"
-          >
+          <p className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg">
             Konneqta is a digital business card platform that lets creators, business owners and
             professionals build a shareable digital business profile using QR code and links — all in one place
-          </motion.p>
+          </p>
 
-          <motion.div variants={item} className="mt-10">
+          <div className="mt-10">
             {cardPath ? (
               <Link
                 href={cardPath}
@@ -170,8 +153,8 @@ export default function Hero({
             ) : (
               <SignInWithGoogle />
             )}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -1,23 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { FaCheck } from 'react-icons/fa';
 import Link from 'next/link';
 
 type Cycle = 'monthly' | 'yearly';
 
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  show: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.55, delay: i * 0.1, ease: 'easeOut' },
-  }),
-};
-
 const freeFeatures = [
-  
   'Offline sharing',
   'One card per person',
   '25 free shares monthly',
@@ -42,6 +31,12 @@ const pricing = {
   yearly: { usd: '9.50', ngn: '9,500', suffix: '/ year' },
 };
 
+/**
+ * Pricing section — client island for the billing-cycle toggle only. The
+ * framer-motion entrance fades, layout-animated toggle pill and
+ * AnimatePresence price swap are replaced with plain conditional classes +
+ * CSS (kq-fade-in, hover lifts). All content is still server-prerendered.
+ */
 export default function Pricing() {
   const [cycle, setCycle] = useState<Cycle>('monthly');
   const price = pricing[cycle];
@@ -49,50 +44,24 @@ export default function Pricing() {
   return (
     <section className="relative bg-[#0a0a0a] px-6 py-16 sm:py-28">
       <div className="mx-auto max-w-3xl text-center">
-        <motion.p
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50"
-        >
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
           Pricing
-        </motion.p>
+        </p>
 
-        <motion.h2
-          variants={fadeUp}
-          custom={1}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="mt-6 font-display text-2xl font-bold leading-tight text-white sm:text-4xl md:text-5xl"
-        >
+        <h2 className="mt-6 font-display text-2xl font-bold leading-tight text-white sm:text-4xl md:text-5xl">
           Simple pricing, <span className="text-[#FF6B2C]">no surprises.</span>
-        </motion.h2>
+        </h2>
 
         {/* Monthly / Yearly toggle */}
-        <motion.div
-          variants={fadeUp}
-          custom={2}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="mt-10 inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1"
-        >
+        <div className="mt-10 inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1">
           {(['monthly', 'yearly'] as Cycle[]).map((c) => (
             <button
               key={c}
               onClick={() => setCycle(c)}
-              className="visible-focus relative rounded-full px-5 py-2.5 text-sm font-semibold capitalize text-white"
+              aria-pressed={cycle === c}
+              className={`visible-focus rounded-full px-5 py-2.5 text-sm font-semibold capitalize text-white transition-colors duration-300 ${cycle === c ? 'bg-[#6B21D4]' : 'hover:bg-white/10'}`}
             >
-              {cycle === c && (
-                <motion.span
-                  layoutId="pricing-toggle-pill"
-                  className="absolute inset-0 rounded-full bg-[#6B21D4]"
-                  transition={{ type: 'spring', duration: 0.5 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
+              <span className="flex items-center gap-2">
                 {c}
                 {c === 'yearly' && (
                   <span className="rounded-full bg-[#FF6B2C] px-2 py-0.5 text-[10px] font-bold text-white">
@@ -102,19 +71,12 @@ export default function Pricing() {
               </span>
             </button>
           ))}
-        </motion.div>
+        </div>
       </div>
 
       <div className="mx-auto mt-10 sm:mt-16 grid max-w-5xl gap-6 sm:grid-cols-3">
         {/* Free */}
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          whileHover={{ y: -6 }}
-          className="flex flex-col rounded-3xl bg-[#F3EFE4] p-6 text-[#0a0a0a] shadow-xl shadow-black/30"
-        >
+        <div className="flex flex-col rounded-3xl bg-[#F3EFE4] p-6 text-[#0a0a0a] shadow-xl shadow-black/30 transition-transform duration-300 hover:-translate-y-1.5">
           <span className="mb-6 inline-flex w-fit rounded-full bg-[#0a0a0a]/10 px-3 py-1 text-xs font-semibold">
             Free forever
           </span>
@@ -133,20 +95,10 @@ export default function Pricing() {
               </li>
             ))}
           </ul>
-
-  
-        </motion.div>
+        </div>
 
         {/* Pro */}
-        <motion.div
-          variants={fadeUp}
-          custom={1}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          whileHover={{ y: -6 }}
-          className="relative flex flex-col rounded-3xl bg-[#6B21D4] p-6 text-white shadow-xl shadow-black/40"
-        >
+        <div className="relative flex flex-col rounded-3xl bg-[#6B21D4] p-6 text-white shadow-xl shadow-black/40 transition-transform duration-300 hover:-translate-y-1.5">
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#FF6B2C] px-3 py-1 text-xs font-bold">
             Most popular
           </span>
@@ -160,30 +112,22 @@ export default function Pricing() {
           </p>
 
           <div className="mt-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={cycle}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-              >
-                <p className="font-display text-4xl font-bold">
-                  ₦{price.ngn}
-                  <span className="ml-2 text-base font-medium text-white/60">
-                    {price.suffix}
-                  </span>
+            <div key={cycle} className="kq-fade-in">
+              <p className="font-display text-4xl font-bold">
+                ₦{price.ngn}
+                <span className="ml-2 text-base font-medium text-white/60">
+                  {price.suffix}
+                </span>
+              </p>
+              <p className="mt-1 text-sm text-white/60">
+                ${price.usd} {price.suffix}
+              </p>
+              {cycle === 'yearly' && (
+                <p className="mt-1 text-xs text-[#2DD9A6]">
+                  Just ₦791.6/mo billed annually
                 </p>
-                <p className="mt-1 text-sm text-white/60">
-                  ${price.usd} {price.suffix}
-                </p>
-                {cycle === 'yearly' && (
-                  <p className="mt-1 text-xs text-[#2DD9A6]">
-                    Just ₦791.6/mo billed annually
-                  </p>
-                )}
-              </motion.div>
-            </AnimatePresence>
+              )}
+            </div>
           </div>
 
           <ul className="mt-6 flex-1 space-y-3 text-sm">
@@ -201,18 +145,10 @@ export default function Pricing() {
           >
             See Refund Policy
           </Link>
-        </motion.div>
+        </div>
 
         {/* Team / Business */}
-        <motion.div
-          variants={fadeUp}
-          custom={2}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          whileHover={{ y: -6 }}
-          className="flex flex-col rounded-3xl border border-white/10 bg-white/5 p-7 text-white shadow-xl shadow-black/30"
-        >
+        <div className="flex flex-col rounded-3xl border border-white/10 bg-white/5 p-7 text-white shadow-xl shadow-black/30 transition-transform duration-300 hover:-translate-y-1.5">
           <span className="mb-6 inline-flex w-fit rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
             Team &amp; Business
           </span>
@@ -242,7 +178,7 @@ export default function Pricing() {
           >
             Notify me
           </button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

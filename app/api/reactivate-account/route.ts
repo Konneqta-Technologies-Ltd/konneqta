@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { captureEvent } from "@/lib/posthog";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 import { getUserFromRequest } from "@/lib/supabase/request-auth";
@@ -45,9 +44,6 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
-    // 3. Track the event (server-side).
-    await captureEvent(userId, "account_reactivated");
 
     return NextResponse.json({ success: true });
   } catch (err) {
