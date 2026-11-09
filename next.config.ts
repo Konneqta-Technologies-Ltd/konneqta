@@ -31,6 +31,14 @@ const nextConfig: NextConfig = {
   images: {
     // Next.js 16 requires an explicit qualities allowlist
     qualities: [75, 90, 100],
+    // AVIF where supported (~20–30% smaller than WebP), WebP fallback.
+    formats: ["image/avif", "image/webp"],
+    // Optimized output (/_next/image for Supabase avatars/banners/logos) is
+    // cached for at least a day — matches the brandCache policy in headers()
+    // (1 day fresh + stale-while-revalidate). The upstream Cache-Control wins
+    // when larger; this floor stops the default 60s TTL making every repeat
+    // avatar view a CDN miss + re-optimization.
+    minimumCacheTTL: 86400,
     remotePatterns: supabaseHost
       ? [
           {

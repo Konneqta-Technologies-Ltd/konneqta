@@ -7,10 +7,15 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: "https://74c6e839d8b71823f7d65ed1cca6b184@o4511702036905984.ingest.de.sentry.io/4511702078586960",
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
-  // Enable logs to be sent to Sentry
-  enableLogs: true,
+  // Performance: the Sentry client ships as a ~410 KiB chunk that is parsed on
+  // EVERY page load, and tracesSampleRate: 1 additionally sent a transaction
+  // for every single visit. 15% sampling still surfaces error-linked traces
+  // while cutting Sentry ingest ~85%. Raise temporarily when hunting a
+  // specific performance issue.
+  tracesSampleRate: 0.15,
+  // Logs are a debugging aid — dev only, so production clients skip the extra
+  // instrumentation and payload.
+  enableLogs: process.env.NODE_ENV !== "production",
 
   dataCollection: {
     // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
