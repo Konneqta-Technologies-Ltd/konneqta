@@ -47,11 +47,21 @@ export type OfflineCardSnapshot = {
   savedAt: string;
   profile: OfflineCardProfile;
   socialLinks: OfflineSocialLink[];
+  /**
+   * How many links are ACTIVE for the owner right now (null/absent = all
+   * active: Pro/exempt owners, or snapshots saved before this field existed).
+   * Links beyond this index render deactivated on the offline card — same
+   * rules as the online page. The full list is ALWAYS kept so renewal
+   * restores everything.
+   */
+  linkLimit?: number | null;
 };
 
 export function saveOfflineCardSnapshot(input: {
   profile: OfflineCardProfile;
   socialLinks: OfflineSocialLink[];
+  /** Active-link cap at save time (null = all active). */
+  linkLimit?: number | null;
 }): void {
   try {
     const snapshot: OfflineCardSnapshot = {
@@ -59,6 +69,7 @@ export function saveOfflineCardSnapshot(input: {
       savedAt: new Date().toISOString(),
       profile: input.profile,
       socialLinks: input.socialLinks,
+      linkLimit: input.linkLimit ?? null,
     };
     localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
   } catch {

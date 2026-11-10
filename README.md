@@ -45,10 +45,16 @@ In Konneqta's ignored `.env.local`, set:
 NEXT_PUBLIC_TEAMS_APP_URL=http://localhost:3001
 ```
 
-Restart Konneqta after changing `.env.local`. The homepage and signup links will
-then open the local Teams signup page. If this variable is unset, the links
-continue to use `https://teams.konneqta.com/teams/signup`, including in
-production.
+**Teams is not launched yet.** Until then, the homepage "For teams"
+link and the signup page's "Create a team workspace" link point to
+Konneqta's own `/teams` "Coming soon" page (`app/teams/page.tsx`)
+instead of the Teams app.
+
+When the Teams app ships, repoint those two links to
+`getTeamsSignupUrl()` from `lib/teams-url.ts` (kept for that moment).
+After restarting Konneqta, the links open the Teams signup page from
+`NEXT_PUBLIC_TEAMS_APP_URL`, falling back to
+`https://teams.konneqta.com/teams/signup` when the variable is unset.
 
 ## Learn More
 

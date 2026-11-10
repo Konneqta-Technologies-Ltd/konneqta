@@ -18,13 +18,16 @@ import { useEffect } from "react";
 export default function OfflineCardSaver({
   profile,
   socialLinks,
+  linkLimit,
 }: {
   profile: OfflineCardProfile;
   socialLinks: OfflineSocialLink[];
+  /** Active-link cap at save time (null = all active). */
+  linkLimit?: number | null;
 }) {
   useEffect(() => {
-    saveOfflineCardSnapshot({ profile, socialLinks });
-  }, [profile, socialLinks]);
+    saveOfflineCardSnapshot({ profile, socialLinks, linkLimit });
+  }, [profile, socialLinks, linkLimit]);
 
   return null;
 }
