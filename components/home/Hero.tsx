@@ -1,21 +1,46 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from 'framer-motion';
+import WavyLine from './WavyLine';
+import FloatingDot from './FloatingDot';
 import Image from 'next/image';
 import Link from 'next/link';
 
 import SignInWithGoogle from '@/components/SignInWithGoogle';
-import FloatingDot from './FloatingDot';
-import WavyLine from './WavyLine';
+import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
+import { getTeamsSignupUrl } from '@/lib/teams-url';
 
-/**
- * Landing hero — a SERVER component (was a framer-motion client component).
- *
- * LCP RULE: the headline is the page's LCP element, so it is plain static
- * HTML and fully visible on first paint — NO entrance animation on it (JS
- * or CSS). The previous hidden-until-hydrated hero (variants starting at
- * opacity: 0) was the #1 cause of the 4.8s LCP in PageSpeed Insights:
- * the HTML was there but the content waited for 350+ KiB of JS to hydrate
- * before becoming visible. Only the decorative wavy lines and floating
- * dots animate (pure CSS — see app/globals.css).
- */
+const heroSlides = [
+  {
+    headingLines: ['Introduce Your Business in', 'One Tap'],
+    description:
+      'Konneqta is a digital business card platform that lets creators, business owners and professionals build a shareable digital business profile using QR code and links — all in one place',
+  },
+  {
+    headingLines: ["Manage your team's", 'Konneqta presence.'],
+    description:
+      "One workspace to bring everyone's identity together: consistent, branded and ready to share.",
+  },
+];
+
+const container: Variants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+  },
+};
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+};
+
 export default function Hero({
   cardPath,
   firstName,
@@ -23,6 +48,29 @@ export default function Hero({
   cardPath: string | null;
   firstName: string | null;
 }) {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const shouldReduceMotion = useReducedMotion();
+  const automaticRotationEnabled = shouldReduceMotion === false;
+
+  useEffect(() => {
+    if (!automaticRotationEnabled) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, 6500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeSlide, automaticRotationEnabled]);
+
+  const changeSlide = (direction: -1 | 1) => {
+    setActiveSlide(
+      (current) =>
+        (current + direction + heroSlides.length) % heroSlides.length,
+    );
+  };
+
+  const slide = heroSlides[activeSlide];
+
   return (
     <section className="relative overflow-hidden bg-[#0a0a0a] pt-10 pb-20 sm:pb-36 md:pb-44">
       {/* ambient decoration layer */}
@@ -97,6 +145,12 @@ export default function Hero({
         />
 
         <nav className="flex items-center gap-6">
+          <Link
+            href={getTeamsSignupUrl()}
+            className="visible-focus text-sm font-semibold text-white/80 transition-colors hover:text-white"
+          >
+            For teams
+          </Link>
           {cardPath ? (
             <Link
               href={cardPath}
@@ -131,16 +185,70 @@ export default function Hero({
             Built for Creators, Entrepreneurs &amp; Professionals
           </span>
 
-          <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl">
-            Introduce Your Business in
-            <br />
-            One Tap
-          </h1>
+          <motion.div variants={item} className="w-full">
+            <div
+              role="region"
+              aria-roledescription="carousel"
+              aria-label="Konneqta for individuals and teams"
+              className="w-full"
+            >
+              <div aria-live={automaticRotationEnabled ? 'off' : 'polite'}>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={activeSlide}
+                    initial={{
+                      opacity: 0,
+                      y: shouldReduceMotion ? 0 : 8,
+                    }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{
+                      opacity: 0,
+                      y: shouldReduceMotion ? 0 : -8,
+                    }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 0.25 }}
+                    role="group"
+                    aria-roledescription="slide"
+                    aria-label={`${activeSlide + 1} of ${heroSlides.length}`}
+                  >
+                    <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl">
+                      {slide.headingLines.map((line) => (
+                        <span key={line} className="block">
+                          {line}
+                        </span>
+                      ))}
+                    </h1>
 
-          <p className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg">
-            Konneqta is a digital business card platform that lets creators, business owners and
-            professionals build a shareable digital business profile using QR code and links — all in one place
-          </p>
+                    <p className="mx-auto mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg">
+                      {slide.description}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <div
+                role="group"
+                aria-label="Hero message controls"
+                className="mt-6 flex items-center justify-center gap-3 text-xs font-semibold text-white/80"
+              >
+                <button
+                  type="button"
+                  onClick={() => changeSlide(-1)}
+                  aria-label="Previous hero message"
+                  className="visible-focus rounded-full bg-white/10 px-4 py-2 transition-colors hover:bg-white/20"
+                >
+                  <FaArrowLeft className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => changeSlide(1)}
+                  aria-label="Next hero message"
+                  className="visible-focus rounded-full bg-white/10 px-4 py-2 transition-colors hover:bg-white/20"
+                >
+                  <FaArrowRight className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
 
           <div className="mt-10">
             {cardPath ? (
