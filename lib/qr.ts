@@ -70,57 +70,71 @@ export async function generateQrDataUrl({
 }
 
 /**
+ * Decode an image from a URL / data URL / object URL into an HTMLImageElement.
+ */
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () =>
+      reject(new Error(`Image failed to load: ${src.slice(0, 96)}`));
+    img.src = src;
+  });
+}
+
+/**
  * Draw the QR onto a canvas, then overlay the logo centered and padded.
  * Returns the canvas as a PNG data URL.
+ *
+ * The logo is FETCHED and drawn from a blob object-URL rather than loaded
+ * with <img crossOrigin="anonymous">: object URLs are same-origin so the
+ * canvas can never be tainted, a failed download throws with a real HTTP
+ * status (an <img> onerror is opaque), and this sidesteps Safari's quirk of
+ * failing a crossOrigin image request when a cached non-CORS response is
+ * reused — which used to silently produce a logo-less QR.
  */
-function compositeLogo(
+async function compositeLogo(
   qrDataUrl: string,
   logoUrl: string,
   size: number
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      reject(new Error("Could not get 2D canvas context"));
-      return;
-    }
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Could not get 2D canvas context");
+  }
 
-    const qrImg = new Image();
-    qrImg.onload = () => {
-      ctx.drawImage(qrImg, 0, 0, size, size);
+  // The QR itself is a data URL — no network involved.
+  const qrImg = await loadImage(qrDataUrl);
+  ctx.drawImage(qrImg, 0, 0, size, size);
 
-      // Logo is ~20% of the QR, centered, on a white rounded background.
-      const logoBox = Math.round(size * 0.2);
-      const pad = Math.round(logoBox * 0.12);
-      const totalBox = logoBox + pad * 2;
-      const x = (size - totalBox) / 2;
-      const y = (size - totalBox) / 2;
-      const radius = Math.round(pad * 1.2);
+  // Logo is ~20% of the QR, centered, on a white rounded background.
+  const logoBox = Math.round(size * 0.2);
+  const pad = Math.round(logoBox * 0.12);
+  const totalBox = logoBox + pad * 2;
+  const x = (size - totalBox) / 2;
+  const y = (size - totalBox) / 2;
+  const radius = Math.round(pad * 1.2);
 
-      // White rounded background behind the logo.
-      ctx.fillStyle = "#FFFFFF";
-      drawRoundedRect(ctx, x, y, totalBox, totalBox, radius);
-      ctx.fill();
+  // White rounded background behind the logo.
+  ctx.fillStyle = "#FFFFFF";
+  drawRoundedRect(ctx, x, y, totalBox, totalBox, radius);
+  ctx.fill();
 
-      const logoImg = new Image();
-      logoImg.crossOrigin = "anonymous"; // avoid tainted canvas on remote logos
-      logoImg.onload = () => {
-        ctx.drawImage(logoImg, x + pad, y + pad, logoBox, logoBox);
-        try {
-          resolve(canvas.toDataURL("image/png"));
-        } catch (e) {
-          reject(e);
-        }
-      };
-      logoImg.onerror = () => reject(new Error("Logo image failed to load"));
-      logoImg.src = logoUrl;
-    };
-    qrImg.onerror = () => reject(new Error("QR image failed to load"));
-    qrImg.src = qrDataUrl;
-  });
+  const res = await fetch(logoUrl, { credentials: "omit" });
+  if (!res.ok) {
+    throw new Error(`Logo fetch failed with status ${res.status}`);
+  }
+  const objectUrl = URL.createObjectURL(await res.blob());
+  try {
+    const logoImg = await loadImage(objectUrl);
+    ctx.drawImage(logoImg, x + pad, y + pad, logoBox, logoBox);
+    return canvas.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 function drawRoundedRect(

@@ -30,65 +30,82 @@ function randomId(): string {
 }
 
 export async function proxy(request: NextRequest) {
-
-   const nextAction = request.headers.get("next-action");
+  const nextAction = request.headers.get("next-action");
   if (nextAction === "x" || nextAction === "test" || (nextAction && nextAction.length < 5)) {
     return new NextResponse("Unauthorized Access Attempt", { status: 400 });
   }
 
-  // 1. Create the singular base response instance
+  // Create the singular base response instance
   const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
-  // 2. Initialize Supabase with clean cookie pass-throughs
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          // Mutate the original request object
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-
-          // ✅ FIX: Directly mutate the existing response object.
-          // Do NOT assign response = NextResponse.next() here.
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  // 3. Securely check the active user session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
 
-  // 4. Handle Redirection Logic cleanly without re-running cookie layers
+  // Auth is only CHECKED on routes that need it (protected/auth pages), and
+  // only REFRESHED on requests that actually carry a Supabase session cookie.
+  //
+  // supabase.auth.getUser() is a NETWORK round-trip to Supabase Auth for
+  // signed-in users, so running it on every request (the old behaviour) put
+  // that latency on the landing page, every public card and every asset
+  // fetch. The matcher below also excludes all static assets, so the proxy
+  // now only touches real navigations / RSC fetches:
+  //   - anonymous visitors (the majority: QR scanners, crawlers, landing)
+  //     → zero auth work, just the consent-cookie logic below;
+  //   - signed-in visitors → getUser() still refreshes their expiring session
+  //     cookies on every page render (the @supabase/ssr pattern — browser
+  //     clients can't renew HttpOnly cookies themselves), and route
+  //     protection works exactly as before.
   const isProtectedRoute =
     matchesRoute(pathname, PROTECTED_ROUTES) || pathname.endsWith("/edit");
-
-  if (!user && isProtectedRoute) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
   const isAuthRoute = matchesRoute(pathname, AUTH_ROUTES);
-  if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL("/post-login", request.url));
+  const hasAuthCookies = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-"));
+
+  if (isProtectedRoute || isAuthRoute || hasAuthCookies) {
+    // Initialize Supabase with clean cookie pass-throughs
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            // Mutate the original request object
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            );
+
+            // ✅ FIX: Directly mutate the existing response object.
+            // Do NOT assign response = NextResponse.next() here.
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    // Securely check the active user session (also refreshes expiring tokens)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Handle Redirection Logic cleanly without re-running cookie layers
+    if (!user && isProtectedRoute) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    if (user && isAuthRoute) {
+      return NextResponse.redirect(new URL("/post-login", request.url));
+    }
   }
 
-  // 5. Anonymous analytics cookies (visitor + session) — CONSENT-GATED.
+  // Anonymous analytics cookies (visitor + session) — CONSENT-GATED.
   //    Must be set here (middleware) because Server Components cannot
   //    modify cookies. Setting on `request.cookies` makes the value visible
   //    to the downstream page on THIS request; `response.cookies` persists
@@ -142,6 +159,20 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|auth/callback).*)",
+    // Run ONLY on real navigations / RSC fetches. Everything that is pure
+    // static payload skips the proxy entirely — previously every image, icon,
+    // the service worker script and the manifest paid proxy + (for signed-in
+    // users) a Supabase Auth round-trip:
+    //   - Next.js pipelines (_next/static, _next/image)
+    //   - public/ assets: /icons/*, /banners/*, root-level images (banner.png,
+    //     k-white.png, favicons, …), the Serwist service worker (/serwist/*),
+    //     the web app manifest and SEO files (robots, sitemap, llms.txt)
+    //   - anything ending in a static-asset extension
+    //   - the precached PWA shell pages (/launch, /offline) — server-rendered
+    //     once, then served by the service worker; the consent cookie they
+    //     need is written client-side and read on the next proxied navigation.
+    // Route protection is unaffected: protected/auth routes and all profile
+    // pages still match.
+    "/((?!api|_next/static|_next/image|favicon\\.ico|auth/callback|serwist/|icons/|banners/|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|llms\\.txt|launch|offline|.*\\.(?:png|jpe?g|svg|webp|ico|css|js|map|txt|xml|webmanifest)$).*)",
   ],
 };

@@ -5,6 +5,7 @@ import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import {
   hasSeenProductTour,
+  isTourExcludedRoute,
   markProductTourSeen,
   hasSeenVisitorTour,
   markVisitorTourSeen,
@@ -22,7 +23,7 @@ import {
   type VisitorTourStep,
 } from '@/lib/visitorTourSteps';
 import { useDriverTour, waitForElement } from '@/hooks/useDriverTour';
-import { useTrack } from '@/lib/use-track';
+import { track } from '@/lib/track';
 import { isPro } from '@/lib/entitlements';
 import { usePathname, useRouter } from 'next/navigation';
 // Global driver.js base styles — everything Konneqta-specific is restyled in
@@ -75,7 +76,6 @@ function isPublicCardRoute(pathname: string): boolean {
 export default function OnboardingWidget() {
   const pathname = usePathname();
   const router = useRouter();
-  const track = useTrack();
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [hasCard, setHasCard] = useState<boolean | null>(null);
@@ -91,13 +91,7 @@ export default function OnboardingWidget() {
   const [visitorSteps, setVisitorSteps] =
     useState<VisitorTourStep[]>(VISITOR_TOUR_STEPS);
 
-  const isExcludedRoute =
-    pathname.startsWith('/auth/') ||
-    pathname === '/post-login' ||
-    pathname === '/privacy' ||
-    pathname === '/terms' ||
-    pathname === '/refund' ||
-    pathname === '/';
+  const isExcludedRoute = isTourExcludedRoute(pathname);
   const isOwnProfileRoute =
     Boolean(username) &&
     (pathname === `/${username}` || pathname.startsWith(`/${username}/`));
@@ -245,7 +239,7 @@ export default function OnboardingWidget() {
       setStepIndex(0);
       setStage('touring');
     },
-    [track],
+    [],
   );
 
   const startVisitorTour = useCallback(
@@ -265,7 +259,7 @@ export default function OnboardingWidget() {
       setStepIndex(0);
       setStage('touring');
     },
-    [track],
+    [],
   );
 
   /** Latest render-scoped helpers for effects that must stay lean. Updated

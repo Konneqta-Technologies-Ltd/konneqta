@@ -11,12 +11,25 @@ import { useEffect, useState } from "react";
 /**
  * Client half of /launch (see app/launch/page.tsx for the full story).
  *
- * Splash → decide: online → replace to /post-login; offline (+ installed PWA
- * + saved snapshot) → the owner's card, fully interactive (flip, on-device
- * QR). Anything else offline → a short "you're offline" note.
+ * Splash → decide:
+ *   online + fresh card snapshot → straight to /{username} (skips the
+ *     /post-login auth hop — see SNAPSHOT_FRESH_MS);
+ *   online, no snapshot          → /post-login (server-side routing to the
+ *     user's active card);
+ *   offline + installed PWA + saved snapshot → the owner's card, fully
+ *     interactive (flip, on-device QR);
+ *   anything else offline        → a short "you're offline" note.
  */
 
 type Mode = "splash" | "card" | "offline-note";
+
+/**
+ * Max age for the /post-login skip. The snapshot is (re)saved by
+ * OfflineCardSaver on every online card view, so a fresh one points at a slug
+ * that was valid the last time the owner opened their card. Past 30 days we
+ * trust the server router (/post-login) over a possibly-renamed slug.
+ */
+const SNAPSHOT_FRESH_MS = 30 * 24 * 60 * 60 * 1000;
 
 function isStandalonePwa(): boolean {
   if (typeof window === "undefined") return false;
@@ -53,6 +66,19 @@ export default function LaunchExperience() {
     // Decide on a timer (never setState synchronously in the effect body).
     const decide = () => {
       if (navigator.onLine) {
+        // Fast path: skip the /post-login hop (middleware auth + 1–3 Supabase
+        // queries) and navigate straight to the card path we already know.
+        // If the card was renamed/deleted since the snapshot was saved, this
+        // lands on the not-found page; the next launch or any /post-login
+        // visit re-routes and self-heals the snapshot.
+        const snap = readOfflineCardSnapshot();
+        if (
+          snap &&
+          Date.now() - new Date(snap.savedAt).getTime() < SNAPSHOT_FRESH_MS
+        ) {
+          router.replace(`/${snap.profile.username}`);
+          return; // stay on the splash while the navigation resolves
+        }
         router.replace("/post-login");
         return; // stay on the splash while the redirect resolves
       }

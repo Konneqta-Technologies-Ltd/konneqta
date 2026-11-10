@@ -128,7 +128,7 @@ export default function PrivacyPolicyPage() {
 
           <Section number={3} id="analytics" title="Analytics">
             <p>
-              We use analytics tools, including PostHog, Google Analytics, Google Search Console and Vercel Analytics, to
+              We use analytics tools, including Google Analytics, Google Search Console and Vercel Analytics, to
               better understand how visitors use our website. These tools may
               collect information such as:
             </p>

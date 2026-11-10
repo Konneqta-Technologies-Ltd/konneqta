@@ -27,7 +27,6 @@ import { getAdminClient, recordEvent } from "@/lib/analytics/server";
 import { createNotification } from "@/lib/notifications/server";
 import { getSessionId } from "@/lib/analytics/session";
 import { getVisitorId } from "@/lib/analytics/visitor";
-import { captureEvent } from "@/lib/posthog";
 
 /** The slice of a konneqt_requests row both callers already have. */
 export interface KonneqtRequestRow {
@@ -165,16 +164,6 @@ export async function acceptKonneqtRequest(
     body: "You're now connected — find them in your Konneqts.",
     link: requester?.username ? `/${requester.username}/konneqts` : null,
   });
-
-  // PostHog funnel events (best-effort).
-  void captureEvent(request.recipient_id, "konneqt_created", {
-    target: requester?.username ?? "unknown",
-    source: request.source,
-    via: "request_accepted",
-  }).catch(() => {});
-  void captureEvent(request.requester_id, "konneqt_request_accepted", {
-    by: recipient?.username ?? "unknown",
-  }).catch(() => {});
 
   // 6. Settle the accepter's notification row(s).
   await stampRequestNotifications(request.id, request.recipient_id, "accepted");

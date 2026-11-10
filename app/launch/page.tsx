@@ -14,8 +14,10 @@ export const metadata: Metadata = {
  * page (see app/serwist/[path]/route.ts additionalPrecacheEntries) so it
  * opens instantly with ZERO network:
  *
- *   ONLINE  → immediately router.replace('/post-login'), which runs the
- *             existing server-side routing to the user's active card.
+ *   ONLINE  → straight to the owner's card when a FRESH snapshot exists
+ *             (saved on their last online card view — skips the /post-login
+ *             auth hop entirely); otherwise router.replace('/post-login'),
+ *             which runs the existing server-side routing to the active card.
  *   OFFLINE → renders the owner's saved card right here (localStorage
  *             snapshot + on-device QR, see components/OfflineCard.tsx),
  *             skipping the network-dependent /post-login hop entirely.

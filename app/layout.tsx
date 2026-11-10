@@ -15,8 +15,7 @@ import ConsentedGoogleAnalytics from '@/components/ConsentedGoogleAnalytics';
 import ConsentedVercelAnalytics from '@/components/ConsentedVercelAnalytics';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
 import OfflineToast from '@/components/OfflineToast';
-import OnboardingWidget from '@/components/onboarding/OnboardingWidget';
-import PostHogProvider from '@/components/PostHogProvider';
+import OnboardingGate from '@/components/onboarding/OnboardingGate';
 import Script from 'next/script';
 import SwRegister from '@/components/SwRegister';
 import { Toaster } from 'sonner';
@@ -196,19 +195,17 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-black"
         suppressHydrationWarning
       >
-        <PostHogProvider>
-          {children}
-          <Toaster position="top-right" richColors />
-          {/* Global offline indicator — slim top toast on every page (never a
-              full-page offline screen). See components/OfflineToast.tsx. */}
-          <OfflineToast />
-          <OnboardingWidget />
-          <ConsentedVercelAnalytics />
-          {/* Registers /sw.js in production only (Serwist offline shell). */}
-          <SwRegister />
-          {/* Auth-gated navbar (hamburger + side drawer) — logged-in users only. */}
-          <AppNavbar />
-        </PostHogProvider>
+        {children}
+        <Toaster position="top-right" richColors />
+        {/* Global offline indicator — slim top toast on every page (never a
+            full-page offline screen). See components/OfflineToast.tsx. */}
+        <OfflineToast />
+        <OnboardingGate />
+        <ConsentedVercelAnalytics />
+        {/* Registers /sw.js in production only (Serwist offline shell). */}
+        <SwRegister />
+        {/* Auth-gated navbar (hamburger + side drawer) — logged-in users only. */}
+        <AppNavbar />
         <CookieConsentBanner />
         {/*
           Google Analytics — the ONLY loader lives in ConsentedGoogleAnalytics:

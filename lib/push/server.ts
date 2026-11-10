@@ -142,6 +142,11 @@ async function sendExpoPushToUser(
             title: payload.title,
             body: payload.body,
             sound: 'default',
+            // Android 8+: without an explicit channel, remote messages land
+            // in the SDK's DEFAULT-importance "Miscellaneous" fallback and
+            // heads-up banners never show. The app creates this HIGH
+            // channel at registration (konneqta-mobile/src/lib/push.ts).
+            channelId: 'konneqta',
             data: {
               url: payload.url ?? null,
               notificationId: payload.notificationId ?? null,

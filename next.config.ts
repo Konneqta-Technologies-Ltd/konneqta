@@ -31,6 +31,14 @@ const nextConfig: NextConfig = {
   images: {
     // Next.js 16 requires an explicit qualities allowlist
     qualities: [75, 90, 100],
+    // AVIF where supported (~20–30% smaller than WebP), WebP fallback.
+    formats: ["image/avif", "image/webp"],
+    // Optimized output (/_next/image for Supabase avatars/banners/logos) is
+    // cached for at least a day — matches the brandCache policy in headers()
+    // (1 day fresh + stale-while-revalidate). The upstream Cache-Control wins
+    // when larger; this floor stops the default 60s TTL making every repeat
+    // avatar view a CDN miss + re-optimization.
+    minimumCacheTTL: 86400,
     remotePatterns: supabaseHost
       ? [
           {
@@ -76,6 +84,37 @@ const nextConfig: NextConfig = {
         ],
         destination: "https://www.konneqta.com/:path*",
         permanent: true,
+      },
+    ];
+  },
+  // Static asset cache lifetimes. Content-hashed /_next assets are already
+  // immutable-1y; these rules cover UNVERSIONED brand assets in /public,
+  // which Render serves with a bare max-age=14400 (4h — the PageSpeed
+  // "efficient cache lifetimes" finding). Policy: 1 day fresh + 7-day
+  // stale-while-revalidate — a replaced file (e.g. k-logo.png) propagates
+  // within a day while Cloudflare serves-and-refreshes stale copies in
+  // between. Version filenames (k-logo-v2.png) if a longer fresh window is
+  // ever needed.
+  async headers() {
+    const brandCache = [
+      {
+        key: "Cache-Control",
+        value: "public, max-age=86400, stale-while-revalidate=604800",
+      },
+    ];
+    return [
+      {
+        // Root-level images/icons (banner.png, k-logo.png, favicons, …).
+        source: "/:file.(png|jpg|jpeg|svg|webp|ico)",
+        headers: brandCache,
+      },
+      {
+        source: "/icons/:file*",
+        headers: brandCache,
+      },
+      {
+        source: "/banners/:file*",
+        headers: brandCache,
       },
     ];
   },
