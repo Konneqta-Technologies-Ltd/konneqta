@@ -30,6 +30,26 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Testing Konneqta Teams locally
+
+When both apps are running locally, keep Konneqta on port `3000` and start the
+Teams app from its repository on port `3001`:
+
+```bash
+pnpm dev --port 3001
+```
+
+In Konneqta's ignored `.env.local`, set:
+
+```env
+NEXT_PUBLIC_TEAMS_APP_URL=http://localhost:3001
+```
+
+Restart Konneqta after changing `.env.local`. The homepage and signup links will
+then open the local Teams signup page. If this variable is unset, the links
+continue to use `https://teams.konneqta.com/teams/signup`, including in
+production.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

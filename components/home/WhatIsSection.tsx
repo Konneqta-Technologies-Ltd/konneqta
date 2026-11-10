@@ -1,6 +1,9 @@
-'use client';
-
-import { motion, type Variants } from 'framer-motion';
+/**
+ * "What is Konneqta" section — a SERVER component (was a framer-motion
+ * client component). All content is static HTML (below the fold, so no
+ * entrance animation is needed); the step cards keep their hover lift as a
+ * pure-CSS Tailwind transition. Zero JS shipped for this section.
+ */
 
 const audiences = [
   'Creators',
@@ -40,51 +43,22 @@ const steps = [
   },
 ];
 
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  show: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.55, delay: i * 0.1, ease: 'easeOut' },
-  }),
-};
-
 export default function WhatIsSection() {
   return (
     <section className="relative bg-[#0a0a0a] px-6 pb-16 sm:pb-28 sm:pt-24 pt-10">
       <div className="mx-auto max-w-3xl text-center">
-        <motion.p
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50"
-        >
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
           What Konneqta is
-        </motion.p>
+        </p>
 
-        <motion.h2
-          variants={fadeUp}
-          custom={1}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="mt-6 font-display text-2xl font-bold leading-tight text-white sm:text-3xl md:text-5xl"
-        >
+        <h2 className="mt-6 font-display text-2xl font-bold leading-tight text-white sm:text-3xl md:text-5xl">
           Konneqta isn&apos;t a link-in-bio.
           <br />
           It&apos;s who you are and what you do,
           <span className="text-[#FF6B2C]">made shareable.</span>
-        </motion.h2>
+        </h2>
 
-        <motion.div
-          variants={fadeUp}
-          custom={2}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="mt-9 flex flex-wrap items-center justify-center gap-3"
-        >
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           {audiences.map((a) => (
             <span
               key={a}
@@ -93,20 +67,14 @@ export default function WhatIsSection() {
               {a}
             </span>
           ))}
-        </motion.div>
+        </div>
       </div>
 
       <div className="mx-auto mt-16 grid max-w-5xl gap-6 sm:grid-cols-3">
-        {steps.map((step, i) => (
-          <motion.div
+        {steps.map((step) => (
+          <div
             key={step.number}
-            variants={fadeUp}
-            custom={i}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            whileHover={{ y: -6 }}
-            className={`rounded-3xl p-7 ${step.bg} ${step.text} ${step.rotation} shadow-xl shadow-black/30`}
+            className={`rounded-3xl p-7 ${step.bg} ${step.text} ${step.rotation} shadow-xl shadow-black/30 transition-transform duration-300 hover:-translate-y-1.5`}
           >
             <span
               className={`mb-6 inline-flex h-9 w-9 items-center justify-center rounded-xl font-display font-bold ${step.badge}`}
@@ -117,7 +85,7 @@ export default function WhatIsSection() {
             <p className="mt-2 text-sm leading-relaxed text-[#0a0a0a]/70">
               {step.description}
             </p>
-          </motion.div>
+          </div>
         ))}
       </div>
     </section>

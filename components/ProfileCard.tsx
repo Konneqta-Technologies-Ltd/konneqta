@@ -19,7 +19,7 @@ import { safeHref } from '@/lib/url-validation';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useTrack } from '@/lib/use-track';
+import { track } from '@/lib/track';
 import { FLIP_CARD_EVENT, OPEN_VISITOR_TOUR_EVENT } from '@/lib/onboarding';
 
 type SocialLink = {
@@ -125,7 +125,6 @@ export default function ProfileCard({
   }, []);
   const [showShowcase, setShowShowcase] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const track = useTrack();
   const router = useRouter();
 
   // ── ANALYTICS: social-link clicks ─────────────────────────────────
@@ -175,12 +174,24 @@ export default function ProfileCard({
         toast.error("Card ID missing — can't refresh QR.");
         return;
       }
+      // The logo prop is DISPLAY-gated server-side (app/[username]/page.tsx
+      // nulls logo_url when the owner's Pro has lapsed). Compositing with it
+      // would silently strip the logo from the stored QR PNG on every
+      // refresh. Re-read the TRUE logo_url from the card row (owner-scoped,
+      // so RLS allows it) — a lapsed-Pro owner's QR keeps the logo they
+      // uploaded while subscribed.
+      const { data: cardRow } = await supabase
+        .from('cards')
+        .select('logo_url')
+        .eq('id', profile.cardId)
+        .eq('owner_id', user.id)
+        .maybeSingle();
       await regenerateQrCode({
         supabase,
         userId: user.id,
         cardId: profile.cardId,
         cardSlug: profile.username,
-        logoUrl: profile.logo_url,
+        logoUrl: cardRow?.logo_url ?? null,
       });
       toast.success('QR code refreshed');
       router.refresh();

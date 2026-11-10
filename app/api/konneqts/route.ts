@@ -42,7 +42,6 @@ import { getAdminClient, recordEvent } from "@/lib/analytics/server";
 import { createNotification } from "@/lib/notifications/server";
 import { getSessionId } from "@/lib/analytics/session";
 import { getVisitorId } from "@/lib/analytics/visitor";
-import { captureEvent } from "@/lib/posthog";
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -326,16 +325,6 @@ export async function POST(req: Request) {
         requesterUsername: callerProfile?.username ?? null,
       },
     });
-
-    // Product analytics (PostHog) — request sent from the ACTOR's
-    // perspective. distinctId = Supabase user id, matching the client-side
-    // identify() call so both merge into one person. The konneqt_created /
-    // `konneqt` analytics events fire at ACCEPT time (lib/konneqts/server.ts),
-    // when the connection actually forms.
-    void captureEvent(callerId, "konneqt_request_sent", {
-      target: targetProfile.username,
-      source,
-    }).catch(() => {});
 
     return NextResponse.json({
       status: "requested",

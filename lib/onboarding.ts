@@ -70,3 +70,20 @@ export function requestCardFlip(flipped: boolean): void {
     new CustomEvent(FLIP_CARD_EVENT, { detail: { flipped } }),
   );
 }
+
+/**
+ * Routes where NO tour UI may ever appear (landing, auth flows, the
+ * post-login hop, legal pages). Shared by OnboardingGate — which skips
+ * loading the widget entirely on these routes — and OnboardingWidget
+ * (defense-in-depth, so the two can never drift apart).
+ */
+export function isTourExcludedRoute(pathname: string): boolean {
+  return (
+    pathname.startsWith('/auth/') ||
+    pathname === '/post-login' ||
+    pathname === '/privacy' ||
+    pathname === '/terms' ||
+    pathname === '/refund' ||
+    pathname === '/'
+  );
+}

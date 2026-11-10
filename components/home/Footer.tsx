@@ -1,10 +1,10 @@
-'use client';
-
+import Image from 'next/image';
 import { FaInstagram, FaLinkedin, FaXTwitter } from 'react-icons/fa6';
 
 import { FaFacebook } from 'react-icons/fa';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
+
+/** Footer — a SERVER component (was framer-motion; the watermark fade-in was
+ *  removed so nothing below the fold ships JS just to fade itself in). */
 
 const links = [
   { name: 'Privacy', url: '/privacy' },
@@ -81,18 +81,14 @@ export default function Footer() {
         </div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1 }}
+      <div
         aria-hidden="true"
         className="pointer-events-none mt-10 select-none overflow-hidden"
       >
         <p className="font-display -mb-[0.08em] whitespace-nowrap text-center text-[22vw] font-bold leading-none text-white/5">
           konneq<span className="text-[#6B21D4]">ta</span>
         </p>
-      </motion.div>
+      </div>
     </footer>
   );
 }

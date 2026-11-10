@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useTrack } from '@/lib/use-track';
+import { track } from '@/lib/track';
 import {
   NOTIFICATION_TYPES,
   NOTIFICATION_TYPE_LABELS,
@@ -48,7 +48,6 @@ function isIosBrowser(): boolean {
  * Row 2+: per-type toggles persisted to notification_preferences.
  */
 export default function NotificationSettings() {
-  const track = useTrack();
   const [pushState, setPushState] = useState<PushSupport>('checking');
   const [iosHint, setIosHint] = useState(false);
   const [prefs, setPrefs] = useState<Record<NotificationType, boolean>>({
@@ -151,7 +150,7 @@ export default function NotificationSettings() {
     } catch {
       setPushState('off');
     }
-  }, [track]);
+  }, []);
 
   const disablePush = useCallback(async () => {
     setPushState('working');
@@ -171,7 +170,7 @@ export default function NotificationSettings() {
     } catch {
       setPushState('off');
     }
-  }, [track]);
+  }, []);
 
   const toggleType = useCallback(
     (type: NotificationType) => {

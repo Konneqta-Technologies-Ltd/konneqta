@@ -78,7 +78,14 @@ export function useNotifications(userId: string | null | undefined) {
       )
       .subscribe();
 
-    const poll = window.setInterval(() => void refresh(), 60_000);
+    // 60s poll — but skip ticks while the tab/PWA is HIDDEN: realtime covers
+    // foreground inserts and the visibilitychange listener below re-syncs on
+    // wake-up, so background polling is pure battery/data burn (an installed
+    // PWA can sit hidden for days).
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void refresh();
+    }, 60_000);
     const onVisible = () => {
       if (document.visibilityState === 'visible') void refresh();
     };

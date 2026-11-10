@@ -1,23 +1,49 @@
 'use client';
 
-import { motion, type Variants } from 'framer-motion';
-import Link from 'next/link';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from 'framer-motion';
 import WavyLine from './WavyLine';
 import FloatingDot from './FloatingDot';
 import Image from 'next/image';
-import SignInWithGoogle from '@/components/SignInWithGoogle';
+import Link from 'next/link';
 
-const container: Variants = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+import SignInWithGoogle from '@/components/SignInWithGoogle';
+import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
+import { getTeamsSignupUrl } from '@/lib/teams-url';
+
+const heroSlides = [
+  {
+    headingLines: ['Introduce Your Business in', 'One Tap'],
+    description:
+      'Konneqta is a digital business card platform that lets creators, business owners and professionals build a shareable digital business profile using QR code and links — all in one place',
   },
-};
+  {
+    headingLines: ["Manage your team's", 'Konneqta presence.'],
+    description:
+      "One workspace to bring everyone's identity together: consistent, branded and ready to share.",
+  },
+];
+
+// const container: Variants = {
+//   hidden: {},
+//   show: {
+//     transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+//   },
+// };
 
 const item: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function Hero({
   cardPath,
@@ -26,6 +52,35 @@ export default function Hero({
   cardPath: string | null;
   firstName: string | null;
 }) {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    getClientSnapshot,
+    getServerSnapshot
+  )
+  const shouldReduceMotion = useReducedMotion();
+  const automaticRotationEnabled = shouldReduceMotion === false;
+
+
+  useEffect(() => {
+    if (!automaticRotationEnabled) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, 6500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeSlide, automaticRotationEnabled]);
+
+  const changeSlide = (direction: -1 | 1) => {
+    setActiveSlide(
+      (current) =>
+        (current + direction + heroSlides.length) % heroSlides.length,
+    );
+  };
+
+  const slide = heroSlides[activeSlide];
+
   return (
     <section className="relative overflow-hidden bg-[#0a0a0a] pt-10 pb-20 sm:pb-36 md:pb-44">
       {/* ambient decoration layer */}
@@ -60,7 +115,7 @@ export default function Hero({
         />
         <WavyLine
           color="#2DD9A6"
-          className="absolute -right-2.5 top-102   hidden sm:block"
+          className="absolute -right-2.5 top-102 hidden sm:block"
           delay={0.5}
           flip
         />
@@ -84,7 +139,7 @@ export default function Hero({
         <FloatingDot
           color="#F3C23A"
           size={8}
-          className="right-8.75 sm:right-41.25 top-86.25 sm:top-136.25 sm:block"
+          className="right-8.75 sm:right-41.25 top-86.25 sm:block"
           duration={3}
         />
       </div>
@@ -100,6 +155,12 @@ export default function Hero({
         />
 
         <nav className="flex items-center gap-6">
+          <Link
+            href={getTeamsSignupUrl()}
+            className="visible-focus text-sm font-semibold text-white/80 transition-colors hover:text-white"
+          >
+            For teams
+          </Link>
           {cardPath ? (
             <Link
               href={cardPath}
@@ -128,38 +189,78 @@ export default function Hero({
       </div>
 
       <div className="relative mx-auto max-w-3xl px-6 pt-8 sm:pt-16 text-center">
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="flex flex-col items-center"
-        >
-          <motion.span
-            variants={item}
-            className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90"
-          >
+        <div className="flex flex-col items-center">
+          <span className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs md:text-sm text-white/90">
             <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
             Built for Creators, Entrepreneurs &amp; Professionals
-          </motion.span>
+          </span>
 
-          <motion.h1
-            variants={item}
-            className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl"
-          >
-            Introduce Your Business in
-            <br />
-            One Tap
-          </motion.h1>
+          <motion.div variants={item} className="w-full">
+            <div
+              role="region"
+              aria-roledescription="carousel"
+              aria-label="Konneqta for individuals and teams"
+              className="w-full"
+            >
+              <div aria-live={!mounted ? 'off' : (automaticRotationEnabled ? 'off' : 'polite')}>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={activeSlide}
+                    initial={{
+                      opacity: 0,
+                      y: shouldReduceMotion ? 0 : 8,
+                    }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{
+                      opacity: 0,
+                      y: shouldReduceMotion ? 0 : -8,
+                    }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 0.25 }}
+                    role="group"
+                    aria-roledescription="slide"
+                    aria-label={`${activeSlide + 1} of ${heroSlides.length}`}
+                  >
+                    <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-7xl">
+                      {slide.headingLines.map((line) => (
+                        <span key={line} className="block">
+                          {line}
+                        </span>
+                      ))}
+                    </h1>
 
-          <motion.p
-            variants={item}
-            className="mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg"
-          >
-            Konneqta is a digital business card platform that lets creators, business owners and
-            professionals build a shareable digital business profile using QR code and links — all in one place
-          </motion.p>
+                    <p className="mx-auto mt-7 max-w-xl text-balance text-base text-white/80 sm:text-lg">
+                      {slide.description}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
 
-          <motion.div variants={item} className="mt-10">
+              <div
+                role="group"
+                aria-label="Hero message controls"
+                className="mt-6 flex items-center justify-center gap-3 text-xs font-semibold text-white/80"
+              >
+                <button
+                  type="button"
+                  onClick={() => changeSlide(-1)}
+                  aria-label="Previous hero message"
+                  className="visible-focus rounded-full bg-white/10 px-4 py-2 transition-colors hover:bg-white/20"
+                >
+                  <FaArrowLeft className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => changeSlide(1)}
+                  aria-label="Next hero message"
+                  className="visible-focus rounded-full bg-white/10 px-4 py-2 transition-colors hover:bg-white/20"
+                >
+                  <FaArrowRight className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="mt-10">
             {cardPath ? (
               <Link
                 href={cardPath}
@@ -170,8 +271,8 @@ export default function Hero({
             ) : (
               <SignInWithGoogle />
             )}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );
