@@ -1,4 +1,10 @@
-import { canUseBanners, canUseThemes, isPro } from "@/lib/entitlements";
+import {
+  canUseBanners,
+  canUseThemes,
+  getMaxShowcaseItems,
+  getMaxSocialLinks,
+  isPro,
+} from "@/lib/entitlements";
 import { notFound, redirect } from "next/navigation";
 
 import type { Metadata } from "next";
@@ -266,6 +272,15 @@ export default async function UsernamePage({
   // we just override what's rendered. If they renew, everything comes back.
   const ownerIsPro = isPro(owner);
 
+  // Read-time link + showcase reversion caps (free = 3 links / 2 items).
+  // Both resolve through isPro()'s lazy expiry check, so an expired
+  // subscription drops to the free caps the instant it lapses — without
+  // touching a single stored row. Renewal restores everything automatically.
+  // Social links are NEVER deleted: ProfileCard renders links beyond the cap
+  // as deactivated (dimmed, unclickable) and the rows stay in the DB.
+  const ownerLinkLimit = getMaxSocialLinks(owner);
+  const ownerShowcaseLimit = getMaxShowcaseItems(owner);
+
   // Non-primary cards (card #2, #3) are Pro-only. If the owner is not Pro,
   // redirect visitors to the owner's primary card so QR scans / links don't
   // hit a dead end. The owner's primary slug = their username.
@@ -323,6 +338,20 @@ export default async function UsernamePage({
     .order("position", { ascending: true })
     .order("created_at", { ascending: true });
 
+  // DISPLAY CAP: a non-Pro owner's items beyond the free cap (2) stay stored
+  // but stop rendering — same pattern as the Konneqts display limit. Visitors
+  // see the visible items + a "🔒 N more with Pro" hint on the showcase
+  // trigger (ProfileCard). Renewal reveals them again with zero data changes.
+  const allShowcaseItems = (showcaseItems ?? []) as ShowcaseItem[];
+  const visibleShowcaseItems =
+    ownerShowcaseLimit === Infinity
+      ? allShowcaseItems
+      : allShowcaseItems.slice(0, ownerShowcaseLimit);
+  const hiddenShowcaseCount = Math.max(
+    0,
+    allShowcaseItems.length - visibleShowcaseItems.length,
+  );
+
   // ── ANALYTICS: profile view (after-response, write-time filtered) ─────
   // v2 counting rules (docs/analytics-plan.md):
   //   • The OWNER's own views are never recorded.
@@ -373,7 +402,11 @@ export default async function UsernamePage({
     company: card.company,
     bio: card.bio,
     avatarUrl: card.avatar_url,
-    socialLinks: socialLinks ?? [],
+    // Only ACTIVE links belong in structured data — links beyond the owner's
+    // current cap render deactivated on the card, so crawlers shouldn't be
+    // handed them either. (ProfileCard still receives the full list and dims
+    // the overflow; renewal brings them back into the schema automatically.)
+    socialLinks: (socialLinks ?? []).slice(0, ownerLinkLimit),
     baseUrl,
   });
 
@@ -420,12 +453,15 @@ export default async function UsernamePage({
           <OfflineCardSaver
             profile={profile}
             socialLinks={socialLinks ?? []}
+            linkLimit={ownerLinkLimit === Infinity ? null : ownerLinkLimit}
           />
         )}
         <ProfileCard
           profile={profile}
           socialLinks={socialLinks ?? []}
-          showcaseItems={(showcaseItems ?? []) as ShowcaseItem[]}
+          showcaseItems={visibleShowcaseItems}
+          hiddenShowcaseCount={hiddenShowcaseCount}
+          linkLimit={ownerLinkLimit}
           isOwner={isOwner}
           canUseThemes={canUseThemes(owner)}
           canUseBanners={canUseBanners(owner)}

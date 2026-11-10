@@ -224,11 +224,17 @@ export default function EditProfileForm({
   const removeSocialLink = (index: number) => {
     setSocialLinks((prev) => prev.filter((_, i) => i !== index));
   };
+  // Over-cap rows are INACTIVE while the owner isn't on Pro: their inputs
+  // are disabled below, and these guards are defence-in-depth so no handler
+  // path can mutate a locked link. Removing is always allowed.
+  const isLinkInactive = (index: number) =>
+    hasLinkLimit && index >= maxSocialLinks;
   const updateSocialLink = (
     index: number,
     field: keyof SocialLink,
     value: string,
   ) => {
+    if (isLinkInactive(index)) return;
     setSocialLinks((prev) =>
       prev.map((link, i) => (i === index ? { ...link, [field]: value } : link)),
     );
@@ -240,6 +246,7 @@ export default function EditProfileForm({
   // Switching away from email clears the auto-filled value so it doesn't
   // silently fail http(s) validation on submit.
   const handlePlatformChange = (index: number, newPlatform: string) => {
+    if (isLinkInactive(index)) return;
     setSocialLinks((prev) =>
       prev.map((link, i) => {
         if (i !== index) return link;
@@ -791,7 +798,9 @@ export default function EditProfileForm({
                 Social Links
                 {hasLinkLimit && (
                   <span className="ml-2 text-xs font-normal text-zinc-400 dark:text-zinc-500">
-                    {socialLinks.length}/{maxSocialLinks}
+                    {socialLinks.length <= maxSocialLinks
+                      ? `${socialLinks.length}/${maxSocialLinks}`
+                      : `${maxSocialLinks}/${maxSocialLinks} active · ${socialLinks.length - maxSocialLinks} locked`}
                   </span>
                 )}
               </label>
@@ -833,8 +842,19 @@ export default function EditProfileForm({
                 </Link>
               </div>
             )}
+            {/* Inactive overflow links: stored + safe, just not editable
+                until the owner is back on Pro. */}
+            {hasLinkLimit && socialLinks.length > maxSocialLinks && (
+              <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
+                💤 {socialLinks.length - maxSocialLinks} of your links are
+                inactive but safe — they&apos;ll wake up again when you upgrade.
+              </p>
+            )}
             <div className="scrollable-links flex min-h-10 max-h-50 flex-col gap-2 overflow-y-auto pr-1">
               {socialLinks.map((link, index) => {
+                // Over-cap rows are INACTIVE on non-Pro accounts: dimmed,
+                // locked (platform/URL/label uneditable), but removable.
+                const isInactive = isLinkInactive(index);
                 const platform = SOCIAL_PLATFORMS.find(
                   (p) => p.id === link.platform,
                 );
@@ -850,7 +870,8 @@ export default function EditProfileForm({
                         onChange={(e) =>
                           handlePlatformChange(index, e.target.value)
                         }
-                        className={`w-30 rounded-lg border border-zinc-300 bg-white py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 ${PlatformIcon ? 'pl-8 pr-2' : 'px-2'}`}
+                        disabled={isInactive}
+                        className={`w-30 rounded-lg border border-zinc-300 bg-white py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 ${PlatformIcon ? 'pl-8 pr-2' : 'px-2'} ${isInactive ? 'cursor-not-allowed opacity-60 grayscale' : ''}`}
                       >
                         {SOCIAL_PLATFORMS.map((p) => (
                           <option key={p.id} value={p.id}>
@@ -867,7 +888,12 @@ export default function EditProfileForm({
                           updateSocialLink(index, 'url', e.target.value)
                         }
                         placeholder={platform?.placeholder ?? 'https://...'}
-                        className={inputClassName}
+                        disabled={isInactive}
+                        className={
+                          isInactive
+                            ? `${disabledInputClassName} opacity-60 grayscale`
+                            : inputClassName
+                        }
                       />
                       {link.platform === 'other' && (
                         <input
@@ -878,16 +904,27 @@ export default function EditProfileForm({
                           }
                           maxLength={20}
                           placeholder='Link name (e.g. "My Shop") — shown on your card'
-                          className={inputClassName}
+                          disabled={isInactive}
+                          className={
+                            isInactive
+                              ? `${disabledInputClassName} opacity-60 grayscale`
+                              : inputClassName
+                          }
                         />
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeSocialLink(index)}
-                      className="mt-0.5 shrink-0 cursor-pointer rounded-md p-2 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40"
-                      aria-label="Remove link"
-                    >
+                    <div className="flex shrink-0 flex-col items-center gap-1">
+                      {isInactive && (
+                        <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-semibold whitespace-nowrap text-amber-600 dark:text-amber-300">
+                          Inactive · Pro
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeSocialLink(index)}
+                        className="shrink-0 cursor-pointer rounded-md p-2 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40"
+                        aria-label="Remove link"
+                      >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
@@ -901,7 +938,8 @@ export default function EditProfileForm({
                       >
                         <path d="M18 6 6 18M6 6l12 12" />
                       </svg>
-                    </button>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
