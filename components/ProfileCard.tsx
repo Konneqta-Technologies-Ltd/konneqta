@@ -7,6 +7,7 @@ import ConnectButton from './connect/ConnectButton';
 import Image from 'next/image';
 import { KONNEQT_SOURCES } from '@/lib/konneqts';
 import { PLATFORM_MAP } from '@/lib/social-platforms';
+import PaymentOptionsModal from './PaymentOptionsModal';
 import ShareMenu from './ShareMenu';
 import ShowcaseViewerModal from './showcase/ShowcaseViewerModal';
 import type { ShowcaseItem } from '@/lib/showcase';
@@ -95,6 +96,8 @@ export default function ProfileCard({
   profile,
   socialLinks,
   showcaseItems = [],
+  linkLimit = Infinity,
+  hiddenShowcaseCount = 0,
   isOwner = false,
   canUseThemes = false,
   canUseBanners = false,
@@ -102,8 +105,20 @@ export default function ProfileCard({
   profile: Profile;
   socialLinks: SocialLink[];
   /** Owner's showcase items — visitors get a trigger under the copy-link
-   *  row that opens them in a view-only modal. Empty = no trigger. */
+   *  row that opens them in a view-only modal. Empty = no trigger. Already
+   *  display-capped by the server to the owner's current tier. */
   showcaseItems?: ShowcaseItem[];
+  /**
+   * How many social links stay ACTIVE (openable). Links beyond this index
+   * render DEACTIVATED — dimmed, unclickable, padlocked — when the owner's
+   * subscription has lapsed (free = 3). Nothing is deleted: the stored rows
+   * stay intact and renewing Pro reactivates them automatically.
+   * Infinity (default) = every link is active.
+   */
+  linkLimit?: number;
+  /** Showcase items beyond the owner's current tier cap. Surfaced as a
+   *  "🔒 N more with Pro" hint on the showcase trigger (visitors only). */
+  hiddenShowcaseCount?: number;
   isOwner?: boolean;
   canUseThemes?: boolean;
   canUseBanners?: boolean;
@@ -125,7 +140,17 @@ export default function ProfileCard({
   }, []);
   const [showShowcase, setShowShowcase] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Owner-only upgrade modal for reactivating lapsed (inactive) links.
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const router = useRouter();
+
+  // How many stored links render deactivated (beyond the owner's active
+  // tier cap). Zero for Pro/exempt owners and whenever the link count fits
+  // within the cap.
+  const inactiveLinkCount =
+    linkLimit === Infinity
+      ? 0
+      : Math.max(0, socialLinks.length - linkLimit);
 
   // ── ANALYTICS: social-link clicks ─────────────────────────────────
   // Fire-and-forget beacon to /api/track/link-click. The server re-checks
@@ -326,6 +351,62 @@ export default function ProfileCard({
                   const isEmail = link.platform === 'email';
                   const href = safeHref(link.url, isEmail);
                   if (!href) return null;
+
+                  // INACTIVE LINK (subscription expired / over the free cap):
+                  // stored but deactivated — dimmed, padlocked, NOT clickable.
+                  // The URL stays safely in the DB; renewing Pro flips this
+                  // straight back to the active branch below.
+                  if (index >= linkLimit) {
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => {
+                          if (isOwner) {
+                            toast.warning(
+                              `${inactiveLinkCount} of your links are inactive — upgrade to Pro to wake them up.`,
+                            );
+                            setUpgradeOpen(true);
+                          } else {
+                            toast('This link is inactive right now.');
+                          }
+                        }}
+                        aria-label={`${label} (inactive)`}
+                        className="group flex w-14 cursor-not-allowed flex-col items-center gap-1 opacity-40 grayscale"
+                      >
+                        <span className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 text-zinc-50">
+                          {Icon ? (
+                            <Icon className="h-5 w-5" />
+                          ) : (
+                            <span className="text-xs font-medium uppercase">
+                              {label.charAt(0)}
+                            </span>
+                          )}
+                          {/* Tiny padlock — "stored, but deactivated" */}
+                          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900/90 text-white ring-1 ring-white/20 dark:bg-zinc-100/90 dark:text-zinc-900">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="9"
+                              height="9"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                          </span>
+                        </span>
+                        <span className="max-w-14 truncate text-[10px] text-zinc-500">
+                          {shortLabel}
+                        </span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <a
                       key={index}
@@ -356,6 +437,41 @@ export default function ProfileCard({
                 })
               )}
             </div>
+
+            {/* INACTIVE LINKS: the owner's subscription lapsed, so links
+                beyond their tier cap render deactivated above. This amber
+                chip explains why — owners tap it to upgrade, visitors just
+                get context. Zero links are ever deleted. */}
+            {inactiveLinkCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isOwner) {
+                    setUpgradeOpen(true);
+                  } else {
+                    toast('Some links are inactive on this card.');
+                  }
+                }}
+                className="mx-auto mt-2 flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] font-medium text-amber-300 transition-colors hover:bg-amber-400/20"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                {inactiveLinkCount} link{inactiveLinkCount === 1 ? '' : 's'} inactive
+                {isOwner ? ' · Upgrade to Pro' : ''}
+              </button>
+)}
 
             {/* ---- QR Code (back of card) ---- */}
             {profile.qr_code_url ? (
@@ -650,6 +766,9 @@ export default function ProfileCard({
               </svg>
               Showcase · {showcaseItems.length}{' '}
               {showcaseItems.length === 1 ? 'item' : 'items'}
+              {hiddenShowcaseCount > 0
+                ? ` · 🔒 ${hiddenShowcaseCount} more with Pro`
+                : ''}
             </button>
           </div>
         )}
@@ -662,6 +781,14 @@ export default function ProfileCard({
           onClose={() => setShowShowcase(false)}
           items={showcaseItems}
           ownerName={displayName}
+        />
+      )}
+
+      {/* ---- Upgrade modal (owner tapped an inactive link / amber chip) ---- */}
+      {isOwner && (
+        <PaymentOptionsModal
+          open={upgradeOpen}
+          onClose={() => setUpgradeOpen(false)}
         />
       )}
 

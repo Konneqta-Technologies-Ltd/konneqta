@@ -19,6 +19,7 @@ import { resolveTheme } from "@/lib/themes";
 import { PLATFORM_MAP } from "@/lib/social-platforms";
 import { renderCardFront } from "@/components/card-layouts";
 import { safeHref } from "@/lib/url-validation";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import type { OfflineCardSnapshot } from "@/lib/offline/card-snapshot";
 
@@ -28,6 +29,13 @@ export default function OfflineCard({
   snapshot: OfflineCardSnapshot;
 }) {
   const { profile, socialLinks } = snapshot;
+  // Subscription-aware activation: links beyond the owner's active cap
+  // render deactivated (dimmed, unclickable). Absent/null limit = all
+  // active (older snapshots, Pro/exempt owners).
+  const linkLimit =
+    typeof snapshot.linkLimit === "number" ? snapshot.linkLimit : Infinity;
+  const inactiveLinkCount =
+    linkLimit === Infinity ? 0 : Math.max(0, socialLinks.length - linkLimit);
   const [flipped, setFlipped] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -154,6 +162,53 @@ export default function OfflineCard({
                   const isEmail = link.platform === "email";
                   const href = safeHref(link.url, isEmail);
                   if (!href) return null;
+
+                  // INACTIVE LINK: stored but deactivated (owner not on Pro).
+                  if (index >= linkLimit) {
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() =>
+                          toast.warning(
+                            `${inactiveLinkCount} of your links are inactive — upgrade to Pro to wake them up.`,
+                          )
+                        }
+                        aria-label={`${label} (inactive)`}
+                        className="group flex w-14 cursor-not-allowed flex-col items-center gap-1 opacity-40 grayscale"
+                      >
+                        <span className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 text-zinc-50">
+                          {Icon ? (
+                            <Icon className="h-5 w-5" />
+                          ) : (
+                            <span className="text-xs font-medium uppercase">
+                              {label.charAt(0)}
+                            </span>
+                          )}
+                          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900/90 text-white ring-1 ring-white/20 dark:bg-zinc-100/90 dark:text-zinc-900">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="9"
+                              height="9"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                          </span>
+                        </span>
+                        <span className="max-w-14 truncate text-[10px] text-zinc-500">
+                          {shortLabel}
+                        </span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <a
                       key={index}
@@ -181,6 +236,13 @@ export default function OfflineCard({
                 })
               )}
             </div>
+
+            {/* INACTIVE LINKS: stored but deactivated while off Pro. */}
+            {inactiveLinkCount > 0 && (
+              <div className="mx-auto mt-2 flex w-fit items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] font-medium text-amber-300">
+                {inactiveLinkCount} link{inactiveLinkCount === 1 ? '' : 's'} inactive · Upgrade to Pro
+              </div>
+            )}
 
             {/* ---- QR Code (regenerated on-device) ---- */}
             <div className="mx-auto flex h-44 w-44 flex-col items-center">
