@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   AnimatePresence,
   motion,
@@ -29,17 +29,21 @@ const heroSlides = [
   },
 ];
 
-const container: Variants = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
-  },
-};
+// const container: Variants = {
+//   hidden: {},
+//   show: {
+//     transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+//   },
+// };
 
 const item: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function Hero({
   cardPath,
@@ -49,8 +53,14 @@ export default function Hero({
   firstName: string | null;
 }) {
   const [activeSlide, setActiveSlide] = useState(0);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    getClientSnapshot,
+    getServerSnapshot
+  )
   const shouldReduceMotion = useReducedMotion();
   const automaticRotationEnabled = shouldReduceMotion === false;
+
 
   useEffect(() => {
     if (!automaticRotationEnabled) return;
@@ -192,7 +202,7 @@ export default function Hero({
               aria-label="Konneqta for individuals and teams"
               className="w-full"
             >
-              <div aria-live={automaticRotationEnabled ? 'off' : 'polite'}>
+              <div aria-live={!mounted ? 'off' : (automaticRotationEnabled ? 'off' : 'polite')}>
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={activeSlide}
