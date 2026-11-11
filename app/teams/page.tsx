@@ -63,6 +63,7 @@ export default function TeamsComingSoonPage() {
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           backgroundClip: "text",
+          color: "transparent",
         }}
       >
         Konneqta for Teams
