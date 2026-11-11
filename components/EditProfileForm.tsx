@@ -496,7 +496,11 @@ export default function EditProfileForm({
           userId: user.id,
           cardId,
           cardSlug,
-          logoUrl: logoUrl || null,
+          // LOGO-IN-QR IS PRO-ONLY: pass the logo through ONLY when this
+          // account may upload logos (canUploadLogo prop, entitlement-gated
+          // server-side). Lapsed/expired Pro get a plain QR; the stored
+          // cards.logo_url is untouched for when they renew.
+          logoUrl: canUploadLogo ? logoUrl || null : null,
           onLogoFailed: (reason) => {
             console.warn('QR logo embedding failed:', reason);
             toast.warning(
@@ -915,7 +919,12 @@ export default function EditProfileForm({
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <input
-                        type={link.platform === 'email' ? 'email' : 'url'}
+                        // type="text" (NOT "url") — the browser’s native URL
+                        // validation would block the planned shorthand inputs
+                        // ("@handle", "handle", "+234 801…") before
+                        // resolveSocialLinkInput() can expand them into full
+                        // https:// links. Real checks run on submit instead.
+                        type={link.platform === 'email' ? 'email' : 'text'}
                         value={link.url}
                         onChange={(e) =>
                           updateSocialLink(index, 'url', e.target.value)

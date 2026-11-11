@@ -1115,11 +1115,19 @@ export default function OnboardingForm({
                       </select>
                     </div>
 
-                    {/* URL / email input — email gets the right keyboard +
-                        native validation so raw addresses pass the form. */}
+                    {/* Email input — email keeps type="email" (native
+                        validation is correct there: a raw address is the
+                        stored form). Every other platform is type="text" so
+                        "@handle" shorthand isn’t blocked by the
+                        browser’s URL check. */}
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <input
-                        type={link.platform === 'email' ? 'email' : 'url'}
+                        // type="text" (NOT "url") — the browser’s native URL
+                        // validation would block the planned shorthand inputs
+                        // ("@handle", "handle", "+234 801…") before
+                        // resolveSocialLinkInput() can expand them into full
+                        // https:// links. Real checks run on submit instead.
+                        type={link.platform === 'email' ? 'email' : 'text'}
                         value={link.url}
                         onChange={(e) =>
                           updateSocialLink(index, 'url', e.target.value)

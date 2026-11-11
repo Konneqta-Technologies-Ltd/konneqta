@@ -1,4 +1,6 @@
 import { canUploadLogo, getMaxCards, getMaxSocialLinks } from "@/lib/entitlements";
+import { getCanonicalProfileUrl } from "@/lib/qr";
+import QRCode from "qrcode";
 
 import EditProfileForm from "@/components/EditProfileForm";
 import { createClient } from "@/lib/supabase/server";
@@ -75,6 +77,23 @@ export default async function EditProfilePage({
     .eq("owner_id", user.id)
     .order("sort_order", { ascending: true });
 
+  // 7. QR preview override: logo-in-QR is Pro-only. Serve non-Pro owners a
+  //    plain, freshly generated QR (data URL) instead of a possibly
+  //    logo-baked stored PNG — consistent with the public page's override.
+  let qrCodeUrl = card.qr_code_url;
+  if (!canUploadLogo(profile)) {
+    try {
+      qrCodeUrl = await QRCode.toDataURL(getCanonicalProfileUrl(card.slug), {
+        errorCorrectionLevel: "M",
+        margin: 2,
+        width: 480,
+        color: { dark: "#18181b", light: "#FFFFFF" },
+      });
+    } catch {
+      // Non-fatal — keep the stored URL.
+    }
+  }
+
   return (
     <EditProfileForm
       initialProfile={{
@@ -89,7 +108,7 @@ export default async function EditProfilePage({
         bio: card.bio ?? "",
         avatar_url: card.avatar_url ?? "",
         logo_url: card.logo_url ?? "",
-        qr_code_url: card.qr_code_url,
+        qr_code_url: qrCodeUrl,
       }}
       initialSocialLinks={socialLinks ?? []}
       canUploadLogo={canUploadLogo(profile)}

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import sharp from "sharp";
 
+import { canUploadLogo } from "@/lib/entitlements";
 import { getCanonicalProfileUrl } from "@/lib/qr";
 
 export const runtime = "nodejs";
@@ -34,6 +35,11 @@ const payloadSchema = Joi.object({
  * displays carries the logo too, not just the mobile's render-time
  * composite. Any compositing failure keeps the plain QR (the web's
  * graceful-fallback behaviour).
+ *
+ * LOGO-IN-QR IS PRO-ONLY and enforced HERE, server-side: the requested
+ * logo is ignored unless the caller's profile passes canUploadLogo()
+ * (paying/unexpired Pro or exempt). Clients can't be trusted to
+ * self-report entitlements.
  *
  * Auth: the caller's Supabase access token (Authorization: Bearer) — the
  * client is created with that token so storage/RLS policies apply as the user.
@@ -118,7 +124,7 @@ export async function POST(request: Request) {
     }
 
     // Normalized logo (null when absent/empty) — drives ECL + compositing.
-    const logoUrl = value.logoUrl ?? null;
+    let logoUrl = value.logoUrl ?? null;
 
     // Ownership check — the card must belong to the caller.
     const { data: card } = await supabase
@@ -129,6 +135,20 @@ export async function POST(request: Request) {
         .maybeSingle();
     if (!card) {
         return NextResponse.json({ error: "Card not found." }, { status: 403 });
+    }
+
+    // LOGO-IN-QR IS PRO-ONLY (server-enforced): drop the requested logo
+    // unless the caller's profile passes canUploadLogo(). Only queried when
+    // a logo was actually requested, so the common plain-QR path is unchanged.
+    if (logoUrl) {
+        const { data: ownerProfile } = await supabase
+            .from("profiles")
+            .select("username, plan, is_exempt, pro_expires_at")
+            .eq("id", user.id)
+            .maybeSingle();
+        if (!canUploadLogo(ownerProfile)) {
+            logoUrl = null;
+        }
     }
 
     // Same canonical URL the web onboarding encodes.
