@@ -199,24 +199,18 @@ export default function ProfileCard({
         toast.error("Card ID missing — can't refresh QR.");
         return;
       }
-      // The logo prop is DISPLAY-gated server-side (app/[username]/page.tsx
-      // nulls logo_url when the owner's Pro has lapsed). Compositing with it
-      // would silently strip the logo from the stored QR PNG on every
-      // refresh. Re-read the TRUE logo_url from the card row (owner-scoped,
-      // so RLS allows it) — a lapsed-Pro owner's QR keeps the logo they
-      // uploaded while subscribed.
-      const { data: cardRow } = await supabase
-        .from('cards')
-        .select('logo_url')
-        .eq('id', profile.cardId)
-        .eq('owner_id', user.id)
-        .maybeSingle();
+      // LOGO-IN-QR IS PRO-ONLY. profile.logo_url is entitlement-gated
+      // server-side (app/[username]/page.tsx nulls it when the owner's Pro
+      // has lapsed), so passing it here bakes the logo ONLY while the owner
+      // is actually Pro. (This used to re-read the raw cards.logo_url so a
+      // lapsed-Pro owner's QR kept the old logo — that policy is reversed:
+      // non-Pro cards get a plain, logo-free QR.)
       await regenerateQrCode({
         supabase,
         userId: user.id,
         cardId: profile.cardId,
         cardSlug: profile.username,
-        logoUrl: cardRow?.logo_url ?? null,
+        logoUrl: profile.logo_url ?? null,
         onLogoFailed: (reason) => {
           console.warn('QR refresh logo embedding failed:', reason);
           toast.warning(
@@ -486,6 +480,14 @@ export default function ProfileCard({
                   src={profile.qr_code_url}
                   alt={`Scan to view ${displayName}'s profile`}
                   fill
+                  // Fixed 176px slot (w-44 h-44) — without `sizes`, Next
+                  // builds the srcset from deviceSizes (viewport-wide) and
+                  // browsers fetch oversized variants of this PNG.
+                  sizes="176px"
+                  // Non-Pro owners are served a freshly generated plain QR
+                  // as a data URL (logo-in-QR is Pro-only). Data URLs bypass
+                  // the image optimizer — mark them unoptimized explicitly.
+                  unoptimized={profile.qr_code_url.startsWith("data:")}
                   className=" rounded-lg border border-zinc-800 bg-white object-contain"
                 />
                 <p className="mt-1 text-[10px] text-zinc-400">

@@ -14,6 +14,8 @@ import OwnerBadges from "@/components/OwnerBadges";
 import ProfileCard from "@/components/ProfileCard";
 import type { ThemeCustomization } from "@/lib/themes";
 import { buildPersonSchema } from "@/lib/seo";
+import { getCanonicalProfileUrl } from "@/lib/qr";
+import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { getVisitorId } from "@/lib/analytics/visitor";
 import { headers } from "next/headers";
@@ -294,6 +296,29 @@ export default async function UsernamePage({
   } = await supabase.auth.getUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
+  // ── QR LOGO ENTITLEMENT (read-time override) ──────────────────────
+  // The QR logo is Pro-only, but the stored PNG may carry a logo baked in
+  // while the owner was Pro (the PNG is uploaded once and served as-is).
+  // For non-Pro owners, generate a plain logo-free QR on the fly and serve
+  // THAT — same encoded URL, size and styling as the stored one (lib/qr.ts
+  // / generate-qr parity). No DB writes on GET; the stored PNG stays
+  // untouched for when they renew.
+  let qrCodeUrl = card.qr_code_url;
+  if (!ownerIsPro) {
+    try {
+      qrCodeUrl = await QRCode.toDataURL(getCanonicalProfileUrl(card.slug), {
+        errorCorrectionLevel: "M",
+        margin: 2,
+        width: 480,
+        color: { dark: "#18181b", light: "#FFFFFF" },
+      });
+    } catch (err) {
+      // Non-fatal: fall back to the stored URL (worst case a legacy logo QR
+      // renders until renewal — same as before this change).
+      console.warn("[username] plain QR generation failed:", err);
+    }
+  }
+
   // Build the profile object that ProfileCard expects.
   // Map card fields → the Profile shape ProfileCard already uses.
   // theme_custom may be null (no customizations) — resolveTheme() handles
@@ -317,7 +342,7 @@ export default async function UsernamePage({
     avatar_url: card.avatar_url,
     // Logo is Pro-only — hide when expired
     logo_url: ownerIsPro ? card.logo_url : null,
-    qr_code_url: card.qr_code_url,
+    qr_code_url: qrCodeUrl,
     // Force classic theme when not Pro
     theme: ownerIsPro ? card.theme : "classic",
     // Banner is Pro-only — hide when expired
@@ -451,7 +476,10 @@ export default async function UsernamePage({
             with zero network. Renders nothing. */}
         {isOwner && (
           <OfflineCardSaver
-            profile={profile}
+            // Keep the STORED qr_code_url in the offline snapshot —
+            // OfflineCard regenerates its own QR on-device, and persisting
+            // this page's on-the-fly data URL would only bloat localStorage.
+            profile={{ ...profile, qr_code_url: card.qr_code_url }}
             socialLinks={socialLinks ?? []}
             linkLimit={ownerLinkLimit === Infinity ? null : ownerLinkLimit}
           />
