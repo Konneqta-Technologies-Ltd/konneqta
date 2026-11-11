@@ -22,6 +22,13 @@ export type GenerateQrOptions = {
   logoUrl?: string | null;
   /** Pixel size of the generated PNG square. Default 480. */
   size?: number;
+  /**
+   * Optional callback fired when a logoUrl WAS provided but could not be
+   * embedded (fetch/CORS/draw failure). The plain QR is still returned —
+   * the graceful fallback stays — but callers get a chance to warn the
+   * user instead of the logo disappearing silently.
+   */
+  onLogoFailed?: (reason: string) => void;
 };
 
 /**
@@ -35,6 +42,7 @@ export async function generateQrDataUrl({
   profileUrl,
   logoUrl,
   size = 480,
+  onLogoFailed,
 }: GenerateQrOptions): Promise<string> {
   // Tag the URL with ?src=qr so that when someone scans the printed QR with
   // their phone camera, the resulting profile view is attributed to source
@@ -63,8 +71,11 @@ export async function generateQrDataUrl({
     return await compositeLogo(qrDataUrl, logoUrl, size);
   } catch (err) {
     // If logo compositing fails (e.g. CORS / load error), fall back to the
-    // plain QR rather than failing the whole profile flow.
+    // plain QR rather than failing the whole profile flow — but TELL the
+    // caller, so the UI can warn instead of the logo silently disappearing.
     console.warn("QR logo compositing failed, using plain QR:", err);
+    const reason = err instanceof Error ? err.message : String(err);
+    onLogoFailed?.(reason);
     return qrDataUrl;
   }
 }
@@ -206,6 +217,12 @@ export type RegenerateQrCodeInput = {
   cardSlug: string;
   /** Optional logo URL to composite into the QR center. */
   logoUrl?: string | null;
+  /**
+   * Optional callback fired when a logoUrl WAS provided but could not be
+   * embedded (see GenerateQrOptions.onLogoFailed) — lets callers warn the
+   * user instead of the logo silently vanishing from the stored PNG.
+   */
+  onLogoFailed?: (reason: string) => void;
 };
 
 /**
@@ -224,6 +241,7 @@ export async function regenerateQrCode({
   cardId,
   cardSlug,
   logoUrl,
+  onLogoFailed,
 }: RegenerateQrCodeInput): Promise<string | null> {
   // Use the canonical production origin (NEXT_PUBLIC_SITE_URL) so QRs
   // never bake in localhost. Falls back to window.location.origin only
@@ -234,6 +252,7 @@ export async function regenerateQrCode({
   const qrDataUrl = await generateQrDataUrl({
     profileUrl,
     logoUrl: logoUrl || null,
+    onLogoFailed,
   });
   const qrBlob = dataUrlToBlob(qrDataUrl);
   const qrPath = `${userId}/${cardId}/qr.png`;

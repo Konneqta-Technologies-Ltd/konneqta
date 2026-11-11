@@ -2,8 +2,6 @@
 
 import {
   ALLOWED_IMAGE_TYPES,
-  isSafeEmailValue,
-  isSafeHttpUrl,
   safeFileExtension,
 } from '@/lib/url-validation';
 import { AVATAR_OPTIONS, LOGO_OPTIONS, compressImage } from '@/lib/image';
@@ -15,7 +13,10 @@ import InfoTip from './InfoTip';
 import Link from 'next/link';
 import { PLAN_LIMITS } from '@/lib/entitlements';
 import ProGate from './ProGate';
-import { SOCIAL_PLATFORMS } from '@/lib/social-platforms';
+import {
+  resolveSocialLinkInput,
+  SOCIAL_PLATFORMS,
+} from '@/lib/social-platforms';
 import Spinner from './ui/Spinner';
 import { createClient } from '@/lib/supabase/client';
 import { regenerateQrCode } from '@/lib/qr';
@@ -427,25 +428,47 @@ export default function EditProfileForm({
         return;
       }
 
-      const linksToInsert = socialLinks
-        .filter((link) => {
-          const trimmed = link.url.trim();
-          if (!trimmed) return false;
-          return link.platform === 'email'
-            ? isSafeEmailValue(trimmed)
-            : isSafeHttpUrl(trimmed);
-        })
-        .map((link) => ({
+      //    SECURITY: every value passes resolveSocialLinkInput, which accepts
+      //    a shorthand (@handle / bare handle → domain-pinned platform URL,
+      //    WhatsApp "+234…" → wa.me) or a full link, and ONLY ever returns an
+      //    http(s) URL (or a raw email address). The DB CHECK constraint
+      //    (social_links_url_safe_scheme) is the real barrier; this gives
+      //    fast feedback instead of a failed insert.
+      //    Unresolvable rows are SKIPPED — but counted, so the user is told
+      //    (they used to vanish silently, looking like a save bug).
+      const linksToInsert: {
+        card_id: string;
+        profile_id: string;
+        platform: string;
+        url: string;
+        label: string | null;
+      }[] = [];
+      let skippedLinkCount = 0;
+      for (const link of socialLinks) {
+        const trimmed = link.url.trim();
+        if (!trimmed) continue; // untouched empty row — nothing to save
+        const resolved = resolveSocialLinkInput(link.platform, trimmed);
+        if (!resolved) {
+          skippedLinkCount++;
+          continue;
+        }
+        linksToInsert.push({
           card_id: cardId,
           profile_id: user.id, // keep for backward compat
           platform: link.platform,
-          url: link.url.trim(),
+          url: resolved,
           // Custom display name — only stored for "Custom Link" entries.
           label:
             link.platform === 'other' && link.label?.trim()
               ? link.label.trim()
               : null,
-        }));
+        });
+      }
+      if (skippedLinkCount > 0) {
+        toast.warning(
+          `${skippedLinkCount} link${skippedLinkCount === 1 ? '' : 's'} skipped — use @handle, a full https:// link, or (WhatsApp) a +country-code number.`,
+        );
+      }
 
       if (linksToInsert.length > 0) {
         const { error: linksError } = await supabase
@@ -460,22 +483,32 @@ export default function EditProfileForm({
       }
 
       // 5. Regenerate QR (per-card, based on slug).
-      //    Regenerate when the logo changed OR when the card is missing a
-      //    QR code (e.g. onboarding upload failed). This ensures editing a
-      //    card always produces a valid QR, even without a new logo upload.
-      const logoChanged = Boolean(logoFile) || logoRemoved;
-      if (logoChanged || !initialProfile.qr_code_url) {
-        try {
-          await regenerateQrCode({
-            supabase,
-            userId: user.id,
-            cardId,
-            cardSlug,
-            logoUrl: logoUrl || null,
-          });
-        } catch (qrErr) {
-          console.error('qr regeneration error:', qrErr);
-        }
+      //    ALWAYS regenerate after a successful save — not only when the
+      //    logo changed. The QR encodes just the slug + logo, so regen is
+      //    cheap, and unconditional regen guarantees the stored PNG always
+      //    matches the card. This fixes the "logo present but missing from
+      //    the QR" bug that happened when the logo reached the card by any
+      //    path other than this same save (mobile onboarding, a previous
+      //    failed composite, a manual DB tweak during testing, …).
+      try {
+        await regenerateQrCode({
+          supabase,
+          userId: user.id,
+          cardId,
+          cardSlug,
+          logoUrl: logoUrl || null,
+          onLogoFailed: (reason) => {
+            console.warn('QR logo embedding failed:', reason);
+            toast.warning(
+              "Card saved, but your logo couldn't be embedded in the QR code. Tap 'Refresh QR code' on your card to retry.",
+            );
+          },
+        });
+      } catch (qrErr) {
+        console.error('qr regeneration error:', qrErr);
+        toast.warning(
+          "Card saved, but the QR code couldn't be refreshed. You can tap 'Refresh QR code' on your card.",
+        );
       }
 
       toast.success('Card updated successfully');

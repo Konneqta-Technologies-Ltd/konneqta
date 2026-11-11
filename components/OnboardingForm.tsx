@@ -2,8 +2,6 @@
 
 import {
   ALLOWED_IMAGE_TYPES,
-  isSafeEmailValue,
-  isSafeHttpUrl,
   safeFileExtension,
 } from '@/lib/url-validation';
 import { AVATAR_OPTIONS, LOGO_OPTIONS, compressImage } from '@/lib/image';
@@ -19,7 +17,10 @@ import InfoTip from './InfoTip';
 import Link from 'next/link';
 import { PLAN_LIMITS } from '@/lib/entitlements';
 import ProGate from './ProGate';
-import { SOCIAL_PLATFORMS } from '@/lib/social-platforms';
+import {
+  resolveSocialLinkInput,
+  SOCIAL_PLATFORMS,
+} from '@/lib/social-platforms';
 import Spinner from './ui/Spinner';
 import { awardMilestone } from '@/lib/feedback/score';
 import {
@@ -523,28 +524,46 @@ export default function OnboardingForm({
       }
 
       // 4. Insert any social links the user added.
-      //    SECURITY: reject dangerous URL schemes (javascript:, data:, etc.)
-      //    before they reach the DB. The DB CHECK constraint is the real
-      //    barrier; this is defense-in-depth + user feedback.
-      const linksToInsert = socialLinks
-        .filter((link) => {
-          const trimmed = link.url.trim();
-          if (!trimmed) return false;
-          return link.platform === 'email'
-            ? isSafeEmailValue(trimmed)
-            : isSafeHttpUrl(trimmed);
-        })
-        .map((link) => ({
+      //    SECURITY: every value passes resolveSocialLinkInput, which accepts
+      //    a shorthand (@handle / bare handle → domain-pinned platform URL,
+      //    WhatsApp "+234…" → wa.me) or a full link, and ONLY ever returns an
+      //    http(s) URL (or a raw email address). The DB CHECK constraint
+      //    (social_links_url_safe_scheme) is the real barrier; this gives
+      //    fast feedback instead of a failed insert. Unresolvable rows are
+      //    SKIPPED — but counted, so the user is told (never silent).
+      const linksToInsert: {
+        card_id: string;
+        profile_id: string;
+        platform: string;
+        url: string;
+        label: string | null;
+      }[] = [];
+      let skippedLinkCount = 0;
+      for (const link of socialLinks) {
+        const trimmed = link.url.trim();
+        if (!trimmed) continue; // untouched empty row — nothing to save
+        const resolved = resolveSocialLinkInput(link.platform, trimmed);
+        if (!resolved) {
+          skippedLinkCount++;
+          continue;
+        }
+        linksToInsert.push({
           card_id: cardId,
           profile_id: user.id, // keep for backward compat
           platform: link.platform,
-          url: link.url.trim(),
+          url: resolved,
           // Custom display name — only stored for "Custom Link" entries.
           label:
             link.platform === 'other' && link.label?.trim()
               ? link.label.trim()
               : null,
-        }));
+        });
+      }
+      if (skippedLinkCount > 0) {
+        toast.warning(
+          `${skippedLinkCount} link${skippedLinkCount === 1 ? '' : 's'} skipped — use @handle, a full https:// link, or (WhatsApp) a +country-code number.`,
+        );
+      }
 
       if (linksToInsert.length > 0) {
         const { error: linksError } = await supabase
@@ -605,6 +624,9 @@ export default function OnboardingForm({
         const qrDataUrl = await generateQrDataUrl({
           profileUrl,
           logoUrl: logoUrl || null,
+          onLogoFailed: (reason) => {
+            console.warn('qr logo embedding failed:', reason);
+          },
         });
         const qrBlob = dataUrlToBlob(qrDataUrl);
         const qrPath = `${user.id}/${cardId}/qr.png`;
