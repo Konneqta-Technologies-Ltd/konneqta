@@ -217,6 +217,12 @@ export default function ProfileCard({
         cardId: profile.cardId,
         cardSlug: profile.username,
         logoUrl: cardRow?.logo_url ?? null,
+        onLogoFailed: (reason) => {
+          console.warn('QR refresh logo embedding failed:', reason);
+          toast.warning(
+            "QR refreshed, but your logo couldn't be embedded in it. Please try again.",
+          );
+        },
       });
       toast.success('QR code refreshed');
       router.refresh();
