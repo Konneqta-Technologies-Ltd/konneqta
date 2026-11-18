@@ -31,6 +31,9 @@ each route is allowed to do.
 | `POST /api/deactivate-account` | Via helper |
 | `POST /api/delete-account` | Via helper |
 | `POST /api/reactivate-account` | Via helper |
+| `GET /api/payments/subscription` | Via helper — normalized subscription state (`{ active, billing: 'flutterwave' \| 'store' \| 'none', planLabel, productId, renewsAt, cancelAtPeriodEnd }`) behind the mobile Settings "Pro Membership" section |
+| `POST /api/payments/cancel-subscription` | Via helper — Flutterwave auto-renewal cancellation. REFUSES store-billed rows (400) — App Store / Play subscriptions are cancelled in the store, never here |
+| `POST /api/track/mobile-event` | Via helper — in-app `profile_view` (source `'app' \| 'qr'`) and `link_click` events, same counting rules as the web (30-min dedupe, self-events dropped). Fire-and-forget; always 204 |
 | `POST` / `DELETE /api/push/register` | Via helper (mobile-only route, see below) |
 
 ## Mobile-only endpoints
@@ -114,7 +117,18 @@ returns `500` with a console warning pre-migration.
 
 ## Known gaps
 
-- **No Universal Links / App Links**: there is no
-  `.well-known/apple-app-site-association` or `assetlinks.json` in this repo.
-  Deep links rely solely on the `konneqta://` custom scheme, which fails
-  silently if the app isn't installed.
+- **Universal Links / App Links — code shipped, INACTIVE until credentials
+  land.** The verification files are now served from this repo:
+  `public/.well-known/apple-app-site-association` (Content-Type forced to
+  `application/json` via `next.config.ts` headers) and
+  `public/.well-known/assetlinks.json`. Both still carry PLACEHOLDERS that
+  must be replaced before the feature activates:
+  - AASA `appID` → `<APPLE_TEAM_ID>.com.konneqta.mobile`
+  - assetlinks `sha256_cert_fingerprints` → the Android signing cert
+    fingerprint(s) (`eas credentials -p android`; include the Play App
+    Signing key if enabled)
+  The app side (associatedDomains + autoVerify intentFilters + the web-URL →
+  app-route mapper in `src/lib/universal-links.ts` in the mobile repo) is
+  complete and applies on the next native build — verification never runs in
+  Expo Go. Until then, deep links still rely solely on the `konneqta://`
+  custom scheme, which fails silently if the app isn't installed.

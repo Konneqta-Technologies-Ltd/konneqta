@@ -181,10 +181,12 @@ const HANDLE_RE = /^[A-Za-z0-9._-]{1,64}$/;
  * address so it satisfies the DB CHECK constraint and mailto: rendering).
  *
  * Accepted inputs per platform:
- * - Full https?:// URL            → kept as-is after the http(s)-only safety
+ * - "https?://…" (full link)     → kept as-is after the http(s)-only safety
  *                                   check (works for EVERY platform — pasted
  *                                   links like facebook.com/profile.php?id=…
  *                                   or YouTube /c/… still work).
+ * - "instagram.com/emeka" (no     → https:// added, then the same safety
+ *   scheme, has a path)             check — scheme-less pastes just work.
  * - "@handle" / bare "handle"     → platform.urlPrefix + sanitized handle
  *                                   (only for platforms defining urlPrefix).
  * - WhatsApp "+234 801 234 5678"
@@ -227,6 +229,16 @@ export function resolveSocialLinkInput(
       return null;
     }
     return `https://wa.me/${digits}`;
+  }
+
+  // Scheme-less URL paste ("instagram.com/emeka", "youtube.com/@you") —
+  // extremely common when users copy from a browser bar. Add the https://
+  // scheme and apply the same safety gate. Anything with a path separator
+  // is a URL, not a handle (handles never contain "/"); dot-only values
+  // (e.g. "emeka.business") stay handles — dots are legal in them.
+  if (input.includes("/")) {
+    const candidate = `https://${input.replace(/^\/+/, "")}`;
+    return isSafeHttpUrl(candidate) ? candidate : null;
   }
 
   // Handle shorthand for platforms with a known profile-URL prefix:
