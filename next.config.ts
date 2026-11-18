@@ -104,6 +104,28 @@ const nextConfig: NextConfig = {
     ];
     return [
       {
+        // Apple Universal Links verification (AASA). The file lives in
+        // public/.well-known WITHOUT an extension, so the static handler
+        // would serve it as octet-stream — Apple requires JSON. Replaced
+        // placeholders must carry the real Apple Team ID before the
+        // production build ships (see docs/mobile-api.md "Known gaps").
+        source: "/.well-known/apple-app-site-association",
+        headers: [
+          { key: "Content-Type", value: "application/json" },
+          { key: "Cache-Control", value: "public, max-age=300" },
+        ],
+      },
+      {
+        // Android App Links verification. .json already serves as
+        // application/json; pinned here with a short TTL so cert rotation
+        // propagates quickly.
+        source: "/.well-known/assetlinks.json",
+        headers: [
+          { key: "Content-Type", value: "application/json" },
+          { key: "Cache-Control", value: "public, max-age=300" },
+        ],
+      },
+      {
         // Root-level images/icons (banner.png, k-logo.png, favicons, …).
         source: "/:file.(png|jpg|jpeg|svg|webp|ico)",
         headers: brandCache,
