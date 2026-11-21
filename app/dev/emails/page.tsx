@@ -1,10 +1,15 @@
 import type { FeedbackPayload } from "@/lib/feedback/google-sheets";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { renderAdminNotification } from "@/lib/emails/templates/admin-notification";
 import { renderContactAdminAlert } from "@/lib/emails/templates/contact-admin-alert";
 import { renderContactConfirmation } from "@/lib/emails/templates/contact-confirmation";
 import { renderFeedbackAdminAlert } from "@/lib/emails/templates/feedback-admin-alert";
 import { renderFeedbackConfirmation } from "@/lib/emails/templates/feedback-confirmation";
+import { renderPaymentReceipt } from "@/lib/emails/templates/payment-receipt";
+import { renderProExpired } from "@/lib/emails/templates/pro-expired";
+import { renderProExpiryReminder } from "@/lib/emails/templates/pro-expiry-reminder";
+import { renderReferralReward } from "@/lib/emails/templates/referral-reward";
 
 /**
  * DEV-ONLY email template preview — /dev/emails
@@ -71,6 +76,43 @@ const feedbackMetrics: FeedbackPayload = {
   email: feedbackData.email,
 };
 
+// Payment receipt + admin notification — ₦950 monthly, realistic refs.
+const paymentData = {
+  customerName: "Adaeze Okafor-Johnson",
+  customerEmail: "adaeze.example+test@konneqta.com",
+  amount: 950,
+  currency: "NGN",
+  planName: "Monthly Plan",
+  txRef: "KONN_MONTHLY_1757600000_ABC123XYZ",
+  transactionId: 3827491,
+  paymentDate: new Date("2026-08-19T13:45:00Z").toLocaleString("en-NG", {
+    dateStyle: "full",
+    timeStyle: "short",
+  }),
+};
+
+// Referral reward — +10 days credited to the referrer.
+const referralData = {
+  referrerName: "Adaeze Okafor-Johnson",
+  referrerEmail: "adaeze.example+test@konneqta.com",
+  daysAdded: 10,
+  referredUsername: "chidi_creative",
+  newProExpiresAt: new Date("2026-11-28T18:30:00Z").toISOString(),
+};
+
+// Pro expiry reminder — inside the 3-day reminder window.
+const proExpiryData = {
+  username: "adaeze",
+  proExpiresAt: new Date("2026-11-24T18:30:00Z").toISOString(),
+  daysLeft: 3,
+};
+
+// Pro expired — lapsed within the 48h lookback window.
+const proExpiredData = {
+  username: "adaeze",
+  proExpiresAt: new Date("2026-11-21T18:30:00Z").toISOString(),
+};
+
 type TemplateEntry = {
   id: string;
   title: string;
@@ -103,6 +145,38 @@ function getTemplates(): TemplateEntry[] {
       title: "Feedback — Admin Alert",
       description: "Rich digest with sentiment, rating + engagement metrics.",
       html: renderFeedbackAdminAlert(feedbackData, feedbackMetrics),
+    },
+    {
+      id: "payment-receipt",
+      title: "Payment — User Receipt",
+      description: "Sent to the payer right after a successful checkout.",
+      html: renderPaymentReceipt(paymentData),
+    },
+    {
+      id: "admin-notification",
+      title: "Payment — Admin Notification",
+      description: `Sent to ADMIN_NOTIFICATION_EMAIL for every successful payment.`,
+      html: renderAdminNotification(paymentData),
+    },
+    {
+      id: "referral-reward",
+      title: "Referral — Reward Email",
+      description: "Sent to the referrer when their invitee first subscribes.",
+      html: renderReferralReward(referralData),
+    },
+    {
+      id: "pro-expiry-reminder",
+      title: "Pro — Expiry Reminder",
+      description:
+        "Daily cron — 'Pro ends in 3 days' (auto-renew subscribers are skipped).",
+      html: renderProExpiryReminder(proExpiryData),
+    },
+    {
+      id: "pro-expired",
+      title: "Pro — Expired Notice",
+      description:
+        "Daily cron — 'Pro has expired' (only true lapses, 48h lookback).",
+      html: renderProExpired(proExpiredData),
     },
   ];
 }

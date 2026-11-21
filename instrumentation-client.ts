@@ -14,8 +14,10 @@ Sentry.init({
   // specific performance issue.
   tracesSampleRate: 0.15,
   // Logs are a debugging aid — dev only, so production clients skip the extra
-  // instrumentation and payload.
-  enableLogs: process.env.NODE_ENV !== "production",
+  // instrumentation and payload. The `enableLogs` option was removed in
+  // Sentry v11 (logs are always captured once `Sentry.logger.*` is called),
+  // so the "dev only" policy is kept by dropping client logs in production.
+  beforeSendLog: process.env.NODE_ENV === "production" ? () => null : undefined,
 
   dataCollection: {
     // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
