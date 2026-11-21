@@ -26,6 +26,10 @@ export async function POST(request: NextRequest) {
 
     const paymentType = body.paymentType as PaymentType;
     const recurring = body.recurring === true;
+    // Optional currency variant — defaults to NGN so existing mobile clients
+    // (which never send it) behave exactly as before. Anything other than
+    // "USD" resolves to NGN. The currency is NEVER taken from payment_type.
+    const currency = body.currency === "USD" ? "USD" : "NGN";
 
     if (!paymentType) {
       return NextResponse.json(
@@ -40,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Pass the caller's own authenticated client through — the service
     // re-resolves the user from it (never trusting the request body), so
     // the pending payment row is attributed to the authenticated user.
-    const result = await createPaymentSession(paymentType, recurring, supabase);
+    const result = await createPaymentSession(paymentType, recurring, supabase, currency);
 
     if (!result.success) {
       // Business guards (e.g. the Pro renewal window) keep their 400.

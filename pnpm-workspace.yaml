@@ -5,3 +5,6 @@ allowBuilds:
   esbuild: false
   sharp: false
   unrs-resolver: false
+
+overrides:
+  "flutterwave-react-v3>axios": "0.35.0"

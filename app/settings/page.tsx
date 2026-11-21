@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import NotificationSettings from "@/components/notifications/NotificationSettings";
 import PromoRedeemCard from "@/components/PromoRedeemCard";
+import SubscriptionCard from "@/components/settings/SubscriptionCard";
 import ReactivateAccountButton from "@/components/nav/ReactivateAccountButton";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -105,6 +106,9 @@ export default async function SettingsPage() {
             </div>
           </dl>
         </section>
+
+        {/* Pro membership — plan state + Flutterwave cancel / store guidance */}
+        <SubscriptionCard />
 
         {/* Promo code redemption */}
         <PromoRedeemCard redeemed={redeemedPromos} disabled={isExempt} />

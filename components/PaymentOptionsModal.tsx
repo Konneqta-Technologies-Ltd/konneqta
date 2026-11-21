@@ -1,29 +1,40 @@
 "use client";
 
-import { PaymentType } from "@/lib/payments/plans";
+import { type Currency, PAYMENT_PLANS, PaymentType } from "@/lib/payments/plans";
 import { toast } from "sonner";
 import { useFlutterwavePayment } from "@/hooks/useFlutterwavePayment";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Payment Options Modal — lets the user choose how to pay for Pro.
  *
- * Two independent choices:
- *   1. Billing cycle: Monthly (₦2,850/mo) vs Yearly (₦28,500/yr).
- *   2. Payment mode:  Auto-Renew (card only, Flutterwave Payment Plan,
+ * Three independent choices:
+ *   1. Currency:      Naira (default) vs US Dollar — compact flag/symbol
+ *                     dropdown beside the price.
+ *   2. Billing cycle: Monthly vs Yearly.
+ *   3. Payment mode:  NGN → Auto-Renew (card only, Flutterwave Payment Plan,
  *      re-charges automatically) vs One-Time (card/transfer/USSD, expires,
  *      manual renewal).
+ *                     USD → Card auto-renew ONLY (bank transfer/USSD are
+ *      Nigerian rails; the backend forces this too — see payment-service.ts).
  *
  * So a user can pick any of:
- *   - Monthly Auto-Renew   (paymentType="monthly", recurring=true)
- *   - Monthly One-Time     (paymentType="monthly", recurring=false)
- *   - Yearly Auto-Renew    (paymentType="yearly",  recurring=true)
- *   - Yearly One-Time      (paymentType="yearly",  recurring=false)
+ *   - NGN Monthly/Yearly, Auto-Renew or One-Time
+ *   - USD Monthly/Yearly, Card auto-renew only
  *
  * Rendered by `UpgradeButton` when the owner doesn't have Pro.
  */
 
 type BillingCycle = "monthly" | "yearly";
+
+/** Flag + symbol shown in the currency dropdown beside the price. */
+const CURRENCIES: Record<
+  Currency,
+  { flag: string; symbol: string; label: string }
+> = {
+  NGN: { flag: "🇳🇬", symbol: "₦", label: "Naira" },
+  USD: { flag: "🇺🇸", symbol: "$", label: "Dollar" },
+};
 
 export default function PaymentOptionsModal({
   open,
@@ -34,19 +45,66 @@ export default function PaymentOptionsModal({
 }) {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [recurring, setRecurring] = useState(true);
+  const [currency, setCurrency] = useState<Currency>("NGN");
+  const [currencyOpen, setCurrencyOpen] = useState(false);
   const { pay, loading, error } = useFlutterwavePayment();
+
+  // Close the currency dropdown on outside click / Escape.
+  const currencyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!currencyOpen) return;
+    const onOutside = (e: MouseEvent | TouchEvent) => {
+      if (
+        currencyRef.current &&
+        !currencyRef.current.contains(e.target as Node)
+      ) {
+        setCurrencyOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCurrencyOpen(false);
+    };
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [currencyOpen]);
 
   if (!open) return null;
 
-  // Derived price/period for the header, based on the selected cycle.
-  const price = cycle === "monthly" ? "₦950" : "₦9,500";
+  // Single source of truth: the plan registry drives BOTH the displayed
+  // price and the backend charge, so UI and server can never drift.
+  // payment_type stays the bare cycle ("monthly"/"yearly"); the currency
+  // is passed separately and picks the price + Flutterwave Payment Plan.
+  const isUsd = currency === "USD";
+  const planKey: PaymentType = cycle;
+  const variant = PAYMENT_PLANS[planKey].variants[currency];
+
+  const { symbol } = CURRENCIES[currency];
+  const price = `${symbol}${variant.amount.toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+  })}`;
   const period = cycle === "monthly" ? "month" : "year";
+
+  // "SAVE n%" badge on Yearly — computed per currency so it stays correct
+  // (NGN ≈ 17%, USD ≈ 16%).
+  const savePct = Math.round(
+    (1 -
+      PAYMENT_PLANS.yearly.variants[currency].amount /
+        (PAYMENT_PLANS.monthly.variants[currency].amount * 12)) *
+      100
+  );
 
   const handlePay = async () => {
     try {
-      // CRITICAL: paymentType must be a key of PAYMENT_PLANS ("monthly" | "yearly").
-      // Previously this sent "premium_upgrade" which doesn't exist → 400.
-      await pay(cycle as PaymentType, recurring);
+      // paymentType must be a key of PAYMENT_PLANS ("monthly" | "yearly");
+      // the currency travels separately. USD is ALWAYS auto-renew — the
+      // backend forces this even if a caller asks otherwise.
+      await pay(planKey, isUsd ? true : recurring, currency);
       // The hook redirects to /payment/callback — modal will unmount.
     } catch (err) {
       const message =
@@ -119,74 +177,156 @@ export default function PaymentOptionsModal({
             >
               Yearly
               <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/50 dark:text-green-400">
-                SAVE 17%
+                SAVE {savePct}%
               </span>
             </button>
           </div>
         </div>
 
-        {/* Price */}
-        <div className="mb-6 text-center">
+        {/* Price + currency selector */}
+        <div className="mb-6 text-center relative ">
           <div className="flex items-baseline justify-center gap-1">
             <span className="text-4xl font-extrabold text-zinc-900 dark:text-white">
               {price}
             </span>
+
             <span className="text-sm text-zinc-500">/ {period}</span>
           </div>
+
+          {/* Currency dropdown — flag + symbol beside the price */}
+            <div className="relative absolute -top-8 left-80" ref={currencyRef}>
+              <button
+                type="button"
+                onClick={() => setCurrencyOpen((v) => !v)}
+                aria-label="Select currency"
+                aria-expanded={currencyOpen}
+                className="flex items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <span>{CURRENCIES[currency].flag}</span>
+                <span>{symbol}</span>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`transition-transform ${currencyOpen ? "rotate-180" : ""}`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {currencyOpen && (
+                <ul className="absolute left-0 top-full z-10 mt-1 w-36 -translate-x-1/2 overflow-hidden rounded-lg border border-zinc-200 bg-white text-left shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+                  {(Object.keys(CURRENCIES) as Currency[]).map((c) => (
+                    <li key={c}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrency(c);
+                          setCurrencyOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-700 ${
+                          c === currency
+                            ? "font-semibold text-zinc-900 dark:text-white"
+                            : "text-zinc-500 dark:text-zinc-400"
+                        }`}
+                      >
+                        <span>{CURRENCIES[c].flag}</span>
+                        <span>{CURRENCIES[c].label}</span>
+                        <span className="ml-auto text-zinc-400">
+                          {CURRENCIES[c].symbol}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          {/* {isUsd && (
+            <p className="mt-1 text-xs text-zinc-400">
+              USD is card payment with auto-renewal.
+            </p>
+          )} */}
         </div>
 
-        {/* Payment mode choice */}
+        {/* Payment mode choice — USD is card auto-renew ONLY */}
         <div className="space-y-3">
-          {/* Auto-Renew */}
-          <label
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
-              recurring
-                ? "border-[#FF6B2C] bg-orange-50 dark:bg-orange-950/30"
-                : "border-zinc-200 dark:border-zinc-700"
-            }`}
-          >
-            <input
-              type="radio"
-              name="billing"
-              checked={recurring}
-              onChange={() => setRecurring(true)}
-              className="mt-1 accent-[#FF6B2C]"
-            />
-            <div className="flex-1">
-              <div className="font-semibold text-zinc-900 dark:text-white">
-                Pay with Card
+          {isUsd ? (
+            <label className="flex items-start gap-3 rounded-xl border-2 border-[#FF6B2C] bg-orange-50 p-4 dark:bg-orange-950/30">
+              <input
+                type="radio"
+                name="billing"
+                checked
+                readOnly
+                className="mt-1 accent-[#FF6B2C]"
+              />
+              <div className="flex-1">
+                <div className="font-semibold text-zinc-900 dark:text-white">
+                  Pay with Card
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Charged {price} automatically every {period}. Cancel anytime.
+                </div>
               </div>
-              <div className="mt-1 text-sm text-zinc-500">
-                Charged automatically each {period}. Cancel anytime. Card only.
-              </div>
-            </div>
-          </label>
+            </label>
+          ) : (
+            <>
+              {/* Auto-Renew */}
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
+                  recurring
+                    ? "border-[#FF6B2C] bg-orange-50 dark:bg-orange-950/30"
+                    : "border-zinc-200 dark:border-zinc-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="billing"
+                  checked={recurring}
+                  onChange={() => setRecurring(true)}
+                  className="mt-1 accent-[#FF6B2C]"
+                />
+                <div className="flex-1">
+                  <div className="font-semibold text-zinc-900 dark:text-white">
+                    Pay with Card
+                  </div>
+                  <div className="mt-1 text-sm text-zinc-500">
+                    Charged automatically each {period}. Cancel anytime. Card only.
+                  </div>
+                </div>
+              </label>
 
-          {/* One-Time */}
-          <label
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
-              !recurring
-                ? "border-[#8B5CF6] bg-purple-50 dark:bg-purple-950/30"
-                : "border-zinc-200 dark:border-zinc-700"
-            }`}
-          >
-            <input
-              type="radio"
-              name="billing"
-              checked={!recurring}
-              onChange={() => setRecurring(false)}
-              className="mt-1 accent-[#8B5CF6]"
-            />
-            <div className="flex-1">
-              <div className="font-semibold text-zinc-900 dark:text-white">
-                Pay with Bank Transfer
-              </div>
-              <div className="mt-1 text-sm text-zinc-500">
-                Pay with card, bank transfer, or USSD. Expires after{" "}
-                {cycle === "monthly" ? "30 days" : "365 days"} — renew manually.
-              </div>
-            </div>
-          </label>
+              {/* One-Time */}
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
+                  !recurring
+                    ? "border-[#8B5CF6] bg-purple-50 dark:bg-purple-950/30"
+                    : "border-zinc-200 dark:border-zinc-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="billing"
+                  checked={!recurring}
+                  onChange={() => setRecurring(false)}
+                  className="mt-1 accent-[#8B5CF6]"
+                />
+                <div className="flex-1">
+                  <div className="font-semibold text-zinc-900 dark:text-white">
+                    Pay with Bank Transfer
+                  </div>
+                  <div className="mt-1 text-sm text-zinc-500">
+                    Pay with card, bank transfer, or USSD. Expires after{" "}
+                    {cycle === "monthly" ? "30 days" : "365 days"} — renew manually.
+                  </div>
+                </div>
+              </label>
+            </>
+          )}
         </div>
 
         {/* Error */}

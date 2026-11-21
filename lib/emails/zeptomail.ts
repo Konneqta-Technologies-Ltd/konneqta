@@ -336,3 +336,60 @@ export async function sendReferralRewardEmail(data: {
     html
   );
 }
+
+/**
+ * Pro expiry reminder — "Your Pro ends in N days".
+ *
+ * Sent to subscribers whose pro_expires_at falls inside the reminder window,
+ * by the daily cron job (Render Cron → /api/cron/pro-expiry). Auto-renew
+ * subscribers are filtered out by the cron query — their card renews
+ * automatically, so an "expiring" email would be wrong. Sends from
+ * info@konneqta.com. Failures are returned, never thrown — the cron marks
+ * the reminder as sent ONLY on success (so a failed send retries next run).
+ */
+export async function sendProExpiryReminderEmail(data: {
+  email: string;
+  username: string;
+  proExpiresAt: string;
+  daysLeft: number;
+}): Promise<{ success: boolean; error?: string }> {
+  const { renderProExpiryReminder } = await import(
+    "./templates/pro-expiry-reminder"
+  );
+
+  const html = renderProExpiryReminder(data);
+
+  return sendEmail(
+    "info",
+    data.email,
+    data.username || "there",
+    `Your Konneqta Pro ends in ${data.daysLeft} day${data.daysLeft === 1 ? "" : "s"}`,
+    html
+  );
+}
+
+/**
+ * Pro expired / termination notice — "Your Pro has expired".
+ *
+ * Sent by the same daily cron job when pro_expires_at has just passed and
+ * the subscription was NOT renewed (auto-renewed users get their date
+ * extended, so they never match; failed renewals / cancelled / one-time
+ * users do). Sends from info@konneqta.com.
+ */
+export async function sendProExpiredEmail(data: {
+  email: string;
+  username: string;
+  proExpiresAt: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { renderProExpired } = await import("./templates/pro-expired");
+
+  const html = renderProExpired(data);
+
+  return sendEmail(
+    "info",
+    data.email,
+    data.username || "there",
+    "Your Konneqta Pro has expired",
+    html
+  );
+}

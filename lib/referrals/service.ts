@@ -34,7 +34,7 @@ export const REFERRAL_REWARD_DAYS = {
   yearly: 90,
 } as const;
 
-/** Resolve reward days for a payment_type ("monthly" | "yearly" | teams…). */
+/** Resolve reward days for a payment_type key (cycle-based: monthly → 10, yearly → 90). */
 export function getReferralRewardDays(paymentType: string): number | null {
   const cycle = PAYMENT_PLANS[paymentType as keyof typeof PAYMENT_PLANS]?.cycle;
   if (cycle === "monthly") return REFERRAL_REWARD_DAYS.monthly;

@@ -1,4 +1,4 @@
-import { PaymentType } from "./plans";
+import { type Currency, PaymentType } from "./plans";
 
 function generateRandomString(length = 10): string {
   const characters =
@@ -16,13 +16,19 @@ function generateRandomString(length = 10): string {
 }
 
 export function generateTransactionReference(
-  paymentType: PaymentType
+  paymentType: PaymentType,
+  currency?: Currency
 ): string {
   const timestamp = Date.now();
 
   const random = generateRandomString();
 
-  return `KONN_${paymentType.toUpperCase()}_${timestamp}_${random}`;
+  // Non-NGN currencies are embedded in the reference so support can identify
+  // the currency from the tx_ref alone. NGN stays bare — matching every
+  // historical reference (KONN_MONTHLY_..., KONN_YEARLY_...).
+  const currencySuffix = currency && currency !== "NGN" ? `_${currency}` : "";
+
+  return `KONN_${paymentType.toUpperCase()}${currencySuffix}_${timestamp}_${random}`;
 }
 
 export function isKonneqtaReference(txRef: string): boolean {

@@ -49,6 +49,14 @@ export function getLogoDarkUrl(): string {
   return `${baseUrl}/konneqta-logo.png`;
 }
 
+/**
+ * Base site URL for CTA links inside emails (renew buttons, etc.).
+ * Matches getLogoUrl()'s fallback so dev + prod both resolve.
+ */
+export function getSiteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL || "https://konneqta.com";
+}
+
 // =============================================================================
 // SENDER ADDRESSES (per purpose)
 // =============================================================================

@@ -42,7 +42,7 @@ export default function Pricing() {
   const price = pricing[cycle];
 
   return (
-    <section className="relative bg-[#0a0a0a] px-6 py-16 sm:py-28">
+    <section id="pricing" className="relative bg-[#0a0a0a] px-6 py-16 sm:py-28">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
           Pricing

@@ -1,4 +1,4 @@
-import { PAYMENT_PLANS, PaymentType } from "./plans";
+import { Currency, PAYMENT_PLANS, PaymentType } from "./plans";
 import { PaymentSession, ServiceResponse } from "./types";
 import { getDaysUntilExpiry, isPro } from "@/lib/entitlements";
 
@@ -16,6 +16,10 @@ export async function createPaymentSession(
     // byte-for-byte unchanged. RLS scopes the profile select + payment
     // insert to the authenticated owner either way.
     supabase?: SupabaseClient,
+    // Currency variant to price the session in. Optional, defaults to NGN —
+    // existing mobile clients (which never send it) behave byte-for-byte the
+    // same as before. USD forces card-only auto-renew (see below).
+    currency: Currency = "NGN",
 ): Promise<ServiceResponse<PaymentSession>> {
     const db = supabase ?? (await createClient());
 
@@ -71,22 +75,40 @@ export async function createPaymentSession(
         };
     }
 
-    // Resolve the Flutterwave Payment Plan ID for recurring billing.
-    // Read from the plan object's `environmentPlanId` (set in plans.ts).
-    // ONLY applies when the user chose "Auto-Renew" (recurring = true).
-    // One-time payments (transfer/USSD) skip the payment plan entirely.
-    const flwPlanIdEnv =
-        "environmentPlanId" in plan ? plan.environmentPlanId : undefined;
+    // Resolve the currency variant. `payment_type` identifies the product;
+    // `currency` picks the price/Flutterwave-plan. The currency itself is
+    // stored in the payments.currency column — never baked into payment_type.
+    const variant = plan.variants[currency];
+
+    // USD is auto-renew (Payment Plan) ONLY — even if a caller asks for a
+    // one-time USD charge, we force the plan so every dollar subscriber is a
+    // managed auto-renewal (the UI matches: USD hides the one-time option).
+    const isUsd = variant.currency === "USD";
+    const wantsPlan = recurring || isUsd;
     const paymentPlan =
-        recurring && flwPlanIdEnv ? Number(flwPlanIdEnv) : undefined;
+        wantsPlan && variant.environmentPlanId
+            ? Number(variant.environmentPlanId)
+            : undefined;
+
+    // Guard: a missing/unset USD Payment Plan ID would make Flutterwave run
+    // this as a plain ONE-TIME card charge (no auto-renewal) while the user
+    // believes they subscribed. Fail loudly instead of silently degrading.
+    if (isUsd && !paymentPlan) {
+        return {
+            success: false,
+            message:
+                "USD payments are not configured yet. Please pay in Naira or contact support.",
+        };
+    }
 
     // Recurring (card only) vs One-Time (all methods).
     // Flutterwave Payment Plans require a card token, so recurring billing
     // restricts to card. One-time allows bank transfer, USSD, etc.
-    const paymentOptions = recurring ? "card" : "card,banktransfer,ussd";
+    // USD is card-only regardless — bank transfer/USSD are Nigerian rails.
+    const paymentOptions = wantsPlan ? "card" : "card,banktransfer,ussd";
 
-    // Generate a unique transaction reference
-    const txRef = generateTransactionReference(paymentType);
+    // Generate a unique transaction reference (currency embedded for USD)
+    const txRef = generateTransactionReference(paymentType, currency);
 
     // Save pending payment
     const { error: paymentError } = await db
@@ -94,8 +116,8 @@ export async function createPaymentSession(
         .insert({
             user_id: user.id,
             tx_ref: txRef,
-            amount: plan.amount,
-            currency: plan.currency,
+            amount: variant.amount,
+            currency: variant.currency,
             payment_type: paymentType,
             status: "pending",
             customer_email: profile.email,
@@ -115,8 +137,8 @@ export async function createPaymentSession(
         data: {
             publicKey: process.env.NEXT_PUBLIC_FLW_PUBLIC_KEY!,
             txRef,
-            amount: plan.amount,
-            currency: plan.currency,
+            amount: variant.amount,
+            currency: variant.currency,
             customer: {
                 email: profile.email,
                 name: profile.username,
