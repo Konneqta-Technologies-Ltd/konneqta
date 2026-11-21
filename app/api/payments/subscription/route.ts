@@ -44,7 +44,8 @@ function planLabelFor(row: SubscriptionRow): string | null {
     if (/monthly/i.test(plan)) return "Monthly";
     return "Pro";
   }
-  // Flutterwave rows carry payment_type ('premium_upgrade' | 'team_subscription').
+  // Flutterwave rows carry a payment_type key from PAYMENT_PLANS (e.g.
+  // 'monthly' / 'yearly' — the currency lives in payments.currency).
   return "Pro";
 }
 

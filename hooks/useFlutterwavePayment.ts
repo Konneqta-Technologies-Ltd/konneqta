@@ -1,6 +1,6 @@
 "use client";
 
-import { PaymentType } from "@/lib/payments/plans";
+import { type Currency, PaymentType } from "@/lib/payments/plans";
 import { useState } from "react";
 
 // ── Lazy-loaded Flutterwave SDK ────────────────────────────────────────
@@ -104,7 +104,11 @@ export function useFlutterwavePayment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pay = async (paymentType: PaymentType, recurring: boolean = false) => {
+  const pay = async (
+    paymentType: PaymentType,
+    recurring: boolean = false,
+    currency: Currency = "NGN"
+  ) => {
     setLoading(true);
     setError(null);
 
@@ -112,6 +116,8 @@ export function useFlutterwavePayment() {
       // 1. Create the payment session (server creates a pending payment row).
       //    `recurring` determines whether this is a card-only auto-renew
       //    subscription or a one-time payment (card/transfer/USSD).
+      //    `currency` picks the NGN/USD price + Flutterwave Payment Plan —
+      //    payment_type itself stays the bare cycle ("monthly"/"yearly").
       const response = await fetch("/api/payments/create-session", {
         method: "POST",
         headers: {
@@ -120,6 +126,7 @@ export function useFlutterwavePayment() {
         body: JSON.stringify({
           paymentType,
           recurring,
+          currency,
         }),
       });
 

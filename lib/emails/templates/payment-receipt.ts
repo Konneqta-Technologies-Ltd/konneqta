@@ -116,10 +116,13 @@ export function renderPaymentReceipt(data: PaymentEmailData): string {
               <div style="background-color:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:20px;">
                 <p style="color:${BRAND_COLORS.purpleDark};font-size:14px;font-weight:600;margin:0 0 8px 0;">&#127881; What you unlocked:</p>
                 <ul style="color:${BRAND_COLORS.grayDark};font-size:14px;margin:0;padding-left:20px;line-height:1.8;">
+                <li>7 links can be added</li>
+                <li>10 Showcase Items</li>
+                <li>Unlimited access to Konneqts</li>
+                <li>Profile Analytics</li>
                   <li>Up to 3 profile cards</li>
                   <li>Custom themes and colors</li>
                   <li>Banner image upload</li>
-                  <li>Email signature builder</li>
                   <li>Company/brand logo</li>
                 </ul>
               </div>

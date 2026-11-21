@@ -33,7 +33,7 @@ each route is allowed to do.
 | `POST /api/reactivate-account` | Via helper |
 | `GET /api/payments/subscription` | Via helper — normalized subscription state (`{ active, billing: 'flutterwave' \| 'store' \| 'none', planLabel, productId, renewsAt, cancelAtPeriodEnd }`) behind the mobile Settings "Pro Membership" section |
 | `POST /api/payments/cancel-subscription` | Via helper — Flutterwave auto-renewal cancellation. REFUSES store-billed rows (400) — App Store / Play subscriptions are cancelled in the store, never here |
-| `POST /api/track/mobile-event` | Via helper — in-app `profile_view` (source `'app' \| 'qr'`) and `link_click` events, same counting rules as the web (30-min dedupe, self-events dropped). Fire-and-forget; always 204 |
+| `POST /api/track/mobile-event` | Via helper — in-app `profile_view` (source `'app' \| 'qr'`), `link_click` (channel = platform) and `vcard_download` (native contact saves) events, same counting rules as the web (views deduped per 30-min session; clicks + saves per-event; self-events dropped). Fire-and-forget; always 204 |
 | `POST` / `DELETE /api/push/register` | Via helper (mobile-only route, see below) |
 
 ## Mobile-only endpoints

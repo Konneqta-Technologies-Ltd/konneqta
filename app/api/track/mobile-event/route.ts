@@ -18,8 +18,8 @@
  * from a 30-minute time bucket (same window as the web's kq_sid cookie; a
  * fixed bucket instead of a sliding window is the only approximation).
  *
- * Body: { type: 'profile_view' | 'link_click', username: string,
- *         source?: 'app' | 'qr', platform?: string }
+ * Body: { type: 'profile_view' | 'link_click' | 'vcard_download',
+ *         username: string, source?: 'app' | 'qr', platform?: string }
  *   source 'qr'  — the profile was opened from a scanned card QR (the
  *                  dashboard derives QR scans from profile_view + source).
  *   platform     — link_click only: the social platform tapped (channel).
@@ -52,7 +52,12 @@ export async function POST(req: Request) {
       platform?: unknown;
     } | null;
 
-    const type = body?.type === "profile_view" || body?.type === "link_click" ? body.type : null;
+    const type =
+      body?.type === "profile_view" ||
+      body?.type === "link_click" ||
+      body?.type === "vcard_download"
+        ? body.type
+        : null;
     const username =
       typeof body?.username === "string" ? body.username.trim().slice(0, 60) : "";
     if (!type || !username) return new NextResponse(null, { status: 204 });
@@ -91,11 +96,13 @@ export async function POST(req: Request) {
         city: geo.city,
       });
     } else {
+      // link_click + vcard_download — plain events, NO dedupe (the web's
+      // vCard route counts every download; same for clicks).
       await recordEvent({
         owner_id: card.owner_id,
         card_id: card.id,
-        event_type: "link_click",
-        channel: platform,
+        event_type: type,
+        channel: type === "link_click" ? platform : null,
         source,
         visitor_id: visitorId,
         session_id: sessionId,

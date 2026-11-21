@@ -14,72 +14,84 @@
    *   - used to build the Flutterwave `tx_ref`
    *   - looked up here at fulfilment time to compute expiry by cycle
    *
-   * Plan families:
-   *   • Pro (individual)   → `monthly` / `yearly`           ← live, in the UI
-   *   • Teams (future)      → `monthly_team_subscription` /
-   *                           `yearly_team_subscription`     ← NOT in the UI yet
+   * Plan families (this repo ships WEB pricing only):
+   *   • Pro → `monthly` / `yearly` — each cycle carries per-currency
+   *     VARIANTS (NGN + USD). `payment_type` identifies the PRODUCT; the
+   *     `payments.currency` column identifies the currency. Never suffix
+   *     payment types with a currency.
    *
-   * The Teams keys are cycle-prefixed on purpose so the same downstream logic
-   * (subscriptions.plan uniqueness, expiry-by-cycle, tx_ref) works unchanged
-   * when Teams launches. No code/UI change will be needed beyond surfacing a
-   * button — just wire the new key into PaymentOptionsModal when ready.
+   * NOTE: Konneqta Teams payment keys are deliberately NOT defined here —
+   * this web app ships no Teams checkout. Teams remains ALLOWED at the DB
+   * level (payments.payment_type check constraint) because Teams will be
+   * implemented against this database by another client.
    *
-   * `environmentPlanId` holds the Flutterwave Payment Plan ID used for
-   * RECURRING (auto-renew) billing. Monthly and yearly need SEPARATE plans in
-   * Flutterwave (different amount + interval), so they read separate env vars:
-   *   - FLW_PRO_PLAN_ID_MONTHLY
-   *   - FLW_PRO_PLAN_ID_YEARLY
+   * Each variant's `environmentPlanId` holds the Flutterwave Payment Plan ID
+   * used for RECURRING (auto-renew) billing. NGN and USD need SEPARATE plans
+   * (different amount AND currency), so they read separate env vars:
+   *   - FLW_PRO_PLAN_ID_MONTHLY       (NGN)
+   *   - FLW_PRO_PLAN_ID_YEARLY        (NGN)
+   *   - FLW_PRO_PLAN_ID_MONTHLY_USD   (USD)
+   *   - FLW_PRO_PLAN_ID_YEARLY_USD    (USD)
    *
-   * Backwards-compat: if only the old `FLW_PRO_PLAN_ID` is set, both cycles
-   * fall back to it (so nothing breaks during rollout — though yearly recurring
-   * would charge the monthly amount until the yearly plan is created).
+   * Backwards-compat: NGN variants fall back to the legacy `FLW_PRO_PLAN_ID`
+   * if the per-cycle var is unset. USD variants have NO fallback on purpose —
+   * the legacy ID is an NGN plan — and payment-service.ts refuses USD
+   * sessions when their plan ID is unset (a USD charge must never silently
+   * degrade to a one-time payment).
    *
    * For ONE-TIME payments, `environmentPlanId` is ignored entirely (see
-   * payment-service.ts → `paymentPlan` is only set when recurring = true).
+   * payment-service.ts → `paymentPlan` is set when recurring = true, or
+   * always for USD).
    */
   export const PAYMENT_PLANS = {
     // ── Pro (individual) — live ──
+    // `payment_type` identifies the PRODUCT (monthly/yearly); the
+    // `payments.currency` column identifies the currency. Each cycle carries
+    // per-currency VARIANTS — never suffix payment types with a currency.
     monthly: {
-      id: "premium_upgrade_monthly",
+      id: "monthly",
       name: "Monthly Plan",
-      amount: 950, // ◄ Charged on Month 1
       cycle: "monthly",
-      currency: "NGN",
       description: "Your Konneqta Premium subscription",
-      environmentPlanId:
-        process.env.FLW_PRO_PLAN_ID_MONTHLY ?? process.env.FLW_PRO_PLAN_ID,
+      variants: {
+        NGN: {
+          amount: 950, // ◄ Charged on Month 1
+          currency: "NGN",
+          environmentPlanId:
+            process.env.FLW_PRO_PLAN_ID_MONTHLY ?? process.env.FLW_PRO_PLAN_ID,
+        },
+        USD: {
+          amount: 0.99, // ◄ Charged on Month 1 — card auto-renew ONLY
+          currency: "USD",
+          // NO fallback to FLW_PRO_PLAN_ID: that legacy ID is an NGN plan,
+          // and attaching it to a USD session would start an NGN renewal.
+          environmentPlanId: process.env.FLW_PRO_PLAN_ID_MONTHLY_USD,
+        },
+      },
     },
 
     yearly: {
-      id: "premium_upgrade_yearly",
+      id: "yearly",
       name: "Yearly Plan",
-      amount: 9500, // ◄ Charged on Year 1
       cycle: "yearly",
-      currency: "NGN",
       description: "Your Konneqta Premium subscription",
-      environmentPlanId:
-        process.env.FLW_PRO_PLAN_ID_YEARLY ?? process.env.FLW_PRO_PLAN_ID,
-    },
-
-    // ── Konneqta Teams (NOT yet exposed in the UI) ──
-    // Cycle-prefixed keys mirror the Pro plans so the same downstream logic
-    // works when Teams launches. Amounts are placeholders until pricing is
-    // finalised. No button/option renders these yet.
-    monthly_team_subscription: {
-      name: "Konneqta Teams (Monthly)",
-      amount: 5000, // Placeholder — update before launching Teams
-      cycle: "monthly",
-      currency: "NGN",
-      description: "Your Konneqta Teams subscription",
-    },
-
-    yearly_team_subscription: {
-      name: "Konneqta Teams (Yearly)",
-      amount: 50000, // Placeholder — update before launching Teams
-      cycle: "yearly",
-      currency: "NGN",
-      description: "Your Konneqta Teams subscription",
+      variants: {
+        NGN: {
+          amount: 9500, // ◄ Charged on Year 1
+          currency: "NGN",
+          environmentPlanId:
+            process.env.FLW_PRO_PLAN_ID_YEARLY ?? process.env.FLW_PRO_PLAN_ID,
+        },
+        USD: {
+          amount: 9.99, // ◄ Charged on Year 1 — card auto-renew ONLY
+          currency: "USD",
+          environmentPlanId: process.env.FLW_PRO_PLAN_ID_YEARLY_USD,
+        },
+      },
     },
   } as const;
 
   export type PaymentType = keyof typeof PAYMENT_PLANS;
+
+  /** Currency variants available for every plan cycle. */
+  export type Currency = "NGN" | "USD";

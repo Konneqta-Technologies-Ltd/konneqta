@@ -61,6 +61,7 @@ export async function verifyAndFulfilPayment(
 
   const txStatus = verification?.data?.status;
   const verifiedAmount = verification?.data?.amount;
+  const verifiedCurrency = verification?.data?.currency;
   const verifiedTxRef = verification?.data?.tx_ref;
 
   // 3. Guard against a mismatched/forged tx_ref.
@@ -88,7 +89,7 @@ export async function verifyAndFulfilPayment(
   const { data: payment, error: lookupError } = await admin
     .from("payments")
     .select(
-      "id, user_id, status, amount, currency, customer_email, customer_name, payment_type, subscription_id"
+      "id, user_id, status, amount, currency, flutterwave_transaction_id, customer_email, customer_name, payment_type, subscription_id"
     )
     .eq("tx_ref", txRef)
     .single();
@@ -101,8 +102,24 @@ export async function verifyAndFulfilPayment(
     };
   }
 
-  // 6. Idempotency — if already fulfilled, don't double-grant.
-  if (payment.status === "successful") {
+  // 6. Idempotency vs RECURRING RENEWALS — two different situations share
+  //    the same payment row, because Flutterwave reuses the ORIGINAL tx_ref
+  //    for every renewal of a Payment Plan subscription (each renewal is a
+  //    NEW transaction id on the SAME tx_ref):
+  //
+  //    a) The transaction id is one we already recorded → a duplicate
+  //       delivery (webhook retry racing the verify fast-path). No-op.
+  //    b) A NEW transaction id on an already-successful row → a genuine
+  //       RENEWAL charge. Fall through: the verified amount/currency is
+  //       re-checked against the row below, then fulfilment extends the
+  //       subscriptions row + profiles.pro_expires_at from Flutterwave's
+  //       real next-charge date. Without this, auto-renew subscribers keep
+  //       being charged but Pro would expire after the first period.
+  const isSameTransaction =
+    payment.flutterwave_transaction_id != null &&
+    Number(payment.flutterwave_transaction_id) === transactionId;
+
+  if (payment.status === "successful" && isSameTransaction) {
     return {
       success: true,
       data: { status: "successful" },
@@ -110,12 +127,16 @@ export async function verifyAndFulfilPayment(
   }
 
   // 7. Map Flutterwave's status to our internal status and update the row.
-  //    We also validate the amount to prevent underpayment attacks.
+  //    We validate amount AND currency — the amount check prevents
+  //    underpayment attacks; the currency check prevents cross-currency
+  //    confusion now that NGN and USD plans coexist. Number() coercion keeps
+  //    the comparison safe whether the provider/DB give number or string.
   //    Store the ENTIRE provider response for debugging + set paid_at.
   const isSuccessful =
     verification.status === "success" &&
     txStatus === "successful" &&
-    verifiedAmount === payment.amount;
+    Number(verifiedAmount) === Number(payment.amount) &&
+    verifiedCurrency === payment.currency;
 
   const newStatus = isSuccessful
     ? "successful"
